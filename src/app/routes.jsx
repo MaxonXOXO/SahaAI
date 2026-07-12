@@ -1,0 +1,65 @@
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import BottomNav from '../shared/components/BottomNav';
+
+/**
+ * Temporary placeholder — swap for real feature screen as each
+ * teammate builds their section. Keeps routing testable meanwhile.
+ */
+function Placeholder({ name }) {
+    return (
+        <div className="flex-1 flex items-center justify-center p-6 text-center">
+            <div>
+                <p className="text-base-md font-semibold text-gray-700 dark:text-gray-200">
+                    {name}
+                </p>
+                <p className="text-base-sm text-gray-400 mt-1">Screen not built yet</p>
+            </div>
+        </div>
+    );
+}
+
+// Routes where BottomNav should be hidden (onboarding / full-screen flows)
+const NO_NAV_ROUTES = [
+    '/', '/language', '/profile-setup',
+];
+
+export default function AppRoutes() {
+    const location = useLocation();
+    const showNav = !NO_NAV_ROUTES.includes(location.pathname);
+
+    return (
+        <>
+            <div className={`flex-1 flex flex-col ${showNav ? 'pb-16' : ''}`}>
+                <Routes>
+                    {/* Onboarding */}
+                    <Route path="/" element={<Placeholder name="Splash Screen" />} />
+                    <Route path="/language" element={<Placeholder name="Language Selection" />} />
+                    <Route path="/profile-setup" element={<Placeholder name="Accessibility Profile Setup" />} />
+
+                    {/* Main tabs */}
+                    <Route path="/dashboard" element={<Placeholder name="Dashboard (Home)" />} />
+                    <Route path="/ai-chat" element={<Placeholder name="AI Chat Assistant" />} />
+                    <Route path="/learn" element={<Placeholder name="Learn" />} />
+                    <Route path="/progress" element={<Placeholder name="Progress Dashboard" />} />
+                    <Route path="/profile" element={<Placeholder name="Profile & Settings" />} />
+
+                    {/* Feature screens */}
+                    <Route path="/dyslexia-reader" element={<Placeholder name="Dyslexia Reading Mode" />} />
+                    <Route path="/text-simplifier" element={<Placeholder name="AI Text Simplifier" />} />
+                    <Route path="/math-helper" element={<Placeholder name="Dyscalculia Math Helper" />} />
+                    <Route path="/focus-mode" element={<Placeholder name="ADHD Focus Mode" />} />
+                    <Route path="/routine-builder" element={<Placeholder name="Routine Builder" />} />
+                    <Route path="/social-story" element={<Placeholder name="Social Story Generator" />} />
+                    <Route path="/conversation-practice" element={<Placeholder name="Conversation Practice" />} />
+                    <Route path="/vision-assistant" element={<Placeholder name="Vision Assistant" />} />
+                    <Route path="/document-reader" element={<Placeholder name="Document Reader" />} />
+                    <Route path="/settings" element={<Placeholder name="Settings" />} />
+
+                    {/* Fallback */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </div>
+            {showNav && <BottomNav />}
+        </>
+    );
+}
