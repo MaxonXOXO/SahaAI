@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from '../shared/components/BottomNav';
-
+import SignupScreen from '../features/auth/SignupScreen';
+import LoginScreen from '../features/auth/LoginScreen';
 /**
  * Temporary placeholder — swap for real feature screen as each
  * teammate builds their section. Keeps routing testable meanwhile.
@@ -20,7 +21,7 @@ function Placeholder({ name }) {
 
 // Routes where BottomNav should be hidden (onboarding / full-screen flows)
 const NO_NAV_ROUTES = [
-    '/', '/language', '/profile-setup',
+    '/', '/language', '/profile-setup', '/signup', '/login'
 ];
 
 export default function AppRoutes() {
@@ -35,6 +36,8 @@ export default function AppRoutes() {
                     <Route path="/" element={<Placeholder name="Splash Screen" />} />
                     <Route path="/language" element={<Placeholder name="Language Selection" />} />
                     <Route path="/profile-setup" element={<Placeholder name="Accessibility Profile Setup" />} />
+                    <Route path="/signup" element={<SignupScreen />} />
+                    <Route path="/login" element={<LoginScreen />} />
 
                     {/* Main tabs */}
                     <Route path="/dashboard" element={<Placeholder name="Dashboard (Home)" />} />
