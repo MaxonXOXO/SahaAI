@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import Button from '../../shared/components/Button';
 import useProfileStore from '../../store/useProfileStore';
+import { supabase } from '../../shared/lib/supabaseClient';
 
 const LANGUAGES = [
     { code: 'en', label: 'English', native: 'English', badge: 'EN' },
@@ -11,11 +12,26 @@ const LANGUAGES = [
 
 export default function LanguageSelectionScreen() {
     const navigate = useNavigate();
+    const id = useProfileStore((s) => s.id);
+    const storeLanguage = useProfileStore((s) => s.language);
     const updateProfile = useProfileStore((s) => s.updateProfile);
-    const [selected, setSelected] = useState('en');
+
+    // Seed from store so re-visits don't reset to 'en'
+    const [selected, setSelected] = useState(storeLanguage || 'en');
 
     const handleContinue = async () => {
-        await updateProfile({ language: selected });
+        // 1. Update local Zustand state immediately
+        updateProfile({ language: selected });
+
+        // 2. Direct update using the known user id — avoids RLS timing race after signup
+        if (id) {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ language: selected })
+                .eq('id', id);
+            if (error) console.error('Language save error:', error.message);
+        }
+
         navigate('/profile-setup');
     };
 
