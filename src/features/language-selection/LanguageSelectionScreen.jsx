@@ -7,29 +7,30 @@ import { supabase } from '../../shared/lib/supabaseClient';
 
 const LANGUAGES = [
     { code: 'en', label: 'English', native: 'English', badge: 'EN' },
-    { code: 'ml', label: 'Malayalam', native: 'മലയാളം', badge: 'മല' },
+    { code: 'ml', label: 'Malayalam', native: 'മലയാളം', badge: 'മல' },
 ];
 
 export default function LanguageSelectionScreen() {
     const navigate = useNavigate();
     const id = useProfileStore((s) => s.id);
     const storeLanguage = useProfileStore((s) => s.language);
-    const updateProfile = useProfileStore((s) => s.updateProfile);
 
     // Seed from store so re-visits don't reset to 'en'
     const [selected, setSelected] = useState(storeLanguage || 'en');
 
     const handleContinue = async () => {
-        // 1. Update local Zustand state immediately
-        updateProfile({ language: selected });
+        // Update local Zustand state
+        useProfileStore.setState({ language: selected });
 
-        // 2. Direct update using the known user id — avoids RLS timing race after signup
-        if (id) {
-            const { error } = await supabase
+        // Direct Supabase update using session user id
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = id || session?.user?.id;
+
+        if (userId) {
+            await supabase
                 .from('profiles')
                 .update({ language: selected })
-                .eq('id', id);
-            if (error) console.error('Language save error:', error.message);
+                .eq('id', userId);
         }
 
         navigate('/profile-setup');
