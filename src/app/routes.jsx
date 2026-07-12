@@ -4,6 +4,7 @@ import SignupScreen from '../features/auth/SignupScreen';
 import LoginScreen from '../features/auth/LoginScreen';
 import LanguageSelectionScreen from '../features/language-selection/Languageselectionscreen';
 import SplashScreen from '../features/splash/SplashScreen';
+import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
 /**
  * Temporary placeholder — swap for real feature screen as each
  * teammate builds their section. Keeps routing testable meanwhile.
@@ -37,9 +38,9 @@ export default function AppRoutes() {
                     {/* Onboarding */}
                     <Route path="/" element={<SplashScreen />} />
                     <Route path="/language" element={<LanguageSelectionScreen />} />
-                    <Route path="/profile-setup" element={<Placeholder name="Accessibility Profile Setup" />} />
                     <Route path="/signup" element={<SignupScreen />} />
                     <Route path="/login" element={<LoginScreen />} />
+                    <Route path="/profile-setup" element={<ProfileSetupScreen />} />
 
                     {/* Main tabs */}
                     <Route path="/dashboard" element={<Placeholder name="Dashboard (Home)" />} />
