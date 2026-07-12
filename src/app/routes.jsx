@@ -2,6 +2,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from '../shared/components/BottomNav';
 import SignupScreen from '../features/auth/SignupScreen';
 import LoginScreen from '../features/auth/LoginScreen';
+import LanguageSelectionScreen from '../features/language-selection/Languageselectionscreen';
 /**
  * Temporary placeholder — swap for real feature screen as each
  * teammate builds their section. Keeps routing testable meanwhile.
@@ -34,7 +35,7 @@ export default function AppRoutes() {
                 <Routes>
                     {/* Onboarding */}
                     <Route path="/" element={<Placeholder name="Splash Screen" />} />
-                    <Route path="/language" element={<Placeholder name="Language Selection" />} />
+                    <Route path="/language" element={<LanguageSelectionScreen />} />
                     <Route path="/profile-setup" element={<Placeholder name="Accessibility Profile Setup" />} />
                     <Route path="/signup" element={<SignupScreen />} />
                     <Route path="/login" element={<LoginScreen />} />
