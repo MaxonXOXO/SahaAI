@@ -6,6 +6,8 @@ import LanguageSelectionScreen from '../features/language-selection/Languagesele
 import SplashScreen from '../features/splash/SplashScreen';
 import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
 import DashboardScreen from '../features/dashboard/DashboardScreen';
+import ChatListScreen from '../features/ai-chat/ChatListScreen';
+import ChatScreen from '../features/ai-chat/ChatScreen';
 /**
  * Temporary placeholder — swap for real feature screen as each
  * teammate builds their section. Keeps routing testable meanwhile.
@@ -30,7 +32,9 @@ const NO_NAV_ROUTES = [
 
 export default function AppRoutes() {
     const location = useLocation();
-    const showNav = !NO_NAV_ROUTES.includes(location.pathname);
+    // Hide nav on onboarding routes and inside individual chat screens
+    const showNav = !NO_NAV_ROUTES.includes(location.pathname)
+        && !location.pathname.startsWith('/ai-chat/');
 
     return (
         <>
@@ -45,7 +49,8 @@ export default function AppRoutes() {
 
                     {/* Main tabs */}
                     <Route path="/dashboard" element={<DashboardScreen />} />
-                    <Route path="/ai-chat" element={<Placeholder name="AI Chat Assistant" />} />
+                    <Route path="/ai-chat" element={<ChatListScreen />} />
+                    <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
                     <Route path="/learn" element={<Placeholder name="Learn" />} />
                     <Route path="/progress" element={<Placeholder name="Progress Dashboard" />} />
                     <Route path="/profile" element={<Placeholder name="Profile & Settings" />} />
