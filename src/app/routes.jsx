@@ -9,6 +9,7 @@ import DashboardScreen from '../features/dashboard/DashboardScreen';
 import ChatListScreen from '../features/ai-chat/ChatListScreen';
 import ChatScreen from '../features/ai-chat/ChatScreen';
 import ReadingModeScreen from '../features/reading-mode/ReadingModeScreen';
+import VisionAssistant from '../features/vision-assistant/VisionAssistant';
 
 /**
  * Temporary placeholder — swap for real feature screen as each
@@ -65,7 +66,7 @@ export default function AppRoutes() {
                     <Route path="/routine-builder" element={<Placeholder name="Routine Builder" />} />
                     <Route path="/social-story" element={<Placeholder name="Social Story Generator" />} />
                     <Route path="/conversation-practice" element={<Placeholder name="Conversation Practice" />} />
-                    <Route path="/vision-assistant" element={<Placeholder name="Vision Assistant" />} />
+                    <Route path="/vision-assistant" element={<VisionAssistant />} />
                     <Route path="/document-reader" element={<Placeholder name="Document Reader" />} />
                     <Route path="/settings" element={<Placeholder name="Settings" />} />
 
