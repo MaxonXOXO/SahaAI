@@ -1,14 +1,10 @@
 /**
- * aiClient.js — Gemini API wrapper for SahaAI.
+ * aiClient.js — DeepSeek API wrapper for SahaAI.
  *
  * Builds a system prompt from the user's accessibility profile,
- * then sends the full conversation history to Gemini.
+ * then sends the full conversation history to DeepSeek.
  */
 
-/**
- * Build a system prompt that tells the AI who the user is.
- * @param {Object} profile — from useProfileStore
- */
 export function buildSystemPrompt(profile) {
     const needsList = Object.entries(profile.needs || {})
         .filter(([, active]) => active)
@@ -37,52 +33,55 @@ Always be encouraging, never condescending. If the user speaks in ${profile.lang
 }
 
 /**
- * Send a conversation to Gemini and get the assistant reply.
+ * Send a conversation to DeepSeek and get the assistant reply.
  * @param {string} systemPrompt — built from buildSystemPrompt()
  * @param {Array<{role: string, content: string}>} messages — chat history (role: 'user' | 'assistant')
  * @returns {Promise<string>} — assistant reply text
  */
 export async function sendMessage(systemPrompt, messages) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
     if (!apiKey) {
-        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
+        throw new Error('Missing VITE_DEEPSEEK_API_KEY in .env');
     }
 
-    console.log('[AI Client] Sending request with key prefix:', apiKey.slice(0, 8), '... length:', apiKey.length);
+    console.log('[AI Client] Sending request to DeepSeek with key prefix:', apiKey.slice(0, 8));
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = 'https://api.deepseek.com/chat/completions';
 
-    // Map our roles to Gemini's format: 'assistant' → 'model'
-    const contents = messages
-        .filter((m) => m.role !== 'system')
-        .map((m) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }],
-        }));
+    // Build OpenAI-style message array
+    const apiMessages = [
+        { role: 'system', content: systemPrompt },
+        ...messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+        })),
+    ];
 
     const body = {
-        system_instruction: {
-            parts: [{ text: systemPrompt }],
-        },
-        contents,
+        model: 'deepseek-chat',
+        messages: apiMessages,
+        temperature: 0.7,
     };
 
     const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        },
         body: JSON.stringify(body),
     });
 
     if (!res.ok) {
         const err = await res.text();
-        throw new Error(`Gemini API error ${res.status}: ${err}`);
+        throw new Error(`DeepSeek API error ${res.status}: ${err}`);
     }
 
     const data = await res.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply = data?.choices?.[0]?.message?.content;
 
     if (!reply) {
-        throw new Error('No response from Gemini');
+        throw new Error('No response from DeepSeek');
     }
 
     return reply;
