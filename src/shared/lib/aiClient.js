@@ -5,9 +5,6 @@
  * then sends the full conversation history to Gemini.
  */
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
 /**
  * Build a system prompt that tells the AI who the user is.
  * @param {Object} profile — from useProfileStore
@@ -46,9 +43,14 @@ Always be encouraging, never condescending. If the user speaks in ${profile.lang
  * @returns {Promise<string>} — assistant reply text
  */
 export async function sendMessage(systemPrompt, messages) {
-    if (!GEMINI_API_KEY) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
         throw new Error('Missing VITE_GEMINI_API_KEY in .env');
     }
+
+    console.log('[AI Client] Sending request with key prefix:', apiKey.slice(0, 8), '... length:', apiKey.length);
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     // Map our roles to Gemini's format: 'assistant' → 'model'
     const contents = messages
@@ -65,7 +67,7 @@ export async function sendMessage(systemPrompt, messages) {
         contents,
     };
 
-    const res = await fetch(GEMINI_URL, {
+    const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
