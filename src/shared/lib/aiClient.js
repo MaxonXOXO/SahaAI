@@ -50,7 +50,7 @@ export async function sendMessage(systemPrompt, messages) {
 
     console.log('[AI Client] Sending request with key prefix:', apiKey.slice(0, 8), '... length:', apiKey.length);
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     // Map our roles to Gemini's format: 'assistant' → 'model'
     const contents = messages
