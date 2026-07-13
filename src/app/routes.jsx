@@ -5,6 +5,9 @@ import LoginScreen from '../features/auth/LoginScreen';
 import LanguageSelectionScreen from '../features/language-selection/Languageselectionscreen';
 import SplashScreen from '../features/splash/SplashScreen';
 import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
+import DashboardScreen from '../features/dashboard/DashboardScreen';
+import ReadingModeScreen from '../features/reading-mode/ReadingModeScreen';
+
 /**
  * Temporary placeholder — swap for real feature screen as each
  * teammate builds their section. Keeps routing testable meanwhile.
@@ -43,14 +46,14 @@ export default function AppRoutes() {
                     <Route path="/profile-setup" element={<ProfileSetupScreen />} />
 
                     {/* Main tabs */}
-                    <Route path="/dashboard" element={<Placeholder name="Dashboard (Home)" />} />
+                    <Route path="/dashboard" element={<DashboardScreen />} />
                     <Route path="/ai-chat" element={<Placeholder name="AI Chat Assistant" />} />
                     <Route path="/learn" element={<Placeholder name="Learn" />} />
                     <Route path="/progress" element={<Placeholder name="Progress Dashboard" />} />
                     <Route path="/profile" element={<Placeholder name="Profile & Settings" />} />
 
                     {/* Feature screens */}
-                    <Route path="/dyslexia-reader" element={<Placeholder name="Dyslexia Reading Mode" />} />
+                    <Route path="/reading-mode" element={<ReadingModeScreen />} />
                     <Route path="/text-simplifier" element={<Placeholder name="AI Text Simplifier" />} />
                     <Route path="/math-helper" element={<Placeholder name="Dyscalculia Math Helper" />} />
                     <Route path="/focus-mode" element={<Placeholder name="ADHD Focus Mode" />} />
