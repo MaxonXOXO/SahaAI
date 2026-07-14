@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
  * AskAIBar - Question input bar with Speech-to-Text (SpeechRecognition) support
  * and large touch-friendly buttons for low vision accessibility.
  */
-export default function AskAIBar({ onSubmit, isProcessing, speakFeedback, playBeep }) {
+export default function AskAIBar({ onSubmit, isProcessing, speakFeedback, playBeep, stopSpeaking }) {
     const [query, setQuery] = useState('');
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef(null);
@@ -21,7 +21,15 @@ export default function AskAIBar({ onSubmit, isProcessing, speakFeedback, playBe
 
             rec.onstart = () => {
                 setIsListening(true);
-                speakFeedback("Microphone active. Ask a question about the photo.");
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
+            };
+
+            rec.onspeechstart = () => {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
             };
 
             rec.onresult = (event) => {
@@ -42,7 +50,12 @@ export default function AskAIBar({ onSubmit, isProcessing, speakFeedback, playBe
             };
 
             recognitionRef.current = rec;
+            window.sahaSpeechRecognition = rec;
         }
+
+        return () => {
+            window.sahaSpeechRecognition = null;
+        };
     }, [onSubmit, speakFeedback]);
 
     const toggleListening = () => {
@@ -53,14 +66,28 @@ export default function AskAIBar({ onSubmit, isProcessing, speakFeedback, playBe
         }
 
         if (isListening) {
-            recognitionRef.current.stop();
-        } else {
             try {
-                recognitionRef.current.start();
-            } catch (error) {
-                console.warn('Speech recognition start failed:', error);
-                recognitionRef.current.stop();
+                recognitionRef.current.abort();
+            } catch (err) {
+                // Ignore
             }
+            setIsListening(false);
+        } else {
+            // Cancel any current TTS speaking so it doesn't overlap or interfere.
+            if (stopSpeaking) {
+                stopSpeaking();
+            }
+
+            // Speak feedback, and in the onEnd callback, start recognition
+            speakFeedback("Microphone active. Ask a question.", () => {
+                try {
+                    recognitionRef.current.start();
+                    setIsListening(true);
+                } catch (error) {
+                    console.warn('Speech recognition start failed:', error);
+                    setIsListening(false);
+                }
+            });
         }
     };
 
