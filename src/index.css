@@ -2,118 +2,318 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SahaAI Global CSS
+   
+   Architecture:
+   - CSS custom properties (--a11y-*) are set by useAccessibilityTheme.js
+   - Body classes (a11y-dyslexia, a11y-adhd, etc.) add structural overrides
+   - Tailwind components pick up the CSS vars automatically
+   - Teammates: use token-based Tailwind classes, never hardcode sizes/colours
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── OpenDyslexic Font (loaded from CDN, no build overhead) ─────────────── */
+@import url('https://fonts.cdnfonts.com/css/opendyslexic');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ── Design tokens (defaults, overridden by useAccessibilityTheme) ──────── */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --a11y-font-body:        'Inter', system-ui, sans-serif;
+  --a11y-font-heading:     'Inter', system-ui, sans-serif;
+  --a11y-font-size-base:   16px;
+  --a11y-font-size-md:     18px;
+  --a11y-font-size-lg:     22px;
+  --a11y-line-height:      1.55;
+  --a11y-letter-spacing:   0.01em;
+  --a11y-word-spacing:     normal;
+  --a11y-bg:               #FFFFFF;
+  --a11y-surface:          #FFFFFF;
+  --a11y-text:             #1F2937;
+  --a11y-text-muted:       #6B7280;
+  --a11y-primary:          #6D28D9;
+  --a11y-primary-light:    #8B5CF6;
+  --a11y-border-width:     2px;
+  --a11y-border-radius:    16px;
+  --a11y-min-touch:        48px;
+  --a11y-icon-size:        20px;
+  --a11y-spacing-section:  16px;
+  --a11y-transition:       all 0.2s ease;
+  --a11y-shadow:           0 1px 3px rgba(0,0,0,0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+/* ── Base resets ────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  font-family:    var(--a11y-font-body);
+  font-size:      var(--a11y-font-size-base);
+  line-height:    var(--a11y-line-height);
+  letter-spacing: var(--a11y-letter-spacing);
+  word-spacing:   var(--a11y-word-spacing);
+  color:          var(--a11y-text);
+  background:     var(--a11y-bg);
+  transition:     var(--a11y-transition);
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Shared component token classes ─────────────────────────────────────── */
+/*    These .saha-* classes are used by shared/components/*.jsx              */
+/*    Teammates: use these instead of hardcoded Tailwind classes             */
+
+.saha-surface {
+  background:    var(--a11y-surface);
+  border-radius: var(--a11y-border-radius);
+  box-shadow:    var(--a11y-shadow);
+  transition:    var(--a11y-transition);
+}
+
+.saha-text {
+  font-family:    var(--a11y-font-body);
+  font-size:      var(--a11y-font-size-base);
+  line-height:    var(--a11y-line-height);
+  letter-spacing: var(--a11y-letter-spacing);
+  color:          var(--a11y-text);
+}
+
+.saha-heading {
+  font-family: var(--a11y-font-heading);
+  font-size:   var(--a11y-font-size-md);
+  color:       var(--a11y-text);
+  font-weight: 700;
+}
+
+.saha-btn {
+  min-height:    var(--a11y-min-touch);
+  min-width:     var(--a11y-min-touch);
+  border-radius: var(--a11y-border-radius);
+  font-family:   var(--a11y-font-body);
+  font-size:     var(--a11y-font-size-base);
+  font-weight:   600;
+  transition:    var(--a11y-transition);
+  cursor:        pointer;
+  background:    var(--a11y-primary);
+  color:         #fff;
+  border:        none;
+  padding:       0 24px;
+}
+
+.saha-btn:hover {
+  background: var(--a11y-primary-light);
+}
+
+.saha-icon {
+  width:  var(--a11y-icon-size);
+  height: var(--a11y-icon-size);
+}
+
+.saha-card {
+  background:    var(--a11y-surface);
+  border-radius: var(--a11y-border-radius);
+  border:        var(--a11y-border-width) solid rgba(0,0,0,0.07);
+  box-shadow:    var(--a11y-shadow);
+  padding:       var(--a11y-spacing-section);
+  transition:    var(--a11y-transition);
+}
+
+.saha-input {
+  font-family:    var(--a11y-font-body);
+  font-size:      var(--a11y-font-size-base);
+  line-height:    var(--a11y-line-height);
+  letter-spacing: var(--a11y-letter-spacing);
+  border:         var(--a11y-border-width) solid rgba(0,0,0,0.15);
+  border-radius:  var(--a11y-border-radius);
+  min-height:     var(--a11y-min-touch);
+  padding:        0 16px;
+  width:          100%;
+  background:     var(--a11y-surface);
+  color:          var(--a11y-text);
+  transition:     var(--a11y-transition);
+  outline:        none;
+}
+
+.saha-input:focus {
+  border-color: var(--a11y-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a11y-primary) 20%, transparent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DISABILITY-SPECIFIC BODY CLASS OVERRIDES
+   Applied by useAccessibilityTheme.js to <body>
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── LOW VISION ─────────────────────────────────────────────────────────── */
+.a11y-low-vision {
+  background: #000 !important;
+}
+
+.a11y-low-vision * {
+  font-size:   max(var(--a11y-font-size-base), 20px) !important;
+  line-height: var(--a11y-line-height) !important;
+}
+
+/* Force all text to white unless explicitly coloured for intent */
+.a11y-low-vision p,
+.a11y-low-vision span,
+.a11y-low-vision label,
+.a11y-low-vision li {
+  color: #FFFFFF !important;
+}
+
+.a11y-low-vision h1,
+.a11y-low-vision h2,
+.a11y-low-vision h3 {
+  color: #FACC15 !important; /* high-contrast yellow headings */
+  font-size: var(--a11y-font-size-lg) !important;
+}
+
+/* All interactive elements get thick yellow outline */
+.a11y-low-vision button,
+.a11y-low-vision a,
+.a11y-low-vision [role="button"] {
+  outline:        3px solid #FACC15 !important;
+  outline-offset: 3px !important;
+  min-height:     var(--a11y-min-touch) !important;
+  font-weight:    700 !important;
+}
+
+/* Remove all decorative shadows (waste of contrast) */
+.a11y-low-vision .saha-card,
+.a11y-low-vision .saha-surface {
+  box-shadow: none !important;
+  border: 3px solid #FACC15 !important;
+  background: #111 !important;
+}
+
+/* ── DYSLEXIA ────────────────────────────────────────────────────────────── */
+.a11y-dyslexia body,
+.a11y-dyslexia {
+  background: #FFFBF0;
+}
+
+/* Force OpenDyslexic everywhere */
+.a11y-dyslexia *:not(.lucide):not(svg):not(path) {
+  font-family:    var(--a11y-font-body) !important;
+  letter-spacing: var(--a11y-letter-spacing) !important;
+  word-spacing:   var(--a11y-word-spacing) !important;
+  line-height:    var(--a11y-line-height) !important;
+}
+
+/* No italics — they create visual noise for dyslexia */
+.a11y-dyslexia em,
+.a11y-dyslexia i,
+.a11y-dyslexia blockquote {
+  font-style: normal !important;
+}
+
+/* Underline all links (not just colour) */
+.a11y-dyslexia a {
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+}
+
+/* Left-align text only, no centred body text */
+.a11y-dyslexia p,
+.a11y-dyslexia span,
+.a11y-dyslexia li {
+  text-align: left !important;
+}
+
+/* Warm card backgrounds */
+.a11y-dyslexia .saha-card {
+  background:    #FFF8E7 !important;
+  border-radius: var(--a11y-border-radius) !important;
+}
+
+/* ── ADHD ────────────────────────────────────────────────────────────────── */
+/* Bold visual hierarchy — clear section demarcation */
+.a11y-adhd h1,
+.a11y-adhd h2,
+.a11y-adhd h3 {
+  font-weight:    800 !important;
+  letter-spacing: -0.01em !important;
+  color:          var(--a11y-primary) !important;
+  border-left:    4px solid var(--a11y-primary) !important;
+  padding-left:   12px !important;
+}
+
+/* Generous tap targets */
+.a11y-adhd button,
+.a11y-adhd [role="button"],
+.a11y-adhd a {
+  min-height: var(--a11y-min-touch) !important;
+  min-width:  var(--a11y-min-touch) !important;
+  font-weight: 700 !important;
+}
+
+/* Strong card borders for visual chunking */
+.a11y-adhd .saha-card {
+  border:        var(--a11y-border-width) solid var(--a11y-primary) !important;
+  border-radius: var(--a11y-border-radius) !important;
+}
+
+/* ── AUTISM ──────────────────────────────────────────────────────────────── */
+/* Disable ALL animations — no surprise motion */
+.a11y-autism *,
+.a11y-autism *::before,
+.a11y-autism *::after {
+  animation:        none !important;
+  transition:       none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+
+/* Structured, angular borders for predictability */
+.a11y-autism .saha-card,
+.a11y-autism .saha-surface,
+.a11y-autism .saha-btn,
+.a11y-autism .saha-input {
+  border-radius: 8px !important;
+}
+
+/* Always show a border on interactive elements */
+.a11y-autism button:not([disabled]),
+.a11y-autism input,
+.a11y-autism textarea {
+  border: 2px solid var(--a11y-primary) !important;
+}
+
+/* Icon + text always visible (never icon-only) — enforced by component */
+/* (The component layer handles this via showLabel prop) */
+
+/* ── DYSCALCULIA ─────────────────────────────────────────────────────────── */
+/* Color-code section types so math/numbers have visual anchors */
+.a11y-dyscalculia [data-type="number"],
+.a11y-dyscalculia [data-type="progress"] {
+  background:    color-mix(in srgb, var(--a11y-primary) 15%, transparent) !important;
+  border:        2px solid var(--a11y-primary) !important;
+  border-radius: 8px !important;
+  padding:       4px 8px !important;
+  font-weight:   700 !important;
+}
+
+/* Section dividers for clear visual grouping */
+.a11y-dyscalculia .saha-card + .saha-card {
+  border-top: 3px solid var(--a11y-primary) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Scrollbar styling (clean, accessible)
+   ══════════════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 8px; }
+.a11y-low-vision ::-webkit-scrollbar-thumb { background: #FACC15; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   App shell
+   ══════════════════════════════════════════════════════════════════════════ */
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  width: 100%;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
