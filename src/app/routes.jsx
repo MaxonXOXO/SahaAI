@@ -8,6 +8,8 @@ import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
 import DashboardScreen from '../features/dashboard/DashboardScreen';
 import ChatListScreen from '../features/ai-chat/ChatListScreen';
 import ChatScreen from '../features/ai-chat/ChatScreen';
+import ProfileScreen from '../features/profile/ProfileScreen';
+import EditProfileScreen from '../features/profile/EditProfileScreen';
 import ReadingModeScreen from '../features/reading-mode/ReadingModeScreen';
 import VisionAssistant from '../features/vision-assistant/VisionAssistant';
 
@@ -35,9 +37,10 @@ const NO_NAV_ROUTES = [
 
 export default function AppRoutes() {
     const location = useLocation();
-    // Hide nav on onboarding routes and inside individual chat screens
+    // Hide nav on onboarding routes, inside individual chat screens, and edit profile
     const showNav = !NO_NAV_ROUTES.includes(location.pathname)
-        && !location.pathname.startsWith('/ai-chat/');
+        && !location.pathname.startsWith('/ai-chat/')
+        && location.pathname !== '/edit-profile';
 
     return (
         <>
@@ -56,7 +59,8 @@ export default function AppRoutes() {
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
                     <Route path="/learn" element={<Placeholder name="Learn" />} />
                     <Route path="/progress" element={<Placeholder name="Progress Dashboard" />} />
-                    <Route path="/profile" element={<Placeholder name="Profile & Settings" />} />
+                    <Route path="/profile" element={<ProfileScreen />} />
+                    <Route path="/edit-profile" element={<EditProfileScreen />} />
 
                     {/* Feature screens */}
                     <Route path="/reading-mode" element={<ReadingModeScreen />} />

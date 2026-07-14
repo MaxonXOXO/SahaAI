@@ -8,8 +8,13 @@ import { supabase } from '../shared/lib/supabaseClient';
 const useProfileStore = create((set, get) => ({
     // --- state (mirrors `profiles` table) ---
     id: null,
+    email: '',
     username: '',
     name: '',
+    bio: '',
+    pronouns: '',
+    gender: '',
+    avatar_base64: '',
     role: 'student',
     language: 'en',
 
@@ -101,24 +106,32 @@ const useProfileStore = create((set, get) => ({
             return;
         }
 
+        // Also grab email from auth user
+        const email = user.email ?? '';
+
         set({
             id: data.id,
+            email,
             username: data.username ?? '',
             name: data.name ?? '',
+            bio: data.bio ?? '',
+            pronouns: data.pronouns ?? '',
+            gender: data.gender ?? '',
+            avatar_base64: data.avatar_base64 ?? '',
             role: data.role ?? 'student',
             language: data.language ?? 'en',
             needs: {
-                dyslexia: data.has_dyslexia,
-                adhd: data.has_adhd,
-                autism: data.has_autism,
-                dyscalculia: data.has_dyscalculia,
-                lowVision: data.has_low_vision,
+                dyslexia: data.has_dyslexia ?? false,
+                adhd: data.has_adhd ?? false,
+                autism: data.has_autism ?? false,
+                dyscalculia: data.has_dyscalculia ?? false,
+                lowVision: data.has_low_vision ?? false,
             },
             progress: {
-                readingStreak: data.reading_streak,
-                focusSessionsWeek: data.focus_sessions_week,
-                mathAccuracy: data.math_accuracy,
-                dailyStreak: data.daily_streak,
+                readingStreak: data.reading_streak ?? 0,
+                focusSessionsWeek: data.focus_sessions_week ?? 0,
+                mathAccuracy: data.math_accuracy ?? 0,
+                dailyStreak: data.daily_streak ?? 0,
             },
             isAuthenticated: true,
             loading: false,
@@ -143,6 +156,11 @@ const useProfileStore = create((set, get) => ({
 
         const { error } = await supabase.from('profiles').update({
             name: state.name,
+            username: state.username,
+            bio: state.bio,
+            pronouns: state.pronouns,
+            gender: state.gender,
+            avatar_base64: state.avatar_base64,
             role: state.role,
             language: state.language,
             has_dyslexia: state.needs.dyslexia,
@@ -156,7 +174,8 @@ const useProfileStore = create((set, get) => ({
     },
 
     reset: () => set({
-        id: null, username: '', name: '', role: 'student', language: 'en',
+        id: null, email: '', username: '', name: '', bio: '', pronouns: '', gender: '', avatar_base64: '',
+        role: 'student', language: 'en',
         needs: { dyslexia: false, adhd: false, autism: false, dyscalculia: false, lowVision: false },
         progress: { readingStreak: 0, focusSessionsWeek: 0, mathAccuracy: 0, dailyStreak: 0 },
         isAuthenticated: false, loading: false, error: null,
