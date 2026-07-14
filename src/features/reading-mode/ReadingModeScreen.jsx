@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sliders, ToggleLeft, ToggleRight, Info } from 'lucide-react';
+import { transcribeImageText } from './lib/openai-ocr';
 
 // Custom CSS styling (OpenDyslexic font-face & spacings)
 import './reading-mode.css';
@@ -15,6 +16,7 @@ import FontControls from './components/FontControls';
 import ReadingPane from './components/ReadingPane';
 import PlaybackBar from './components/PlaybackBar';
 import ScanBar from './components/ScanBar';
+import ScanCaptureModal from './components/ScanCaptureModal';
 
 // Default document text for initial mount testing
 const DEFAULT_DOC_TEXT = `SahaAI Reading Assistant is ready.
@@ -38,12 +40,19 @@ export default function ReadingModeScreen() {
         setOverlayOn,
         overlayColor,
         setOverlayColor,
+        voiceEngine,
+        setVoiceEngine,
     } = useReadingSettings();
 
     // Local screen visual states
     const [activeTab, setActiveTab] = useState(null); // 'fonts' | 'spacing' | 'overlay' | 'more' | null
     const [documentText, setDocumentText] = useState(DEFAULT_DOC_TEXT);
     const [statusMessage, setStatusMessage] = useState('');
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanError, setScanError] = useState(false);
+    const [isCaptureModalOpen, setIsCaptureModalOpen] = useState(false);
+    const mobileInputRef = useRef(null);
+    const ocrInputRef = useRef(null);
 
     // 2. Tokenize text into words with absolute offsets
     const words = useMemo(() => {
@@ -69,8 +78,9 @@ export default function ReadingModeScreen() {
         play,
         pause,
         stop,
-        setSpeechRate
-    } = useTextToSpeech({ text: documentText, words });
+        setSpeechRate,
+        isGenerating
+    } = useTextToSpeech({ text: documentText, words, voiceEngine });
 
     // Scroll active word span into center focus
     useEffect(() => {
@@ -81,6 +91,15 @@ export default function ReadingModeScreen() {
             }
         }
     }, [currentWordIndex]);
+
+    // Handle background speech synthesis voice generation loading status
+    useEffect(() => {
+        if (isGenerating) {
+            setStatusMessage('Generating voice...');
+        } else if (statusMessage === 'Generating voice...') {
+            setStatusMessage('');
+        }
+    }, [isGenerating]);
 
     // Calculate audio progress percentage
     const progressPercent = useMemo(() => {
@@ -126,29 +145,67 @@ export default function ReadingModeScreen() {
     ];
 
 
-    // Simulated Scanners Triggers
+    // Capability check: identify if device is mobile/tablet to use native capture
+    const isMobileDevice = () => {
+        if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+        const isIPadOS = navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /macintosh/.test(ua);
+        return isMobileUA || isIPadOS;
+    };
+
+    // Vision-based OCR processing using OpenAI
+    const processImage = async (imageFileOrBlob) => {
+        setIsScanning(true);
+        setScanError(false);
+        setStatusMessage('Processing image with OpenAI Vision...');
+
+        try {
+            const text = await transcribeImageText(imageFileOrBlob);
+
+            // Check if OCR returns empty/garbled text.
+            if (!text || text.trim().length === 0 || !/[a-zA-Z0-9]/.test(text)) {
+                throw new Error('Garbled or empty text');
+            }
+
+            const cleanedText = text.trim();
+            setDocumentText(cleanedText);
+            setStatusMessage('Text successfully scanned!');
+            setTimeout(() => setStatusMessage(''), 3000);
+        } catch (err) {
+            console.error('OCR Error:', err);
+            setScanError(true);
+            if (err.message && err.message.includes('VITE_OPENAI_API_KEY')) {
+                setStatusMessage('Error: OpenAI API Key is missing. Please add VITE_OPENAI_API_KEY in your .env file.');
+            } else {
+                setStatusMessage('Error: Failed to extract readable text. Please try again.');
+            }
+        } finally {
+            setIsScanning(false);
+            if (mobileInputRef.current) {
+                mobileInputRef.current.value = '';
+            }
+            if (ocrInputRef.current) {
+                ocrInputRef.current.value = '';
+            }
+        }
+    };
+
     const handleScanDoc = () => {
         stop();
-        setStatusMessage('Starting camera overlay tracking...');
-        setTimeout(() => {
-            setDocumentText(
-                'Camera Scanned Worksheet:\n\nThe Solar system contains eight planetary orbits surrounding the central Sun.\n\nEarth is situated in the habitable zone, sustaining deep liquid oceans and complex biology.'
-            );
-            setStatusMessage('OCR character scanning successfully parsed!');
-            setTimeout(() => setStatusMessage(''), 2500);
-        }, 1200);
+        setScanError(false);
+
+        if (isMobileDevice()) {
+            mobileInputRef.current?.click();
+        } else {
+            setIsCaptureModalOpen(true);
+        }
     };
 
     const handleOcrProcess = () => {
         stop();
-        setStatusMessage('Segmenting layout structures and cleaning document blocks (OCR)...');
-        setTimeout(() => {
-            setDocumentText(
-                'Scanned Textbook Section:\n\nGravity pulls objects toward center vectors proportional to their mass.\n\nThis basic law structures tides, keeps moons linked to planetary targets, and regulates stellar cluster dynamics.'
-            );
-            setStatusMessage('Character recognition resolved!');
-            setTimeout(() => setStatusMessage(''), 2500);
-        }, 1500);
+        setScanError(false);
+        ocrInputRef.current?.click();
     };
 
     const handlePlayPauseToggle = () => {
@@ -308,14 +365,45 @@ export default function ReadingModeScreen() {
                             transition={{ duration: 0.18 }}
                             className="overflow-hidden mt-1"
                         >
-                            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card p-4 shadow-lg text-left flex flex-col gap-2">
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wide">
-                                    <Info size={14} className="text-primary" />
-                                    <span>Settings Shell</span>
+                            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card p-4 shadow-lg text-left flex flex-col gap-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Voice Synthesis Engine
+                                    </span>
+                                    <div className="flex bg-gray-50 dark:bg-gray-850 p-0.5 rounded-xl border border-gray-200 dark:border-gray-700">
+                                        <button
+                                            onClick={() => {
+                                                stop();
+                                                setVoiceEngine('browser');
+                                            }}
+                                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                                                voiceEngine === 'browser'
+                                                    ? 'bg-primary text-white shadow-sm'
+                                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            Standard
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                stop();
+                                                setVoiceEngine('openai');
+                                            }}
+                                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                                                voiceEngine === 'openai'
+                                                    ? 'bg-primary text-white shadow-sm'
+                                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            OpenAI Premium
+                                        </button>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-gray-400 leading-normal">
-                                    Additional accessibility settings such as visual rulers, speech voice filters, and baseline profiles will be structured here in future iterations.
-                                </p>
+                                <div className="border-t border-gray-100 dark:border-gray-800 pt-2">
+                                    <p className="text-[11px] text-gray-400 leading-normal">
+                                        OpenAI Premium Voice generates natural-sounding human speech. Standard uses your local browser synthesis engine (free).
+                                    </p>
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -361,6 +449,44 @@ export default function ReadingModeScreen() {
                 onScan={handleScanDoc}
                 onOcr={handleOcrProcess}
                 onListen={handlePlayPauseToggle}
+                isScanning={isScanning}
+                hasError={scanError}
+            />
+
+            {/* Hidden Input for Mobile Camera Capture */}
+            <input
+                type="file"
+                ref={mobileInputRef}
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        processImage(file);
+                    }
+                }}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+            />
+
+            {/* Hidden Input for Plain OCR File Selection */}
+            <input
+                type="file"
+                ref={ocrInputRef}
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        processImage(file);
+                    }
+                }}
+                accept="image/*"
+                className="hidden"
+            />
+
+            {/* Laptop/Desktop Webcam & File Upload Modal */}
+            <ScanCaptureModal
+                isOpen={isCaptureModalOpen}
+                onClose={() => setIsCaptureModalOpen(false)}
+                onImageSelected={processImage}
             />
         </div>
     );
