@@ -19,6 +19,9 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
+            if (streamRef.current._mockInterval) {
+                clearInterval(streamRef.current._mockInterval);
+            }
             streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
         }
@@ -28,8 +31,53 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
     }, []);
 
     const startCamera = useCallback(async () => {
+        if (playBeep) playBeep(440, 0.08);
         stopCamera();
         setHasPermission(null);
+
+        // Check for mock camera parameter first
+        const isMockCamera = window.location.search.includes('mock_camera');
+        if (isMockCamera) {
+            const canvasMock = document.createElement('canvas');
+            canvasMock.width = 640;
+            canvasMock.height = 480;
+            const ctxMock = canvasMock.getContext('2d');
+            let angle = 0;
+            const interval = setInterval(() => {
+                if (!ctxMock) return;
+                ctxMock.fillStyle = '#1e293b';
+                ctxMock.fillRect(0, 0, 640, 480);
+                
+                // Draw a pulsing circle
+                ctxMock.strokeStyle = '#3b82f6';
+                ctxMock.lineWidth = 4;
+                ctxMock.beginPath();
+                ctxMock.arc(320, 240, 80 + Math.sin(angle) * 20, 0, 2 * Math.PI);
+                ctxMock.stroke();
+                
+                ctxMock.fillStyle = '#ffffff';
+                ctxMock.font = '24px sans-serif';
+                ctxMock.textAlign = 'center';
+                ctxMock.fillText('Simulated Camera Viewfinder Feed', 320, 240);
+                
+                // Add a dynamic timestamp to ensure base64 checksum changes
+                ctxMock.fillStyle = '#64748b';
+                ctxMock.font = '16px sans-serif';
+                ctxMock.fillText(`Frame Time: ${Date.now()}`, 320, 280);
+                
+                angle += 0.1;
+            }, 100);
+
+            const mockStream = canvasMock.captureStream(10);
+            mockStream._mockInterval = interval;
+            streamRef.current = mockStream;
+            if (videoRef.current) {
+                videoRef.current.srcObject = mockStream;
+            }
+            setHasPermission(true);
+            speakFeedback("Camera active. Point at your target and tap Capture.");
+            return;
+        }
 
         const constraints = {
             video: {
@@ -53,7 +101,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
             setHasPermission(false);
             speakFeedback("Camera permission denied or camera not found. Please enable it in browser settings.");
         }
-    }, [facingMode, speakFeedback, stopCamera]);
+    }, [facingMode, speakFeedback, stopCamera, playBeep]);
 
     // Initial camera setup
     useEffect(() => {
@@ -183,7 +231,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
                             </button>
                             <button
                                 onClick={toggleActive}
-                                aria-label="Pause Camera Feed"
+                                aria-label={isActive ? "Pause Camera Feed" : "Resume Camera Feed"}
                                 className="w-12 h-12 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white border-2 border-white"
                             >
                                 <Play size={22} />

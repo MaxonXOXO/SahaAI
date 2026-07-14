@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
  * useSpeak - Custom Hook for Speech Synthesis and Accessibility Audio Feedback
@@ -9,6 +9,7 @@ export default function useSpeak() {
     const [speaking, setSpeaking] = useState(false);
     const [paused, setPaused] = useState(false);
     const synthRef = useRef(window.speechSynthesis);
+    const currentUtteranceRef = useRef(null);
 
     useEffect(() => {
         if (!synthRef.current) return;
@@ -29,11 +30,20 @@ export default function useSpeak() {
      * @param {number} rate - Speech rate multiplier (0.5 to 2)
      * @param {function} onEnd - Callback function when speech finishes
      */
-    const speak = (text, rate = 1.0, onEnd = null) => {
+    const speak = useCallback((text, rate = 1.0, onEnd = null) => {
         if (!synthRef.current) return;
 
         // Stop any current reading
         synthRef.current.cancel();
+
+        // Mutually exclusive: Abort active speech recognition if it is listening
+        if (window.sahaSpeechRecognition) {
+            try {
+                window.sahaSpeechRecognition.abort();
+            } catch (e) {
+                console.warn('Failed to abort speech recognition during speak:', e);
+            }
+        }
 
         if (!text || typeof text !== 'string') return;
 
@@ -42,14 +52,22 @@ export default function useSpeak() {
 
         const utterance = new SpeechSynthesisUtterance(cleanText);
         utterance.rate = rate;
+        currentUtteranceRef.current = utterance;
 
         utterance.onend = () => {
+            if (currentUtteranceRef.current !== utterance) return;
             setSpeaking(false);
             setPaused(false);
             if (onEnd) onEnd();
         };
 
         utterance.onerror = (e) => {
+            if (currentUtteranceRef.current !== utterance) return;
+            if (e.error === 'interrupted' || e.error === 'canceled') {
+                setSpeaking(false);
+                setPaused(false);
+                return;
+            }
             console.error('SpeechSynthesisUtterance error:', e);
             setSpeaking(false);
             setPaused(false);
@@ -58,36 +76,37 @@ export default function useSpeak() {
         synthRef.current.speak(utterance);
         setSpeaking(true);
         setPaused(false);
-    };
+    }, []);
 
     /** Stops current speech output */
-    const stop = () => {
+    const stop = useCallback(() => {
         if (!synthRef.current) return;
         synthRef.current.cancel();
+        currentUtteranceRef.current = null;
         setSpeaking(false);
         setPaused(false);
-    };
+    }, []);
 
     /** Pauses speech output */
-    const pause = () => {
+    const pause = useCallback(() => {
         if (!synthRef.current) return;
         synthRef.current.pause();
         setPaused(true);
-    };
+    }, []);
 
     /** Resumes speech output */
-    const resume = () => {
+    const resume = useCallback(() => {
         if (!synthRef.current) return;
         synthRef.current.resume();
         setPaused(false);
-    };
+    }, []);
 
     /**
      * Plays a high contrast beep sound to help low-vision users confirm buttons actions
      * @param {number} freq - Sound frequency in Hz (e.g. 440, 880)
      * @param {number} duration - Sound duration in seconds
      */
-    const playBeep = (freq = 440, duration = 0.08) => {
+    const playBeep = useCallback((freq = 440, duration = 0.08) => {
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return;
@@ -111,7 +130,7 @@ export default function useSpeak() {
         } catch (error) {
             console.warn('Speech beep feedback audio play failed:', error);
         }
-    };
+    }, []);
 
     return {
         speak,
