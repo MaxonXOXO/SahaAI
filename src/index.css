@@ -134,47 +134,163 @@ body {
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── LOW VISION ─────────────────────────────────────────────────────────── */
-.a11y-low-vision {
-  background: #000 !important;
+/*
+ * Strategy: Tailwind generates bg-white, bg-gray-50, text-gray-800, etc.
+ * as inline class names. CSS vars alone don't override those.
+ * We use aggressive !important rules on ALL known Tailwind color patterns
+ * to force the full UI into high-contrast black/white/yellow mode.
+ * Yellow (#FACC15) = primary interactive / headings
+ * White (#FFFFFF)  = body text
+ * Black (#0A0A0A)  = all backgrounds and surfaces
+ */
+
+/* ── Body and root backgrounds ── */
+.a11y-low-vision,
+.a11y-low-vision body,
+.a11y-low-vision #root,
+.a11y-low-vision > div {
+  background-color: #0A0A0A !important;
 }
 
+/* Nuke ALL Tailwind white/gray/light background classes */
+.a11y-low-vision [class*="bg-white"],
+.a11y-low-vision [class*="bg-gray-50"],
+.a11y-low-vision [class*="bg-gray-100"],
+.a11y-low-vision [class*="bg-gray-200"],
+.a11y-low-vision [class*="bg-surface"],
+.a11y-low-vision [class*="bg-slate"],
+.a11y-low-vision [class*="bg-zinc"],
+.a11y-low-vision [class*="bg-neutral"],
+.a11y-low-vision [class*="bg-stone"] {
+  background-color: #141414 !important;
+}
+
+.a11y-low-vision [class*="bg-gray-700"],
+.a11y-low-vision [class*="bg-gray-800"],
+.a11y-low-vision [class*="bg-gray-900"],
+.a11y-low-vision [class*="dark:bg-"] {
+  background-color: #0A0A0A !important;
+}
+
+/* Nuke primary/purple/violet background tints */
+.a11y-low-vision [class*="bg-primary"],
+.a11y-low-vision [class*="bg-purple"],
+.a11y-low-vision [class*="bg-violet"],
+.a11y-low-vision [class*="bg-indigo"] {
+  background-color: #1a1a00 !important; /* dark yellow tint */
+}
+
+/* ── All text → white by default ── */
 .a11y-low-vision * {
-  font-size:   max(var(--a11y-font-size-base), 20px) !important;
-  line-height: var(--a11y-line-height) !important;
-}
-
-/* Force all text to white unless explicitly coloured for intent */
-.a11y-low-vision p,
-.a11y-low-vision span,
-.a11y-low-vision label,
-.a11y-low-vision li {
   color: #FFFFFF !important;
+  border-color: #333333 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
 }
 
+/* ── Headings and labels → bright yellow ── */
 .a11y-low-vision h1,
 .a11y-low-vision h2,
-.a11y-low-vision h3 {
-  color: #FACC15 !important; /* high-contrast yellow headings */
-  font-size: var(--a11y-font-size-lg) !important;
+.a11y-low-vision h3,
+.a11y-low-vision h4,
+.a11y-low-vision [class*="font-bold"],
+.a11y-low-vision [class*="font-semibold"],
+.a11y-low-vision [class*="font-extrabold"] {
+  color: #FACC15 !important;
 }
 
-/* All interactive elements get thick yellow outline */
-.a11y-low-vision button,
-.a11y-low-vision a,
-.a11y-low-vision [role="button"] {
-  outline:        3px solid #FACC15 !important;
-  outline-offset: 3px !important;
-  min-height:     var(--a11y-min-touch) !important;
-  font-weight:    700 !important;
+/* ── Muted/placeholder text → light gray (still readable) ── */
+.a11y-low-vision [class*="text-gray-400"],
+.a11y-low-vision [class*="text-gray-500"],
+.a11y-low-vision [class*="text-gray-600"],
+.a11y-low-vision [class*="text-muted"],
+.a11y-low-vision placeholder {
+  color: #AAAAAA !important;
 }
 
-/* Remove all decorative shadows (waste of contrast) */
+/* ── Primary colored text → yellow ── */
+.a11y-low-vision [class*="text-primary"],
+.a11y-low-vision [class*="text-purple"],
+.a11y-low-vision [class*="text-violet"],
+.a11y-low-vision [class*="text-indigo"] {
+  color: #FACC15 !important;
+}
+
+/* ── Cards, panels, modals, navbars → very dark surfaces ── */
 .a11y-low-vision .saha-card,
-.a11y-low-vision .saha-surface {
+.a11y-low-vision .saha-surface,
+.a11y-low-vision [class*="rounded"],
+.a11y-low-vision nav {
+  background-color: #141414 !important;
+  border-color: #FACC15 !important;
+  border-width: 2px !important;
   box-shadow: none !important;
-  border: 3px solid #FACC15 !important;
-  background: #111 !important;
 }
+
+/* ── Buttons → black bg, yellow border and text ── */
+.a11y-low-vision button,
+.a11y-low-vision [role="button"] {
+  background-color: #1C1C00 !important;
+  color: #FACC15 !important;
+  border: 2px solid #FACC15 !important;
+  outline: 3px solid #FACC15 !important;
+  outline-offset: 2px !important;
+  min-height: var(--a11y-min-touch) !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+}
+
+/* Primary filled buttons stay yellow-on-black (not transparent) */
+.a11y-low-vision .bg-primary,
+.a11y-low-vision [class*="bg-primary"] {
+  background-color: #FACC15 !important;
+  color: #000000 !important;
+}
+
+/* ── Inputs / textareas ── */
+.a11y-low-vision input,
+.a11y-low-vision textarea,
+.a11y-low-vision select {
+  background-color: #0A0A0A !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FACC15 !important;
+  caret-color: #FACC15 !important;
+}
+
+.a11y-low-vision input::placeholder,
+.a11y-low-vision textarea::placeholder {
+  color: #888888 !important;
+}
+
+/* ── Dividers / borders ── */
+.a11y-low-vision [class*="border"],
+.a11y-low-vision [class*="divide"] > * {
+  border-color: #333333 !important;
+}
+
+/* ── Avatars / icon circles → dark with yellow icon ── */
+.a11y-low-vision [class*="rounded-full"]:not(button):not(img) {
+  background-color: #1C1C00 !important;
+  border: 2px solid #FACC15 !important;
+}
+
+/* ── Images stay intact ── */
+.a11y-low-vision img {
+  filter: contrast(1.2) brightness(0.95);
+  border: 2px solid #555 !important;
+}
+
+/* ── SVG icons → inherit white ── */
+.a11y-low-vision svg,
+.a11y-low-vision svg * {
+  color: inherit !important;
+}
+
+/* ── Scrollbar ── */
+.a11y-low-vision ::-webkit-scrollbar { width: 6px; }
+.a11y-low-vision ::-webkit-scrollbar-track { background: #0A0A0A; }
+.a11y-low-vision ::-webkit-scrollbar-thumb { background: #FACC15; border-radius: 4px; }
+
 
 /* ── DYSLEXIA ────────────────────────────────────────────────────────────── */
 .a11y-dyslexia body,
