@@ -13,7 +13,7 @@ const NEED_META = {
 };
 
 const QUICK_ACCESS = [
-    { key: 'read', label: 'Read Text', icon: FileText, path: '/text-simplifier', color: 'bg-primary' },
+    { key: 'read', label: 'Read Text', icon: FileText, path: '/reading-mode', color: 'bg-primary' },
     { key: 'math', label: 'Math Helper', icon: Calculator, path: '/math-helper', color: 'bg-accent-dyscalculia' },
     { key: 'social', label: 'Social Stories', icon: MessageSquare, path: '/social-story', color: 'bg-accent-autism' },
     { key: 'focus', label: 'Focus Mode', icon: Sparkles, path: '/focus-mode', color: 'bg-accent-adhd' },

@@ -1,0 +1,33 @@
+/* features/reading-mode/reading-mode.css */
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/fonts/OpenDyslexic-Regular.woff2') format('woff2'),
+         url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/fonts/OpenDyslexic-Regular.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.font-opendyslexic {
+    font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
+}
+
+.font-sans-default {
+    font-family: system-ui, -apple-system, sans-serif !important;
+}
+
+/* state-driven spacing classes */
+.spacing-normal {
+    letter-spacing: normal !important;
+    line-height: 1.55 !important;
+}
+
+.spacing-relaxed {
+    letter-spacing: 0.08em !important;
+    line-height: 2.0 !important;
+}
+
+.spacing-wide {
+    letter-spacing: 0.16em !important;
+    line-height: 2.5 !important;
+}

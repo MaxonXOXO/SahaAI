@@ -8,8 +8,9 @@ import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
 import DashboardScreen from '../features/dashboard/DashboardScreen';
 import ChatListScreen from '../features/ai-chat/ChatListScreen';
 import ChatScreen from '../features/ai-chat/ChatScreen';
-import ProfileScreen from '../features/profile/ProfileScreen';
-import EditProfileScreen from '../features/profile/EditProfileScreen';
+import ReadingModeScreen from '../features/reading-mode/ReadingModeScreen';
+import VisionAssistant from '../features/vision-assistant/VisionAssistant';
+
 /**
  * Temporary placeholder — swap for real feature screen as each
  * teammate builds their section. Keeps routing testable meanwhile.
@@ -55,18 +56,17 @@ export default function AppRoutes() {
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
                     <Route path="/learn" element={<Placeholder name="Learn" />} />
                     <Route path="/progress" element={<Placeholder name="Progress Dashboard" />} />
-                    <Route path="/profile" element={<ProfileScreen />} />
-                    <Route path="/edit-profile" element={<EditProfileScreen />} />
+                    <Route path="/profile" element={<Placeholder name="Profile & Settings" />} />
 
                     {/* Feature screens */}
-                    <Route path="/dyslexia-reader" element={<Placeholder name="Dyslexia Reading Mode" />} />
+                    <Route path="/reading-mode" element={<ReadingModeScreen />} />
                     <Route path="/text-simplifier" element={<Placeholder name="AI Text Simplifier" />} />
                     <Route path="/math-helper" element={<Placeholder name="Dyscalculia Math Helper" />} />
                     <Route path="/focus-mode" element={<Placeholder name="ADHD Focus Mode" />} />
                     <Route path="/routine-builder" element={<Placeholder name="Routine Builder" />} />
                     <Route path="/social-story" element={<Placeholder name="Social Story Generator" />} />
                     <Route path="/conversation-practice" element={<Placeholder name="Conversation Practice" />} />
-                    <Route path="/vision-assistant" element={<Placeholder name="Vision Assistant" />} />
+                    <Route path="/vision-assistant" element={<VisionAssistant />} />
                     <Route path="/document-reader" element={<Placeholder name="Document Reader" />} />
                     <Route path="/settings" element={<Placeholder name="Settings" />} />
 
