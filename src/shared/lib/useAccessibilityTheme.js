@@ -1,34 +1,54 @@
 /**
  * useAccessibilityTheme.js
  *
- * The SINGLE source of truth for all adaptive UI changes in SahaAI.
+ * Reactive global UI adaptation engine for SahaAI.
  *
- * How it works:
- *   - Reads active disability needs from useProfileStore
- *   - Computes a set of CSS custom property overrides and body class tokens
- *   - Applied once in App.jsx via the <AccessibilityProvider> wrapper
- *   - All shared components (Button, Card, ScreenHeader, BottomNav etc.)
- *     automatically respond — no per-screen changes required
+ * Rules:
+ * 1. If NO disabilities are active → app looks EXACTLY like default (no changes)
+ * 2. Each disability ONLY overrides what it specifically needs — nothing more
+ * 3. Multiple active disabilities compose cleanly (no conflicts)
+ * 4. Changes apply instantly on need toggle (Zustand subscription)
  *
- * For teammates building features:
- *   - Use the Tailwind tokens already in tailwind.config.js (text-base-sm,
- *     text-base-md, bg-surface, text-primary, etc.)
- *   - The hook will override these tokens' underlying CSS vars at runtime
- *   - Never hardcode font sizes or colours in feature screens; always use tokens
+ * What each disability changes:
+ *   dyslexia    → font (OpenDyslexic), spacing, warm bg, no italics
+ *   adhd        → bold section markers, larger tap targets, bold active states
+ *   autism      → zero animations, structured/angular borders, calm palette, icon+label always
+ *   lowVision   → large font, ultra-high contrast (yellow on black), thick borders
+ *   dyscalculia → minimal: colour-coded number/progress elements only (no layout change)
  *
- * Disability mappings:
- *   dyslexia   → OpenDyslexic font, warm cream bg, wide spacing, no italics
- *   adhd       → High contrast, bold section markers, large tap targets
- *   autism     → Muted palette, strong borders, zero surprise animations
- *   lowVision  → Max font, ultra-high contrast, thick borders, huge targets
- *   dyscalculia → Distinct color-coded surfaces, progress as bars
+ * Cross-device persistence:
+ *   On login, fetchProfile() loads needs from Supabase into Zustand.
+ *   This hook runs reactively whenever needs change — so fresh logins
+ *   automatically restore theming from the server without any extra wiring.
  */
 
 import { useEffect } from 'react';
 import useProfileStore from '../../store/useProfileStore';
 
-// Priority order when multiple needs are active (highest wins for conflicting rules)
-const PRIORITY = ['lowVision', 'dyslexia', 'adhd', 'autism', 'dyscalculia'];
+// Default CSS var values — what the app looks like with NO accessibility mode
+const DEFAULTS = {
+    '--a11y-font-body':        "'Inter', system-ui, sans-serif",
+    '--a11y-font-heading':     "'Inter', system-ui, sans-serif",
+    '--a11y-font-size-base':   '16px',
+    '--a11y-font-size-md':     '18px',
+    '--a11y-font-size-lg':     '22px',
+    '--a11y-line-height':      '1.55',
+    '--a11y-letter-spacing':   'normal',
+    '--a11y-word-spacing':     'normal',
+    '--a11y-bg':               '',           // empty = let Tailwind/system handle it
+    '--a11y-surface':          '',
+    '--a11y-text':             '',
+    '--a11y-text-muted':       '',
+    '--a11y-primary':          '#6D28D9',
+    '--a11y-primary-light':    '#8B5CF6',
+    '--a11y-border-width':     '2px',
+    '--a11y-border-radius':    '16px',
+    '--a11y-min-touch':        '48px',
+    '--a11y-icon-size':        '20px',
+    '--a11y-spacing-section':  '16px',
+    '--a11y-transition':       'all 0.2s ease',
+    '--a11y-shadow':           '0 1px 3px rgba(0,0,0,0.08)',
+};
 
 export default function useAccessibilityTheme() {
     const needs = useProfileStore((s) => s.needs);
@@ -37,7 +57,7 @@ export default function useAccessibilityTheme() {
         const root = document.documentElement;
         const body = document.body;
 
-        // ── Clear all previous a11y classes ──────────────────────────────────
+        // ── Step 1: Reset body classes and CSS vars to default ───────────────
         body.classList.remove(
             'a11y-dyslexia',
             'a11y-adhd',
@@ -45,61 +65,34 @@ export default function useAccessibilityTheme() {
             'a11y-low-vision',
             'a11y-dyscalculia'
         );
+        Object.entries(DEFAULTS).forEach(([k, v]) => {
+            if (v === '') root.style.removeProperty(k);
+            else root.style.setProperty(k, v);
+        });
 
-        // ── Reset all CSS vars to defaults ───────────────────────────────────
-        const defaults = {
-            '--a11y-font-body': "'Inter', system-ui, sans-serif",
-            '--a11y-font-heading': "'Inter', system-ui, sans-serif",
-            '--a11y-font-size-base': '16px',
-            '--a11y-font-size-md': '18px',
-            '--a11y-font-size-lg': '22px',
-            '--a11y-line-height': '1.55',
-            '--a11y-letter-spacing': '0.01em',
-            '--a11y-word-spacing': 'normal',
-            '--a11y-bg': '#FFFFFF',
-            '--a11y-bg-dark': '#1F2937',
-            '--a11y-surface': '#FFFFFF',
-            '--a11y-surface-dark': '#1F2937',
-            '--a11y-text': '#1F2937',
-            '--a11y-text-muted': '#6B7280',
-            '--a11y-primary': '#6D28D9',
-            '--a11y-primary-light': '#8B5CF6',
-            '--a11y-border-width': '2px',
-            '--a11y-border-radius': '16px',
-            '--a11y-min-touch': '48px',
-            '--a11y-icon-size': '20px',
-            '--a11y-spacing-section': '16px',
-            '--a11y-transition': 'all 0.2s ease',
-            '--a11y-shadow': '0 1px 3px rgba(0,0,0,0.08)',
-        };
-        Object.entries(defaults).forEach(([k, v]) => root.style.setProperty(k, v));
+        // ── Step 2: Check if ANY accessibility mode is active ────────────────
+        const anyActive = Object.values(needs).some(Boolean);
+        if (!anyActive) return; // ← No disabilities: app stays exactly as default
 
-        // ── Apply per-disability overrides (in priority order) ───────────────
+        // ── Step 3: Apply changes per active disability ───────────────────────
 
-        // LOW VISION — highest priority: maximum size, ultra-high contrast
+        // LOW VISION — largest footprint: overrides colour, size, contrast
         if (needs.lowVision) {
             body.classList.add('a11y-low-vision');
             root.style.setProperty('--a11y-font-size-base', '20px');
             root.style.setProperty('--a11y-font-size-md', '24px');
             root.style.setProperty('--a11y-font-size-lg', '30px');
             root.style.setProperty('--a11y-line-height', '1.8');
-            root.style.setProperty('--a11y-letter-spacing', '0.03em');
             root.style.setProperty('--a11y-min-touch', '64px');
             root.style.setProperty('--a11y-icon-size', '28px');
             root.style.setProperty('--a11y-border-width', '3px');
-            root.style.setProperty('--a11y-border-radius', '12px');
-            // Force dark-mode-like ultra contrast regardless of system pref
-            root.style.setProperty('--a11y-bg', '#000000');
-            root.style.setProperty('--a11y-surface', '#111111');
-            root.style.setProperty('--a11y-text', '#FFFFFF');
-            root.style.setProperty('--a11y-text-muted', '#D1D5DB');
-            root.style.setProperty('--a11y-primary', '#FACC15'); // bright yellow for max contrast
-            root.style.setProperty('--a11y-primary-light', '#FDE68A');
-            root.style.setProperty('--a11y-shadow', 'none');
             root.style.setProperty('--a11y-transition', 'none');
+            root.style.setProperty('--a11y-shadow', 'none');
+            root.style.setProperty('--a11y-primary', '#FACC15');       // high-contrast yellow
+            root.style.setProperty('--a11y-primary-light', '#FDE68A');
         }
 
-        // DYSLEXIA — warm bg, OpenDyslexic font, wide spacing
+        // DYSLEXIA — font + spacing + warm background
         if (needs.dyslexia) {
             body.classList.add('a11y-dyslexia');
             root.style.setProperty('--a11y-font-body', "'OpenDyslexic', 'Comic Sans MS', cursive");
@@ -107,56 +100,46 @@ export default function useAccessibilityTheme() {
             root.style.setProperty('--a11y-letter-spacing', '0.08em');
             root.style.setProperty('--a11y-word-spacing', '0.18em');
             root.style.setProperty('--a11y-line-height', '1.9');
-            root.style.setProperty('--a11y-font-size-base', '17px');
-            root.style.setProperty('--a11y-font-size-md', '19px');
-            // Cream warm background reduces visual stress
+            root.style.setProperty('--a11y-border-radius', '20px');
+            // Only set warm colours if low-vision hasn't already claimed colour
             if (!needs.lowVision) {
-                root.style.setProperty('--a11y-bg', '#FFFBF0');
-                root.style.setProperty('--a11y-surface', '#FFF8E7');
-                root.style.setProperty('--a11y-text', '#2D1B00');
-                root.style.setProperty('--a11y-primary', '#B45309'); // warm amber
+                root.style.setProperty('--a11y-primary', '#B45309');
                 root.style.setProperty('--a11y-primary-light', '#D97706');
             }
-            root.style.setProperty('--a11y-border-radius', '20px'); // softer corners
         }
 
-        // ADHD — vibrant, high contrast, larger targets, bold markers
+        // ADHD — bold structure, larger targets, no colour override
         if (needs.adhd) {
             body.classList.add('a11y-adhd');
-            root.style.setProperty('--a11y-font-size-base', '17px');
-            root.style.setProperty('--a11y-line-height', '1.65');
-            root.style.setProperty('--a11y-min-touch', '56px');
-            root.style.setProperty('--a11y-icon-size', '24px');
+            root.style.setProperty('--a11y-min-touch', needs.lowVision ? '64px' : '56px');
+            root.style.setProperty('--a11y-icon-size', needs.lowVision ? '28px' : '24px');
             root.style.setProperty('--a11y-spacing-section', '20px');
             if (!needs.lowVision && !needs.dyslexia) {
-                root.style.setProperty('--a11y-primary', '#DC2626'); // bold red-orange
+                root.style.setProperty('--a11y-primary', '#DC2626');
                 root.style.setProperty('--a11y-primary-light', '#EF4444');
             }
-            root.style.setProperty('--a11y-border-width', '2.5px');
         }
 
-        // AUTISM — muted calm palette, strong structure, zero surprise animations
+        // AUTISM — zero animation, angular structure, calm palette
         if (needs.autism) {
             body.classList.add('a11y-autism');
-            root.style.setProperty('--a11y-transition', 'none'); // no animations = no sensory overload
-            root.style.setProperty('--a11y-border-radius', '8px'); // angular = structured, predictable
-            root.style.setProperty('--a11y-border-width', '2px');
+            root.style.setProperty('--a11y-transition', 'none');      // critical: no motion
+            root.style.setProperty('--a11y-border-radius', '8px');    // structured/angular
             root.style.setProperty('--a11y-spacing-section', '20px');
             if (!needs.lowVision && !needs.dyslexia && !needs.adhd) {
-                root.style.setProperty('--a11y-primary', '#2563EB'); // calm blue
+                root.style.setProperty('--a11y-primary', '#2563EB');  // calm blue
                 root.style.setProperty('--a11y-primary-light', '#3B82F6');
-                root.style.setProperty('--a11y-bg', '#F8FAFC');
-                root.style.setProperty('--a11y-surface', '#F1F5F9');
             }
         }
 
-        // DYSCALCULIA — color-coded sections, warm accents
+        // DYSCALCULIA — minimal UI change, only colour-codes number elements
+        // No layout, font, or colour changes — just adds the body class
+        // which CSS uses to style [data-type="number"] elements
         if (needs.dyscalculia) {
             body.classList.add('a11y-dyscalculia');
-            if (!needs.lowVision && !needs.dyslexia && !needs.adhd && !needs.autism) {
-                root.style.setProperty('--a11y-primary', '#059669'); // green = go / correct
-                root.style.setProperty('--a11y-primary-light', '#10B981');
-            }
+            // No CSS var overrides — dyscalculia is handled at component level
+            // by adding data-type="number" to numeric displays
         }
+
     }, [needs]);
 }
