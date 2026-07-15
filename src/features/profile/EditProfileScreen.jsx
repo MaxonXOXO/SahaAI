@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Check, Loader2, BookOpen, Zap, Users, Calculator, Eye } from 'lucide-react';
 import Cropper from 'react-easy-crop';
@@ -40,7 +40,6 @@ const NEEDS_META = [
 
 const PRONOUN_OPTIONS = ['He/Him', 'She/Her', 'They/Them', 'He/They', 'She/They', 'Prefer not to say'];
 const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Genderfluid', 'Prefer not to say', 'Prefer to self-describe'];
-const ROLE_OPTIONS = ['student', 'parent', 'teacher', 'caregiver'];
 
 // ─── Input helper ────────────────────────────────────────────────────────────
 function Field({ label, sublabel, children }) {
@@ -55,6 +54,7 @@ function Field({ label, sublabel, children }) {
     );
 }
 
+// ─── Text Input helper ────────────────────────────────────────────────────────────
 function TextInput({ value, onChange, placeholder, disabled, multiline }) {
     const cls = "w-full bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-base-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-primary/60 transition-colors resize-none";
     return multiline
@@ -75,6 +75,7 @@ export default function EditProfileScreen() {
         bio: profile.bio || '',
         pronouns: profile.pronouns || '',
         gender: profile.gender || '',
+        primaryMode: profile.primaryMode || '',
     });
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -89,6 +90,20 @@ export default function EditProfileScreen() {
     const [preview, setPreview] = useState(profile.avatar_base64 || null);
 
     const handleField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+    // Get active needs list
+    const activeNeeds = Object.entries(profile.needs || {})
+        .filter(([, active]) => active)
+        .map(([key]) => key);
+
+    // Automatically sync primaryMode if only 1 need is selected
+    useEffect(() => {
+        if (activeNeeds.length === 1 && form.primaryMode !== activeNeeds[0]) {
+            setForm(f => ({ ...f, primaryMode: activeNeeds[0] }));
+        } else if (activeNeeds.length === 0 && form.primaryMode !== '') {
+            setForm(f => ({ ...f, primaryMode: '' }));
+        }
+    }, [activeNeeds, form.primaryMode]);
 
     // ── Image pick ──
     const handleFilePick = (e) => {
@@ -124,6 +139,7 @@ export default function EditProfileScreen() {
             pronouns: form.pronouns,
             gender: form.gender,
             avatar_base64: preview || profile.avatar_base64 || '',
+            primary_mode: form.primaryMode || null,
         };
 
         // Direct Supabase update to make sure it lands
@@ -134,8 +150,16 @@ export default function EditProfileScreen() {
             await supabase.from('profiles').update(updates).eq('id', uid);
         }
 
-        // Update Zustand store
-        await updateProfile(updates);
+        // Update Zustand store (mapping key correctly to camelCase primaryMode)
+        await updateProfile({
+            name: form.name,
+            username: form.username,
+            bio: form.bio,
+            pronouns: form.pronouns,
+            gender: form.gender,
+            avatar_base64: preview || profile.avatar_base64 || '',
+            primaryMode: form.primaryMode || null,
+        });
 
         setSaving(false);
         setSaved(true);
@@ -309,28 +333,12 @@ export default function EditProfileScreen() {
                             ))}
                         </div>
                     </Field>
-
-                    <Field label="Role">
-                        <div className="flex flex-wrap gap-2">
-                            {ROLE_OPTIONS.map((r) => (
-                                <button
-                                    key={r}
-                                    onClick={() => setForm((f) => ({ ...f }))}
-                                    className="px-3 py-1.5 rounded-full text-xs font-semibold border-2 border-gray-200 dark:border-gray-700 text-gray-500 cursor-not-allowed opacity-60 capitalize"
-                                    disabled
-                                >
-                                    {r}
-                                </button>
-                            ))}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">Role is set during onboarding. Contact support to change.</p>
-                    </Field>
                 </div>
 
                 {/* ── Section: Accessibility Profile ── */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-3">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Accessibility Profile</p>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Accessibility Needs</p>
                         <button
                             onClick={() => navigate('/profile-setup')}
                             className="text-xs text-primary font-semibold"
@@ -353,9 +361,34 @@ export default function EditProfileScreen() {
                             </div>
                         ))}
                     </div>
-                    <p className="text-xs text-gray-400">
-                        Coloured = active. Tap "Edit →" to change your accessibility needs.
-                    </p>
+                    
+                    {activeNeeds.length > 1 && (
+                        <Field label="Primary Mode Focus" sublabel="Choose which need to optimize your home screen for">
+                            <div className="flex flex-wrap gap-2 mt-1">
+                                {activeNeeds.map((needKey) => {
+                                    const meta = NEEDS_META.find(n => n.key === needKey);
+                                    if (!meta) return null;
+                                    const Icon = meta.Icon;
+                                    const isSelected = form.primaryMode === needKey;
+                                    return (
+                                        <button
+                                            key={needKey}
+                                            type="button"
+                                            onClick={() => setForm(f => ({ ...f, primaryMode: needKey }))}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-full border-2 transition-colors ${
+                                                isSelected
+                                                    ? 'bg-primary border-primary text-white'
+                                                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary/40'
+                                            }`}
+                                        >
+                                            <Icon size={14} />
+                                            <span className="text-xs font-semibold">{meta.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </Field>
+                    )}
                 </div>
 
                 <Button onClick={handleSave} disabled={saving || saved} className="w-full">
