@@ -1,19 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
+import { fetchSpeechAudio, buildSpeechChunks, estimateWordTimings } from '../lib/openai-tts';
 
 /**
  * useTextToSpeech Hook
- * Integrates Web SpeechSynthesis API with a text tokenized word list.
- * Leverages onboundary tracking, charOffsets, and features a weighted fallback timer simulator.
+ * Integrates Web SpeechSynthesis API with a text tokenized word list,
+ * alongside OpenAI TTS premium engine with text chunking, prefetching, and estimated highlight mapping.
  */
-export default function useTextToSpeech({ text, words }) {
+export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentWordIndex, setCurrentWordIndex] = useState(-1);
     const [speechRate, setSpeechRate] = useState(1.0);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const utteranceRef = useRef(null);
     const fallbackTimerRef = useRef(null);
     const activePlaybackOffset = useRef(0);
     const boundaryFiredRef = useRef(false);
+
+    // OpenAI TTS specific refs
+    const audioRef = useRef(null);
+    const audioCacheRef = useRef(new Map());
+    const prefetchingRef = useRef(new Set());
+    const animationRef = useRef(null);
+    const currentChunkIndexRef = useRef(-1);
+    const timingsRef = useRef([]);
 
     // Keep refs of settings to avoid state closure pitfalls in async callbacks
     const refs = useRef({
@@ -21,28 +31,193 @@ export default function useTextToSpeech({ text, words }) {
         currentWordIndex,
         speechRate,
         words,
-        text
+        text,
+        voiceEngine
     });
 
     useEffect(() => {
-        refs.current = { isPlaying, currentWordIndex, speechRate, words, text };
-    }, [isPlaying, currentWordIndex, speechRate, words, text]);
+        refs.current = { isPlaying, currentWordIndex, speechRate, words, text, voiceEngine };
+    }, [isPlaying, currentWordIndex, speechRate, words, text, voiceEngine]);
 
-    const stop = () => {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-        }
-        clearTimers();
-        setIsPlaying(false);
-        setCurrentWordIndex(-1);
-    };
-
+    // Clean up timers
     const clearTimers = () => {
         if (fallbackTimerRef.current) {
             clearTimeout(fallbackTimerRef.current);
             fallbackTimerRef.current = null;
         }
     };
+
+    // OpenAI TTS highlight loop
+    const startHighlightLoop = (audio, timings) => {
+        stopHighlightLoop();
+        const updateHighlight = () => {
+            if (!audio || audio.paused || audio.ended) return;
+            const currentTime = audio.currentTime;
+
+            // Find the word that spans across currentTime
+            const activeWord = timings.find(
+                (w) => currentTime >= w.startTime && currentTime <= w.endTime
+            );
+            if (activeWord) {
+                setCurrentWordIndex(activeWord.index);
+            }
+            animationRef.current = requestAnimationFrame(updateHighlight);
+        };
+        animationRef.current = requestAnimationFrame(updateHighlight);
+    };
+
+    const stopHighlightLoop = () => {
+        if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = null;
+        }
+    };
+
+    // OpenAI TTS prefetching
+    const prefetchChunk = async (chunkIndex, chunks) => {
+        if (chunkIndex < 0 || chunkIndex >= chunks.length) return;
+        if (audioCacheRef.current.has(chunkIndex)) return;
+        if (prefetchingRef.current.has(chunkIndex)) return;
+
+        prefetchingRef.current.add(chunkIndex);
+        try {
+            const chunk = chunks[chunkIndex];
+            const blob = await fetchSpeechAudio(chunk.text, { voice: 'alloy' });
+            const url = URL.createObjectURL(blob);
+            audioCacheRef.current.set(chunkIndex, url);
+        } catch (err) {
+            console.warn(`[TTS Prefetch] Failed to prefetch chunk ${chunkIndex}:`, err);
+        } finally {
+            prefetchingRef.current.delete(chunkIndex);
+        }
+    };
+
+    // OpenAI TTS playback logic
+    const playOpenAIChunk = async (chunkIndex, chunks) => {
+        if (chunkIndex < 0 || chunkIndex >= chunks.length) {
+            stop();
+            return;
+        }
+
+        currentChunkIndexRef.current = chunkIndex;
+        stopHighlightLoop();
+
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        let url = audioCacheRef.current.get(chunkIndex);
+        if (!url) {
+            setIsGenerating(true);
+            try {
+                const chunk = chunks[chunkIndex];
+                const blob = await fetchSpeechAudio(chunk.text, { voice: 'alloy' });
+                url = URL.createObjectURL(blob);
+                audioCacheRef.current.set(chunkIndex, url);
+            } catch (err) {
+                console.error('[TTS] Failed to play OpenAI chunk:', err);
+                setIsGenerating(false);
+                setIsPlaying(false);
+                return;
+            } finally {
+                setIsGenerating(false);
+            }
+        }
+
+        audio.src = url;
+        audio.playbackRate = refs.current.speechRate;
+        
+        try {
+            await audio.play();
+            setIsPlaying(true);
+        } catch (err) {
+            console.error('[TTS] Audio play failed:', err);
+            setIsPlaying(false);
+            return;
+        }
+
+        // Prefetch next chunk
+        prefetchChunk(chunkIndex + 1, chunks);
+    };
+
+    const playNextChunk = () => {
+        const activeChunks = buildSpeechChunks(refs.current.words, refs.current.text);
+        const nextIdx = currentChunkIndexRef.current + 1;
+        if (nextIdx < activeChunks.length) {
+            playOpenAIChunk(nextIdx, activeChunks);
+        } else {
+            stop();
+        }
+    };
+
+    const pauseOpenAI = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+        }
+        stopHighlightLoop();
+        setIsPlaying(false);
+    };
+
+    const stopOpenAI = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.src = '';
+        }
+        stopHighlightLoop();
+        setIsPlaying(false);
+        setCurrentWordIndex(-1);
+        currentChunkIndexRef.current = -1;
+    };
+
+    // Setup Audio events and cleanup
+    useEffect(() => {
+        audioRef.current = new Audio();
+        const audio = audioRef.current;
+
+        const handleEnded = () => {
+            playNextChunk();
+        };
+
+        const handleCanPlayThrough = () => {
+            const duration = audio.duration;
+            const currentIdx = currentChunkIndexRef.current;
+            const activeChunks = buildSpeechChunks(refs.current.words, refs.current.text);
+            const chunk = activeChunks[currentIdx];
+            
+            if (chunk) {
+                const timings = estimateWordTimings(chunk.words, duration);
+                timingsRef.current = timings;
+                startHighlightLoop(audio, timings);
+            }
+        };
+
+        audio.addEventListener('ended', handleEnded);
+        audio.addEventListener('canplaythrough', handleCanPlayThrough);
+
+        return () => {
+            audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+            audio.pause();
+            audioRef.current = null;
+
+            audioCacheRef.current.forEach((url) => URL.revokeObjectURL(url));
+            audioCacheRef.current.clear();
+        };
+    }, []);
+
+    // Clear cache when text changes
+    useEffect(() => {
+        audioCacheRef.current.forEach((url) => URL.revokeObjectURL(url));
+        audioCacheRef.current.clear();
+        prefetchingRef.current.clear();
+        currentChunkIndexRef.current = -1;
+    }, [text]);
+
+    // Sync speech rate change
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.playbackRate = speechRate;
+        }
+    }, [speechRate]);
 
     // Weighted timer simulation fallback if onboundary is not supported/firing
     const startTimerFallback = (startIndex) => {
@@ -75,14 +250,26 @@ export default function useTextToSpeech({ text, words }) {
 
         if (!activeText || activeWords.length === 0) return;
 
+        // Route to OpenAI Speech path
+        if (refs.current.voiceEngine === 'openai') {
+            const activeChunks = buildSpeechChunks(activeWords, activeText);
+            let chunkIndex = activeChunks.findIndex(
+                (c) => startIndex >= c.startIndex && startIndex <= c.endIndex
+            );
+            if (chunkIndex === -1) chunkIndex = 0;
+
+            setCurrentWordIndex(startIndex);
+            playOpenAIChunk(chunkIndex, activeChunks);
+            return;
+        }
+
+        // Standard Web Speech API logic
         if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-            // Synthesis not supported - go straight to timer
             setIsPlaying(true);
             startTimerFallback(startIndex);
             return;
         }
 
-        // Reset previous speech synthethizer sessions
         window.speechSynthesis.cancel();
         clearTimers();
 
@@ -95,11 +282,10 @@ export default function useTextToSpeech({ text, words }) {
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.rate = refs.current.speechRate;
 
-        // Pull English voices
         const allVoices = window.speechSynthesis.getVoices();
         const englishVoice = allVoices.find(
-            v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
-        ) || allVoices.find(v => v.lang.startsWith('en')) || allVoices[0];
+            (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
+        ) || allVoices.find((v) => v.lang.startsWith('en')) || allVoices[0];
 
         if (englishVoice) {
             utterance.voice = englishVoice;
@@ -108,11 +294,10 @@ export default function useTextToSpeech({ text, words }) {
         utterance.onboundary = (event) => {
             if (event.name === 'word') {
                 boundaryFiredRef.current = true;
-                clearTimers(); // disable simulated timer fallback
+                clearTimers();
 
                 const absoluteCharIndex = event.charIndex + activePlaybackOffset.current;
                 
-                // Match absolute character boundaries back to word tokens
                 let matchedIndex = 0;
                 let minDiff = Infinity;
                 const currentWordsList = refs.current.words;
@@ -139,7 +324,6 @@ export default function useTextToSpeech({ text, words }) {
         };
 
         utterance.onerror = (err) => {
-            // Avoid flagging errors during speech cancellations
             if (err.error !== 'interrupted') {
                 console.warn("Speech synthesis boundary warning:", err.error);
                 setIsPlaying(false);
@@ -151,8 +335,6 @@ export default function useTextToSpeech({ text, words }) {
         window.speechSynthesis.speak(utterance);
         setIsPlaying(true);
 
-        // Fallback watchdog:
-        // If onboundary fails to fire within 600ms, initialize timer simulation
         setTimeout(() => {
             if (refs.current.isPlaying && !boundaryFiredRef.current) {
                 console.log("Boundary callbacks inactive. Starting fallback speaking simulation...");
@@ -163,6 +345,11 @@ export default function useTextToSpeech({ text, words }) {
     };
 
     const pause = () => {
+        if (refs.current.voiceEngine === 'openai') {
+            pauseOpenAI();
+            return;
+        }
+
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
             if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
                 window.speechSynthesis.pause();
@@ -171,21 +358,33 @@ export default function useTextToSpeech({ text, words }) {
                 return;
             }
         }
-        // Fallback pause clearing
         clearTimers();
         setIsPlaying(false);
     };
 
+    const stop = () => {
+        if (refs.current.voiceEngine === 'openai') {
+            stopOpenAI();
+            return;
+        }
+
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
+        clearTimers();
+        setIsPlaying(false);
+        setCurrentWordIndex(-1);
+    };
+
     const changeRate = (rate) => {
         setSpeechRate(rate);
-        // If speaking, recreate session under revised speaking rates
         if (refs.current.isPlaying || refs.current.currentWordIndex >= 0) {
             const index = refs.current.currentWordIndex >= 0 ? refs.current.currentWordIndex : 0;
             play(index);
         }
     };
 
-    // Clean up
+    // Clean up SpeechSynthesis on unmount
     useEffect(() => {
         return () => {
             if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -202,6 +401,7 @@ export default function useTextToSpeech({ text, words }) {
         play,
         pause,
         stop,
-        setSpeechRate: changeRate
+        setSpeechRate: changeRate,
+        isGenerating
     };
 }

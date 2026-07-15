@@ -14,6 +14,7 @@ export default function TextRecognitionPanel({
     stopSpeaking,
     pauseSpeaking,
     resumeSpeaking,
+    playBeep,
 }) {
     // Automatically read results when a new scan completes
     useEffect(() => {
@@ -52,8 +53,12 @@ export default function TextRecognitionPanel({
             <div className="flex gap-2 mb-4 mt-2">
                 {!isSpeaking ? (
                     <button
-                        onClick={speakResult}
+                        onClick={() => {
+                            if (playBeep) playBeep(440, 0.08);
+                            speakResult();
+                        }}
                         className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white py-3 rounded-card font-bold text-base-md min-h-touch border-2 border-white focus:outline-none"
+                        aria-label="Read document text out loud"
                     >
                         <Play size={22} />
                         Read Out Loud
@@ -61,15 +66,28 @@ export default function TextRecognitionPanel({
                 ) : (
                     <>
                         <button
-                            onClick={isPaused ? resumeSpeaking : pauseSpeaking}
+                            onClick={() => {
+                                if (isPaused) {
+                                    if (playBeep) playBeep(440, 0.08);
+                                    resumeSpeaking();
+                                } else {
+                                    if (playBeep) playBeep(350, 0.08);
+                                    pauseSpeaking();
+                                }
+                            }}
                             className="flex-1 flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-card font-bold text-base-md min-h-touch border-2 border-white focus:outline-none"
+                            aria-label={isPaused ? "Resume reading text" : "Pause reading text"}
                         >
                             {isPaused ? <Play size={20} /> : <Pause size={20} />}
                             {isPaused ? 'Resume' : 'Pause'}
                         </button>
                         <button
-                            onClick={stopSpeaking}
+                            onClick={() => {
+                                if (playBeep) playBeep(300, 0.15);
+                                stopSpeaking();
+                            }}
                             className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-3 rounded-card font-bold text-base-md min-h-touch border-2 border-white focus:outline-none"
+                            aria-label="Stop reading text"
                         >
                             <Square size={20} />
                             Stop

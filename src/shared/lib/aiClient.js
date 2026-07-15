@@ -89,13 +89,80 @@ General rules:
 - If the user writes in Malayalam, respond in Malayalam. Otherwise, default to English.`.trim();
 }
 
+let currentProvider = 'gemini';
+
 /**
- * Send a conversation to Gemini and get the assistant reply.
+ * Get the current active AI provider ('gemini' | 'openai')
+ */
+export function getAIProvider() {
+    return currentProvider;
+}
+
+/**
+ * Set the active AI provider ('gemini' | 'openai')
+ */
+export function setAIProvider(provider) {
+    if (provider !== 'gemini' && provider !== 'openai') {
+        throw new Error(`Unsupported AI provider: ${provider}`);
+    }
+    currentProvider = provider;
+}
+
+/**
+ * Send a conversation to the active provider and get the assistant reply.
  * @param {string} systemPrompt — built from buildSystemPrompt()
  * @param {Array<{role: string, content: string}>} messages — chat history (role: 'user' | 'assistant')
+ * @param {Object} options — optional configurations (e.g. { provider: 'openai' })
  * @returns {Promise<string>} — assistant reply text
  */
-export async function sendMessage(systemPrompt, messages) {
+export async function sendMessage(systemPrompt, messages, options = {}) {
+    const provider = options.provider || currentProvider;
+
+    if (provider === 'openai') {
+        const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+        if (!apiKey) {
+            throw new Error('Missing VITE_OPENAI_API_KEY in .env');
+        }
+
+        console.log('[AI Client] Sending request to OpenAI with key prefix:', apiKey.slice(0, 8));
+
+        const url = 'https://api.openai.com/v1/chat/completions';
+        const chatMessages = [
+            { role: 'system', content: systemPrompt },
+            ...messages.map((m) => ({
+                role: m.role,
+                content: m.content
+            }))
+        ];
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: chatMessages
+            })
+        });
+
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(`OpenAI API error ${res.status}: ${err}`);
+        }
+
+        const data = await res.json();
+        const reply = data?.choices?.[0]?.message?.content;
+
+        if (!reply) {
+            throw new Error('No response from OpenAI');
+        }
+
+        return reply;
+    }
+
+    // Default to existing Gemini implementation
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error('Missing VITE_GEMINI_API_KEY in .env');
@@ -140,3 +207,122 @@ export async function sendMessage(systemPrompt, messages) {
 
     return reply;
 }
+
+/**
+ * Helper to convert a File/Blob object to a Base64 Data URL.
+ */
+function toBase64(fileOrBlob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(fileOrBlob);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+    });
+}
+
+/**
+ * Perform client-side OCR on an image file/blob using OpenAI Vision.
+ * @param {Blob|File} imageFileOrBlob — The image file/blob
+ * @param {Object} options — Optional configurations (provider, systemPrompt)
+ * @returns {Promise<string>} — Extracted text
+ */
+export async function recognizeText(imageFileOrBlob, options = {}) {
+    const provider = options.provider || currentProvider;
+    if (provider !== 'openai') {
+        throw new Error('OCR via recognizeText only supported via OpenAI provider currently');
+    }
+
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error('Missing VITE_OPENAI_API_KEY in .env');
+    }
+
+    const base64DataUrl = await toBase64(imageFileOrBlob);
+
+    const url = 'https://api.openai.com/v1/chat/completions';
+    const systemPrompt = options.systemPrompt || 'You are an OCR assistant. Extract and return all readable text from the provided image. Output only the extracted text exactly as it appears. Do not include any explanations, greetings, markdown formatting blocks (like ```text), or metadata.';
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: systemPrompt
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: base64DataUrl
+                            }
+                        }
+                    ]
+                }
+            ]
+        })
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`OpenAI OCR error ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const reply = data?.choices?.[0]?.message?.content;
+
+    if (!reply) {
+        throw new Error('No OCR response from OpenAI');
+    }
+
+    return reply;
+}
+
+/**
+ * Convert text to speech using OpenAI's TTS endpoint.
+ * @param {string} text — Text to convert
+ * @param {Object} options — Optional configurations (voice, provider)
+ * @returns {Promise<Blob>} — Audio binary data as a Blob
+ */
+export async function generateSpeech(text, options = {}) {
+    const provider = options.provider || currentProvider;
+    if (provider !== 'openai') {
+        throw new Error('TTS only supported via OpenAI provider currently');
+    }
+
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error('Missing VITE_OPENAI_API_KEY in .env');
+    }
+
+    const url = 'https://api.openai.com/v1/audio/speech';
+    const voice = options.voice || 'alloy';
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: 'tts-1',
+            input: text,
+            voice: voice
+        })
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`OpenAI TTS error ${res.status}: ${err}`);
+    }
+
+    return await res.blob();
+}
+

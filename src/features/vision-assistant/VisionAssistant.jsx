@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Card from '../../shared/components/Card';
@@ -39,6 +39,10 @@ export default function VisionAssistant() {
     const { speak, stop, pause, resume, speaking, paused, playBeep } = useSpeak();
     const { analyzeImage, loading } = useVisionAI();
 
+    const speakFeedback = useCallback((text, onEnd = null) => {
+        speak(text, speechRate, onEnd);
+    }, [speak, speechRate]);
+
     // Persist accessibility configurations
     useEffect(() => {
         localStorage.setItem('saha_vision_contrast', contrastMode);
@@ -56,6 +60,25 @@ export default function VisionAssistant() {
         localStorage.setItem('saha_vision_history', JSON.stringify(scanHistory));
     }, [scanHistory]);
 
+    // Processing audio/speech cues during AI loading gap
+    useEffect(() => {
+        let intervalId;
+        if (loading) {
+            // First speak a message
+            speakFeedback("Analyzing, please wait.");
+            
+            // Then play a soft repeating tone so they know it is still processing
+            intervalId = setInterval(() => {
+                playBeep(660, 0.08);
+            }, 1200);
+        }
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
+    }, [loading, speakFeedback, playBeep]);
+
     // Initial greeting voice announcement
     const hasGreetedRef = useRef(false);
     useEffect(() => {
@@ -66,9 +89,6 @@ export default function VisionAssistant() {
         return () => stop();
     }, [speak, speechRate, stop]);
 
-    const speakFeedback = (text) => {
-        speak(text, speechRate);
-    };
 
     // Mode changer
     const selectMode = (mode) => {
@@ -105,8 +125,17 @@ export default function VisionAssistant() {
             };
             setScanHistory((prev) => [newScan, ...prev.slice(0, 9)]); // Cap at 10 items
         } catch (err) {
-            console.error('Vision analysis failure:', err);
-            speak("Analysis failed. Please check your internet or retry.", speechRate);
+            console.error('[VisionAI] Vision analysis failure:', err);
+            const msg = err?.message || '';
+            if (msg.includes('401') || msg.includes('403')) {
+                speak("API key rejected. Please check your Gemini key in Settings and make sure it is valid.", speechRate);
+            } else if (msg.includes('404')) {
+                speak("API model not found. The app configuration needs an update — please contact support.", speechRate);
+            } else if (msg.includes('429')) {
+                speak("Rate limit reached. Please wait a moment, then try again.", speechRate);
+            } else {
+                speak("Analysis failed. Please check your internet connection and try again.", speechRate);
+            }
         }
     };
 
@@ -125,8 +154,8 @@ export default function VisionAssistant() {
             setAnalysisResult(resultText);
             speak(resultText, speechRate);
         } catch (err) {
-            console.error('Q&A analysis failure:', err);
-            speak("Failed to answer. Please try again.", speechRate);
+            console.error('[VisionAI] Q&A analysis failure:', err);
+            speak("Failed to answer. Please check your API key in Settings and try again.", speechRate);
         }
     };
 
@@ -233,6 +262,7 @@ export default function VisionAssistant() {
                                                 playBeep(440, 0.05);
                                                 setContrastMode(mode.key);
                                             }}
+                                            aria-label={`Set contrast mode to ${mode.label}`}
                                             className={`py-2 px-1 rounded-card text-base-sm font-bold border-2 transition-colors flex items-center justify-center gap-1 ${
                                                 contrastMode === mode.key
                                                     ? 'border-primary bg-primary/10 text-primary'
@@ -257,6 +287,7 @@ export default function VisionAssistant() {
                                                 playBeep(500, 0.05);
                                                 setFontScale(scale);
                                             }}
+                                            aria-label={`Set text zoom to ${scale}x`}
                                             className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
                                                 fontScale === scale
                                                     ? 'border-primary bg-primary/10 text-primary'
@@ -280,6 +311,7 @@ export default function VisionAssistant() {
                                                 playBeep(550, 0.05);
                                                 setSpeechRate(rate);
                                             }}
+                                            aria-label={`Set speech rate speed to ${rate}x`}
                                             className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
                                                 speechRate === rate
                                                     ? 'border-primary bg-primary/10 text-primary'
@@ -327,6 +359,7 @@ export default function VisionAssistant() {
                             <button
                                 key={mode.key}
                                 onClick={() => selectMode(mode.key)}
+                                aria-label={`Select ${mode.label} mode`}
                                 className={`flex flex-col items-center justify-center py-3 rounded-card border-2 font-bold text-base-sm transition-colors min-h-touch ${
                                     isSelected
                                         ? contrastMode === 'high-dark'
@@ -359,6 +392,7 @@ export default function VisionAssistant() {
                         isSpeaking={speaking}
                         speakResult={() => speak(analysisResult, speechRate)}
                         stopSpeaking={stop}
+                        playBeep={playBeep}
                     />
                 )}
 
@@ -371,6 +405,7 @@ export default function VisionAssistant() {
                         stopSpeaking={stop}
                         pauseSpeaking={pause}
                         resumeSpeaking={resume}
+                        playBeep={playBeep}
                     />
                 )}
 
@@ -383,12 +418,21 @@ export default function VisionAssistant() {
                     >
                         <div className="flex justify-between items-center mb-4 mt-2">
                             <button
-                                onClick={speaking ? stop : () => speak(analysisResult, speechRate)}
+                                onClick={() => {
+                                    if (speaking) {
+                                        playBeep(300, 0.15);
+                                        stop();
+                                    } else {
+                                        playBeep(440, 0.08);
+                                        speak(analysisResult, speechRate);
+                                    }
+                                }}
                                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-card font-bold text-base-md min-h-touch transition-colors border-2 border-white focus:outline-none ${
                                     speaking
                                         ? 'bg-red-500 hover:bg-red-600 text-white'
                                         : 'bg-primary hover:bg-primary-dark text-white'
                                 }`}
+                                aria-label={speaking ? "Stop voice description of scene" : "Describe scene out loud"}
                             >
                                 {speaking ? <Square size={20} /> : <Volume2 size={20} />}
                                 {speaking ? 'Stop Speech' : 'Describe Scene'}
@@ -417,6 +461,7 @@ export default function VisionAssistant() {
                             isProcessing={loading}
                             speakFeedback={speakFeedback}
                             playBeep={playBeep}
+                            stopSpeaking={stop}
                         />
                     </div>
                 )}

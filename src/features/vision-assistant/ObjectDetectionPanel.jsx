@@ -6,7 +6,7 @@ import Card from '../../shared/components/Card';
  * ObjectDetectionPanel - Displays detected objects/obstacles/currency
  * Automatically speaks out the objects on render, with custom audio play/stop toggle.
  */
-export default function ObjectDetectionPanel({ result, isSpeaking, speakResult, stopSpeaking }) {
+export default function ObjectDetectionPanel({ result, isSpeaking, speakResult, stopSpeaking, playBeep }) {
     // Speak automatically when a new result arrives
     useEffect(() => {
         if (result) {
@@ -43,12 +43,21 @@ export default function ObjectDetectionPanel({ result, isSpeaking, speakResult, 
             {/* Playback Controls */}
             <div className="flex justify-between items-center mb-4 mt-2">
                 <button
-                    onClick={isSpeaking ? stopSpeaking : speakResult}
+                    onClick={() => {
+                        if (isSpeaking) {
+                            if (playBeep) playBeep(300, 0.15);
+                            stopSpeaking();
+                        } else {
+                            if (playBeep) playBeep(440, 0.08);
+                            speakResult();
+                        }
+                    }}
                     className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-card font-bold text-base-md min-h-touch transition-colors border-2 border-white focus:outline-none ${
                         isSpeaking
                             ? 'bg-red-500 hover:bg-red-600 text-white'
                             : 'bg-primary hover:bg-primary-dark text-white'
                     }`}
+                    aria-label={isSpeaking ? "Stop voice output description" : "Speak results out loud"}
                 >
                     {isSpeaking ? <VolumeX size={22} /> : <Volume2 size={22} />}
                     {isSpeaking ? 'Stop Voice Output' : 'Speak Results'}
