@@ -35,7 +35,7 @@ const CATEGORIES = [
     },
     {
         id: 'ai',
-        tiles: ['aiChat', 'social']
+        tiles: ['aiChat', 'social', 'aacBoard']
     }
 ];
 

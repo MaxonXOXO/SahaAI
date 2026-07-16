@@ -15,6 +15,7 @@ import MathHelperScreen from '../features/math-helper/MathHelperScreen';
 import VisionAssistant from '../features/vision-assistant/VisionAssistant';
 import ToolsScreen from '../features/tools/ToolsScreen';
 import ProgressScreen from '../features/progress/ProgressScreen';
+import AACBoardScreen from '../features/aac-board/AACBoardScreen';
 import { getRouteMeta } from './config/routeMeta';
 
 /**
@@ -69,6 +70,7 @@ export default function AppRoutes() {
                     <Route path="/vision-assistant"      element={<VisionAssistant />} />
                     <Route path="/document-reader"       element={<Placeholder name="Document Reader" />} />
                     <Route path="/settings"              element={<Placeholder name="Settings" />} />
+                    <Route path="/aac-board"             element={<AACBoardScreen />} />
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />

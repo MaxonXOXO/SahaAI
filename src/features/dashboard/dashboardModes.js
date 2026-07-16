@@ -26,6 +26,7 @@ export const TILE_REGISTRY = {
     textReader: { label: 'Text Reader', icon: Volume2, path: '/vision-assistant', color: 'bg-accent-lowvision' },
     largeKeyboard: { label: 'Large Keyboard', icon: Type, path: '/settings', color: 'bg-accent-lowvision' },
     colorInverter: { label: 'Color Inverter', icon: Settings2, path: '/settings', color: 'bg-gray-600' },
+    aacBoard: { label: 'AAC Board', icon: MessageSquare, path: '/aac-board', color: 'bg-accent-autism' },
 };
 
 // Configuration for each primary mode
@@ -52,7 +53,7 @@ export const DASHBOARD_MODES = {
         bgLight: 'bg-accent-autism/10',
         greeting: "Here's your plan for today.",
         heroTitle: "TODAY'S SCHEDULE",
-        tiles: ['social', 'readAloud', 'routine', 'visualAssistant', 'calmCorner', 'aiChat'],
+        tiles: ['social', 'aacBoard', 'routine', 'visualAssistant', 'calmCorner', 'aiChat'],
     },
     dyscalculia: {
         label: 'Dyscalculia Mode',
@@ -76,6 +77,6 @@ export const DASHBOARD_MODES = {
         bgLight: 'bg-primary/5',
         greeting: "Ready to learn something new?",
         heroTitle: "GET STARTED",
-        tiles: ['read', 'math', 'focus', 'routine', 'social', 'aiChat'],
+        tiles: ['read', 'math', 'focus', 'routine', 'aacBoard', 'aiChat'],
     }
 };

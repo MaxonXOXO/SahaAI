@@ -41,6 +41,7 @@ export const ROUTE_META = [
     { path: '/vision-assistant',      onboarding: false, hideNav: false },
     { path: '/document-reader',       onboarding: false, hideNav: false },
     { path: '/settings',              onboarding: false, hideNav: false },
+    { path: '/aac-board',             onboarding: false, hideNav: false },
 ];
 
 /**

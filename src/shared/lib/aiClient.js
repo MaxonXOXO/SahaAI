@@ -504,4 +504,119 @@ ${schemaDescription}`;
     }
 }
 
+/**
+ * Generate a set of contextual AAC board tiles based on a given context.
+ * Adapts to the user's accessibility profile.
+ * Supporting both Gemini (default) and OpenAI (fallback) for JSON structure.
+ *
+ * @param {string} context - The situation (e.g. "Mealtime", "Going to the store")
+ * @param {Object} profile - User profile with needs and bio
+ * @returns {Promise<Array<Object>>} - Array of generated tiles
+ */
+export async function generateAACTiles(context, profile) {
+    const userPrompt = `Generate a list of 8 to 12 highly relevant communication tiles for a non-verbal or overwhelmed user in this situation/context: "${context}".
+Each tile represents a word, feeling, or simple action related to "${context}".
+Provide the output as a JSON object with a single root key "tiles" containing an array of objects.
+Each tile object MUST have exactly these fields:
+- "labelEn": Simple English phrase or word (e.g., "Water", "More food", "Tired")
+- "labelMl": Precise Malayalam translation/transliteration for the label (e.g., "വെള്ളം", "കൂടുതൽ ഭക്ഷണം")
+- "iconName": Standard Lucide icon name matching the item (e.g., "Droplet", "Utensils", "Smile", "Clock", "Home", "User", "Heart", "Moon", "School", "HelpCircle")
+
+Keep language extremely clear, direct, and accessible.`;
+
+    const systemPrompt = buildSystemPrompt(profile) + `\n\nYou are an expert in Augmentative and Alternative Communication (AAC) boards.
+Your task is to generate custom tiles in JSON format.
+You MUST output ONLY a valid JSON object matching this schema:
+{
+  "tiles": [
+    {
+      "labelEn": "string",
+      "labelMl": "string",
+      "iconName": "string"
+    }
+  ]
+}
+Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in the response. Return ONLY raw JSON.`;
+
+    // Try Gemini first
+    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (geminiKey) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${geminiKey}`;
+        const body = {
+            system_instruction: {
+                parts: [{ text: systemPrompt }]
+            },
+            contents: [
+                {
+                    role: 'user',
+                    parts: [{ text: userPrompt }]
+                }
+            ],
+            generationConfig: {
+                responseMimeType: "application/json"
+            }
+        };
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+                try {
+                    const parsed = JSON.parse(text.trim());
+                    if (parsed && Array.isArray(parsed.tiles)) {
+                        return parsed.tiles;
+                    }
+                } catch (err) {
+                    console.warn('Failed to parse Gemini AAC JSON response:', err);
+                }
+            }
+        }
+    }
+
+    // Fallback to OpenAI
+    const openAIKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (openAIKey) {
+        const systemPromptOpenAI = systemPrompt + `\n\nRequired JSON Structure: { "tiles": [{ "labelEn": "string", "labelMl": "string", "iconName": "string" }] }`;
+        const url = 'https://api.openai.com/v1/chat/completions';
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openAIKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: systemPromptOpenAI },
+                    { role: 'user', content: userPrompt }
+                ],
+                response_format: { type: 'json_object' }
+            })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            const content = data?.choices?.[0]?.message?.content;
+            if (content) {
+                try {
+                    const parsed = JSON.parse(content.trim());
+                    if (parsed && Array.isArray(parsed.tiles)) {
+                        return parsed.tiles;
+                    }
+                } catch (err) {
+                    console.warn('Failed to parse OpenAI AAC JSON response:', err);
+                }
+            }
+        }
+    }
+
+    throw new Error('Could not generate contextual tiles. Check your API keys and connection.');
+}
+
 
