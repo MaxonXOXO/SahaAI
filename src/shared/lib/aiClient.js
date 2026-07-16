@@ -297,7 +297,7 @@ export async function generateGoogleSpeech(text, options = {}) {
         throw new Error('Missing VITE_GEMINI_API_KEY in .env');
     }
 
-    const modelName = options.model || 'gemini-2.0-flash';
+    const modelName = options.model || 'gemini-3.1-flash-tts';
     const voiceName = options.voice || 'Puck'; // Kore, Puck, Charon, Aoede, Fenrir
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
