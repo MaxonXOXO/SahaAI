@@ -1,51 +1,45 @@
 import { Home, Sparkles, LayoutGrid, TrendingUp, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useProfileStore from '../../store/useProfileStore';
+import useSettingsStore from '../../store/useSettingsStore';
+import { translate } from '../../shared/lib/translations';
 
 /**
  * BottomNav — persistent bottom tab bar.
- *
- * Adaptive behaviour:
- *   - Low Vision:  taller bar, icons + labels always visible, high contrast active
- *   - ADHD:        larger icons, bold active label
- *   - Autism:      labels always show (never icon-only), no animation on tap
- *   - Dyslexia:    OpenDyslexic labels via CSS var font override
- *
- * Tabs: Home / AI / Learn / Progress / Profile
  */
 const TABS = [
-    { key: 'home',     label: 'Home',     icon: Home,       path: '/dashboard' },
-    { key: 'ai',       label: 'AI',       icon: Sparkles,   path: '/ai-chat' },
-    { key: 'tools',    label: 'Tools',    icon: LayoutGrid, path: '/tools' },
-    { key: 'progress', label: 'Progress', icon: TrendingUp, path: '/progress' },
-    { key: 'profile',  label: 'Profile',  icon: User,       path: '/profile' },
+    { key: 'home',     labelKey: 'home',     icon: Home,       path: '/dashboard' },
+    { key: 'ai',       labelKey: 'ai',       icon: Sparkles,   path: '/ai-chat' },
+    { key: 'tools',    labelKey: 'tools',    icon: LayoutGrid, path: '/tools' },
+    { key: 'progress', labelKey: 'progress', icon: TrendingUp, path: '/progress' },
+    { key: 'profile',  labelKey: 'profile',  icon: User,       path: '/profile' },
 ];
 
 export default function BottomNav() {
     const navigate  = useNavigate();
     const location  = useLocation();
     const needs     = useProfileStore((s) => s.needs);
+    const displayLanguage = useSettingsStore((s) => s.displayLanguage);
 
-    // Autism mode: always show labels (never icon-only) — already the default
-    // Low Vision: larger tap zones
-    const isLowVision = needs.lowVision;
-    const isAdhd      = needs.adhd;
+    const isLowVision = needs?.lowVision;
+    const isAdhd      = needs?.adhd;
 
     return (
         <nav
-            className="fixed bottom-0 left-0 right-0 border-t z-20 flex items-center justify-around"
+            className="absolute bottom-0 left-0 right-0 border-t z-20 flex items-center justify-around"
             style={{
                 background:   'var(--a11y-surface)',
                 borderColor:  isLowVision ? '#FACC15' : 'rgba(0,0,0,0.08)',
                 borderWidth:  isLowVision ? '3px' : '1px',
-                paddingTop:   isLowVision ? '10px' : '6px',
-                paddingBottom: isLowVision ? '14px' : '8px',
+                paddingTop:   isLowVision ? '0.625rem' : '0.375rem',
+                paddingBottom: isLowVision ? '0.875rem' : '0.5rem',
                 minHeight:    'var(--a11y-min-touch)',
                 transition:   'var(--a11y-transition)',
             }}
         >
-            {TABS.map(({ key, label, icon: Icon, path }) => {
+            {TABS.map(({ key, labelKey, icon: Icon, path }) => {
                 const isActive = location.pathname === path || location.pathname.startsWith(path + '/');
+                const label = translate(labelKey, displayLanguage);
 
                 return (
                     <button
@@ -61,8 +55,8 @@ export default function BottomNav() {
                     >
                         <Icon
                             style={{
-                                width:  isLowVision ? '28px' : isAdhd ? '24px' : 'var(--a11y-icon-size)',
-                                height: isLowVision ? '28px' : isAdhd ? '24px' : 'var(--a11y-icon-size)',
+                                width:  isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
+                                height: isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
                                 color:  isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
                                 strokeWidth: isActive ? 2.5 : 1.8,
                             }}
@@ -70,7 +64,7 @@ export default function BottomNav() {
                         <span
                             style={{
                                 fontFamily:  'var(--a11y-font-body)',
-                                fontSize:    isLowVision ? '13px' : '11px',
+                                fontSize:    isLowVision ? '0.8125rem' : '0.6875rem',
                                 fontWeight:  isActive ? 700 : 400,
                                 color:       isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
                                 letterSpacing: 'var(--a11y-letter-spacing)',

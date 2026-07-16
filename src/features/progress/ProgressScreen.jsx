@@ -2,7 +2,9 @@ import { motion } from 'framer-motion';
 import { Flame, Trophy, Calendar, Check, BookOpen } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
+import useSettingsStore from '../../store/useSettingsStore';
 import useProgressStats from '../../shared/hooks/useProgressStats';
+import { translate } from '../../shared/lib/translations';
 
 // Circular SVG Progress Ring Widget
 function ProgressCircle({ percentage, size = 120, strokeWidth = 10, strokeClass = "stroke-primary", title, subtitle, centerLabel }) {
@@ -54,6 +56,7 @@ function ProgressCircle({ percentage, size = 120, strokeWidth = 10, strokeClass 
 
 export default function ProgressScreen() {
     const primaryMode = useProfileStore((s) => s.primaryMode);
+    const displayLanguage = useSettingsStore((s) => s.displayLanguage);
 
     // Real data from activity_log via Supabase
     const {
@@ -94,7 +97,9 @@ export default function ProgressScreen() {
     // Calculate details for the last 7 calendar days
     const getStreakCalendar = () => {
         const days = [];
-        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const weekdays = displayLanguage === 'ml'
+            ? ['ഞാ', 'തി', 'ചൊ', 'ബു', 'വ്യാ', 'വെ', 'ശ']
+            : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const today = new Date();
 
         for (let i = 6; i >= 0; i--) {
@@ -119,8 +124,8 @@ export default function ProgressScreen() {
 
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900">
-                <ScreenHeader title="My Progress" showBack={false} />
+            <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 pb-24">
+                <ScreenHeader title={translate('progressTitle', displayLanguage)} showBack={false} />
                 <div className="flex-1 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
                         <motion.div
@@ -128,7 +133,7 @@ export default function ProgressScreen() {
                             transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
                             className="w-8 h-8 border-3 border-gray-200 border-t-primary rounded-full"
                         />
-                        <p className="text-sm text-gray-400">Loading your stats...</p>
+                        <p className="text-sm text-gray-400">{translate('loading', displayLanguage)}</p>
                     </div>
                 </div>
             </div>
@@ -136,8 +141,8 @@ export default function ProgressScreen() {
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto pb-8">
-            <ScreenHeader title="My Progress" showBack={false} />
+        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto pb-24">
+            <ScreenHeader title={translate('progressTitle', displayLanguage)} showBack={false} />
 
             <div className="px-4 py-4 flex flex-col gap-6">
                 
@@ -150,15 +155,15 @@ export default function ProgressScreen() {
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
                             <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-full backdrop-blur-md">
-                                Current Streak
+                                {translate('dailyStreak', displayLanguage)}
                             </span>
                             <h2 className="text-3xl font-extrabold mt-3 flex items-baseline gap-1.5">
-                                {dailyStreak} <span className="text-base-sm font-semibold text-white/90">days</span>
+                                {translate('streakValue', displayLanguage, { count: dailyStreak })}
                             </h2>
                             <p className="text-xs text-white/90 mt-1 max-w-[200px]">
                                 {dailyStreak > 0 
-                                    ? "Awesome! Keep your daily learning streak burning!" 
-                                    : "Use any tool today to start your streak!"}
+                                    ? translate('streakSubtitle', displayLanguage)
+                                    : (displayLanguage === 'ml' ? 'സ്ട്രീക്ക് ആരംഭിക്കാൻ ഇന്ന് ഏതെങ്കിലും ഉപകരണം ഉപയോഗിക്കുക!' : 'Use any tool today to start your streak!')}
                             </p>
                         </div>
                         <div className="relative flex items-center justify-center pr-2">
@@ -175,7 +180,9 @@ export default function ProgressScreen() {
                     {/* Total sessions badge */}
                     {totalSessions > 0 && (
                         <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between">
-                            <span className="text-xs text-white/70">Total sessions logged</span>
+                            <span className="text-xs text-white/70">
+                                {displayLanguage === 'ml' ? 'ആകെ പൂർത്തിയാക്കിയ സെഷനുകൾ' : 'Total sessions logged'}
+                            </span>
                             <span className="text-sm font-bold">{totalSessions}</span>
                         </div>
                     )}
@@ -186,15 +193,15 @@ export default function ProgressScreen() {
                     <ProgressCircle
                         percentage={(focusSessionsWeek / 5) * 100}
                         strokeClass={getPrimaryModeStrokeClass(primaryMode)}
-                        title="Weekly Focus"
-                        subtitle="Target: 5 sessions"
+                        title={translate('weeklyFocus', displayLanguage)}
+                        subtitle={translate('sessionsGoal', displayLanguage, { current: focusSessionsWeek, goal: 5 })}
                         centerLabel={`${focusSessionsWeek}/5`}
                     />
                     <ProgressCircle
                         percentage={mathAccuracy}
                         strokeClass={getPrimaryModeStrokeClass(primaryMode)}
-                        title="Math Accuracy"
-                        subtitle="Based on solving logs"
+                        title={translate('mathAccuracy', displayLanguage)}
+                        subtitle={translate('accuracySubtitle', displayLanguage)}
                         centerLabel={`${mathAccuracy}%`}
                     />
                 </div>
@@ -204,7 +211,7 @@ export default function ProgressScreen() {
                     <div className="flex items-center gap-2 mb-4">
                         <Calendar size={18} className={activeColorClass} />
                         <h3 className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
-                            Activity History
+                            {translate('streakGridTitle', displayLanguage)}
                         </h3>
                     </div>
 
@@ -234,7 +241,7 @@ export default function ProgressScreen() {
                                 </div>
                                 {day.isToday && (
                                     <span className={`text-[8px] font-bold mt-1 uppercase ${activeColorClass}`}>
-                                        Today
+                                        {translate('today', displayLanguage)}
                                     </span>
                                 )}
                             </div>
@@ -245,7 +252,7 @@ export default function ProgressScreen() {
                 {/* Additional Stats Section */}
                 <div className="flex flex-col gap-3">
                     <h3 className="text-base-sm font-bold text-gray-800 dark:text-gray-100 px-1">
-                        Learning Milestones
+                        {displayLanguage === 'ml' ? 'പഠന നാഴികക്കല്ലുകൾ' : 'Learning Milestones'}
                     </h3>
 
                     {/* Reading Streak Card */}
@@ -256,10 +263,10 @@ export default function ProgressScreen() {
                             </div>
                             <div>
                                 <h4 className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
-                                    Reading Streak
+                                    {displayLanguage === 'ml' ? 'വായനാ സ്ട്രീക്ക്' : 'Reading Streak'}
                                 </h4>
                                 <p className="text-xs text-gray-400">
-                                    Consecutive days with reading activity
+                                    {displayLanguage === 'ml' ? 'തുടർച്ചയായി വായന നടത്തിയ ദിവസങ്ങൾ' : 'Consecutive days with reading activity'}
                                 </p>
                             </div>
                         </div>
@@ -268,7 +275,7 @@ export default function ProgressScreen() {
                                 {readingStreak}
                             </span>
                             <span className="text-[10px] font-bold text-gray-400 block">
-                                days
+                                {displayLanguage === 'ml' ? 'ദിവസങ്ങൾ' : 'days'}
                             </span>
                         </div>
                     </div>
@@ -281,16 +288,18 @@ export default function ProgressScreen() {
                             </div>
                             <div>
                                 <h4 className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
-                                    Next Achievement
+                                    {displayLanguage === 'ml' ? 'അടുത്ത നേട്ടം' : 'Next Achievement'}
                                 </h4>
                                 <p className="text-xs text-gray-400">
-                                    {dailyStreak >= 5 ? 'Reach 14 days streak!' : 'Reach 5 days streak!'}
+                                    {dailyStreak >= 5 
+                                        ? (displayLanguage === 'ml' ? '14 ദിവസത്തെ സ്ട്രീക്ക് പൂർത്തിയാക്കുക!' : 'Reach 14 days streak!') 
+                                        : (displayLanguage === 'ml' ? '5 ദിവസത്തെ സ്ട്രീക്ക് പൂർത്തിയാക്കുക!' : 'Reach 5 days streak!')}
                                 </p>
                             </div>
                         </div>
                         <div className="text-right">
                             <span className="text-xs font-bold text-purple-500 bg-purple-500/10 px-2.5 py-1 rounded-full border border-purple-500/20">
-                                {dailyStreak}/{dailyStreak >= 5 ? 14 : 5} days
+                                {dailyStreak}/{dailyStreak >= 5 ? 14 : 5} {displayLanguage === 'ml' ? 'ദിവസം' : 'days'}
                             </span>
                         </div>
                     </div>

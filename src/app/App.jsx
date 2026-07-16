@@ -1,50 +1,35 @@
-import { useEffect } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import AppRoutes from './routes';
-import useProfileStore from '../store/useProfileStore';
-import useAccessibilityTheme from '../shared/lib/useAccessibilityTheme';
-import { logActivity } from '../shared/lib/logActivity';
-
 /**
- * AccessibilityShell
+ * App.jsx — Root application shell.
  *
- * Sits INSIDE BrowserRouter so it has router context.
- * Applies the adaptive theme globally on every needs change.
- * Teammates never touch this file — the theme hook handles everything.
+ * Composes providers in the correct order:
+ *   BrowserRouter
+ *     → SessionProvider
+ *       → AccessibilityProvider
+ *         → LayoutProvider
+ *           → ThemeProvider
+ *             → AppRoutes
+ *
+ * All concerns (Session, Accessibility, Viewport/Layout, Theme) are split cleanly.
  */
-function AccessibilityShell() {
-    // Expose for testing in browser console
-    useEffect(() => {
-        window.logActivity = logActivity;
-        window.useProfileStore = useProfileStore;
-    }, []);
+import { BrowserRouter }         from 'react-router-dom';
+import SessionProvider           from './providers/SessionProvider';
+import AccessibilityProvider     from './providers/AccessibilityProvider';
+import LayoutProvider            from './providers/LayoutProvider';
+import ThemeProvider             from './providers/ThemeProvider';
+import AppRoutes                 from './routes';
 
-    // Boot: restore session on app load
-    const checkSession = useProfileStore((s) => s.checkSession);
-    useEffect(() => { checkSession(); }, [checkSession]);
-
-    // Apply adaptive UI based on disability profile
-    useAccessibilityTheme();
-
-    return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex justify-center">
-            <div className="w-full max-w-[420px] min-h-screen relative flex flex-col shadow-xl"
-                 style={{ background: 'var(--a11y-surface)' }}>
-                <AppRoutes />
-            </div>
-        </div>
-    );
-}
-
-/**
- * App shell — mobile-only viewport.
- * Fixed max-width container simulates a phone screen on desktop browsers
- * during development; on real mobile it just fills the viewport.
- */
 export default function App() {
     return (
         <BrowserRouter>
-            <AccessibilityShell />
+            <SessionProvider>
+                <AccessibilityProvider>
+                    <LayoutProvider>
+                        <ThemeProvider>
+                            <AppRoutes />
+                        </ThemeProvider>
+                    </LayoutProvider>
+                </AccessibilityProvider>
+            </SessionProvider>
         </BrowserRouter>
     );
 }
