@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes';
 import useProfileStore from '../store/useProfileStore';
 import useAccessibilityTheme from '../shared/lib/useAccessibilityTheme';
+import { logActivity } from '../shared/lib/logActivity';
 
 /**
  * AccessibilityShell
@@ -12,6 +13,12 @@ import useAccessibilityTheme from '../shared/lib/useAccessibilityTheme';
  * Teammates never touch this file — the theme hook handles everything.
  */
 function AccessibilityShell() {
+    // Expose for testing in browser console
+    useEffect(() => {
+        window.logActivity = logActivity;
+        window.useProfileStore = useProfileStore;
+    }, []);
+
     // Boot: restore session on app load
     const checkSession = useProfileStore((s) => s.checkSession);
     useEffect(() => { checkSession(); }, [checkSession]);

@@ -12,6 +12,8 @@ import ProfileScreen from '../features/profile/ProfileScreen';
 import EditProfileScreen from '../features/profile/EditProfileScreen';
 import ReadingModeScreen from '../features/reading-mode/ReadingModeScreen';
 import VisionAssistant from '../features/vision-assistant/VisionAssistant';
+import ToolsScreen from '../features/tools/ToolsScreen';
+import ProgressScreen from '../features/progress/ProgressScreen';
 
 /**
  * Temporary placeholder — swap for real feature screen as each
@@ -57,8 +59,8 @@ export default function AppRoutes() {
                     <Route path="/dashboard" element={<DashboardScreen />} />
                     <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
-                    <Route path="/learn" element={<Placeholder name="Learn" />} />
-                    <Route path="/progress" element={<Placeholder name="Progress Dashboard" />} />
+                    <Route path="/tools" element={<ToolsScreen />} />
+                    <Route path="/progress" element={<ProgressScreen />} />
                     <Route path="/profile" element={<ProfileScreen />} />
                     <Route path="/edit-profile" element={<EditProfileScreen />} />
 

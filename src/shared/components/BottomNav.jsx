@@ -1,4 +1,4 @@
-import { Home, Sparkles, BookOpen, TrendingUp, User } from 'lucide-react';
+import { Home, Sparkles, LayoutGrid, TrendingUp, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useProfileStore from '../../store/useProfileStore';
 
@@ -16,7 +16,7 @@ import useProfileStore from '../../store/useProfileStore';
 const TABS = [
     { key: 'home',     label: 'Home',     icon: Home,       path: '/dashboard' },
     { key: 'ai',       label: 'AI',       icon: Sparkles,   path: '/ai-chat' },
-    { key: 'learn',    label: 'Learn',    icon: BookOpen,   path: '/learn' },
+    { key: 'tools',    label: 'Tools',    icon: LayoutGrid, path: '/tools' },
     { key: 'progress', label: 'Progress', icon: TrendingUp, path: '/progress' },
     { key: 'profile',  label: 'Profile',  icon: User,       path: '/profile' },
 ];
