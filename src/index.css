@@ -180,10 +180,9 @@ body {
   background-color: #1a1a00 !important; /* dark yellow tint */
 }
 
-/* ── All text → white by default, backgrounds → black by default ── */
+/* ── All text → white by default ── */
 .a11y-low-vision * {
   color: #FFFFFF !important;
-  background-color: #0A0A0A; /* base — overridden upward by specific !important rules */
   border-color: #333333 !important;
   box-shadow: none !important;
   text-shadow: none !important;

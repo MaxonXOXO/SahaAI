@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, BookOpen, Zap, Users, Calculator, Eye } from 'lucide-react';
+import { Check, BookOpen, Zap, Users, Calculator, Eye, ArrowLeft } from 'lucide-react';
 import Button from '../../shared/components/Button';
 import useProfileStore from '../../store/useProfileStore';
 import { supabase } from '../../shared/lib/supabaseClient';
@@ -13,18 +13,13 @@ const NEEDS = [
     { key: 'lowVision', label: 'Low Vision', icon: Eye },
 ];
 
-const ROLES = [
-    { key: 'student', label: 'Student' },
-    { key: 'parent', label: 'Parent' },
-    { key: 'teacher', label: 'Teacher' },
-];
-
 export default function ProfileSetupScreen() {
     const navigate = useNavigate();
     const id = useProfileStore((s) => s.id);
 
+    const [step, setStep] = useState('needs'); // 'needs' or 'primaryMode'
     const [selectedNeeds, setSelectedNeeds] = useState([]);
-    const [role, setRole] = useState('student');
+    const [primaryMode, setPrimaryMode] = useState(null);
 
     const toggleNeedLocal = (key) => {
         setSelectedNeeds((prev) =>
@@ -32,7 +27,24 @@ export default function ProfileSetupScreen() {
         );
     };
 
-    const handleContinue = async () => {
+    const handleContinueNeeds = () => {
+        if (selectedNeeds.length > 1) {
+            setStep('primaryMode');
+        } else {
+            const singleMode = selectedNeeds.length === 1 ? selectedNeeds[0] : null;
+            saveProfile(singleMode);
+        }
+    };
+
+    const handleContinuePrimaryMode = () => {
+        if (!primaryMode && selectedNeeds.length > 0) {
+            saveProfile(selectedNeeds[0]);
+        } else {
+            saveProfile(primaryMode);
+        }
+    };
+
+    const saveProfile = async (finalPrimaryMode) => {
         const needs = {
             dyslexia: selectedNeeds.includes('dyslexia'),
             adhd: selectedNeeds.includes('adhd'),
@@ -42,7 +54,7 @@ export default function ProfileSetupScreen() {
         };
 
         // Update local Zustand state
-        useProfileStore.setState({ needs, role });
+        useProfileStore.setState({ needs, primaryMode: finalPrimaryMode });
 
         // Direct Supabase update using session user id
         const { data: { session } } = await supabase.auth.getSession();
@@ -52,12 +64,12 @@ export default function ProfileSetupScreen() {
             const { error } = await supabase
                 .from('profiles')
                 .update({
-                    role,
                     has_dyslexia: needs.dyslexia,
                     has_adhd: needs.adhd,
                     has_autism: needs.autism,
                     has_dyscalculia: needs.dyscalculia,
                     has_low_vision: needs.lowVision,
+                    primary_mode: finalPrimaryMode,
                 })
                 .eq('id', userId);
 
@@ -66,6 +78,65 @@ export default function ProfileSetupScreen() {
 
         navigate('/dashboard');
     };
+
+    if (step === 'primaryMode') {
+        const availableNeeds = NEEDS.filter(n => selectedNeeds.includes(n.key));
+        
+        return (
+            <div className="flex-1 flex flex-col px-6 py-8 overflow-y-auto">
+                <button 
+                    onClick={() => setStep('needs')}
+                    className="flex items-center text-gray-500 mb-6 gap-2 w-max"
+                >
+                    <ArrowLeft size={20} />
+                    <span className="text-base-sm">Back</span>
+                </button>
+                <h1 className="text-base-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
+                    Primary Focus
+                </h1>
+                <p className="text-base-sm text-gray-400 mb-6">
+                    You selected multiple needs. Which one should we optimize your home screen for?
+                </p>
+
+                <div className="flex flex-col gap-3 mb-8">
+                    {availableNeeds.map(({ key, label, icon: Icon }) => {
+                        const isSelected = primaryMode === key;
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => setPrimaryMode(key)}
+                                className={`
+                                    flex items-center gap-3 p-4 rounded-card border-2 text-left transition-colors
+                                    ${isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700'}
+                                `}
+                            >
+                                <Icon size={20} className={isSelected ? 'text-primary' : 'text-gray-400'} />
+                                <span className="flex-1 text-base-sm font-medium text-gray-800 dark:text-gray-100">
+                                    {label} Mode
+                                </span>
+                                <div
+                                    className={`
+                                        w-6 h-6 rounded-full border-2 flex items-center justify-center
+                                        ${isSelected ? 'border-primary' : 'border-gray-300'}
+                                    `}
+                                >
+                                    {isSelected && <div className="w-3 h-3 rounded-full bg-primary" />}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <Button 
+                    onClick={handleContinuePrimaryMode} 
+                    className="w-full mt-auto"
+                    disabled={!primaryMode}
+                >
+                    Finish Setup
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col px-6 py-8 overflow-y-auto">
@@ -105,27 +176,7 @@ export default function ProfileSetupScreen() {
                 })}
             </div>
 
-            <p className="text-base-sm font-medium text-gray-600 dark:text-gray-300 mb-2">
-                I am a
-            </p>
-            <div className="flex gap-2 mb-8">
-                {ROLES.map(({ key, label }) => (
-                    <button
-                        key={key}
-                        onClick={() => setRole(key)}
-                        className={`
-              flex-1 py-2 rounded-card border-2 text-base-sm font-medium transition-colors
-              ${role === key
-                                ? 'border-primary bg-primary text-white'
-                                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}
-            `}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            <Button onClick={handleContinue} className="w-full">
+            <Button onClick={handleContinueNeeds} className="w-full mt-auto">
                 Continue
             </Button>
         </div>

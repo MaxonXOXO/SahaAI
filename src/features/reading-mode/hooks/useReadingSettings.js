@@ -20,6 +20,7 @@ export default function useReadingSettings() {
     const [spacing, setSpacing] = useState(defaultSpacing); // spacing-normal | spacing-relaxed | spacing-wide
     const [overlayOn, setOverlayOn] = useState(false);
     const [overlayColor, setOverlayColor] = useState('rgba(254, 240, 138, 0.12)'); // default low-opacity yellow swatch
+    const [voiceEngine, setVoiceEngine] = useState('browser'); // browser | openai
 
     return {
         fontFamily,
@@ -32,5 +33,7 @@ export default function useReadingSettings() {
         setOverlayOn,
         overlayColor,
         setOverlayColor,
+        voiceEngine,
+        setVoiceEngine,
     };
 }

@@ -25,6 +25,7 @@ const useProfileStore = create((set, get) => ({
         dyscalculia: false,
         lowVision: false,
     },
+    primaryMode: null,
 
     progress: {
         readingStreak: 0,
@@ -127,6 +128,7 @@ const useProfileStore = create((set, get) => ({
                 dyscalculia: data.has_dyscalculia ?? false,
                 lowVision: data.has_low_vision ?? false,
             },
+            primaryMode: data.primary_mode ?? null,
             progress: {
                 readingStreak: data.reading_streak ?? 0,
                 focusSessionsWeek: data.focus_sessions_week ?? 0,
@@ -168,6 +170,7 @@ const useProfileStore = create((set, get) => ({
             has_autism: state.needs.autism,
             has_dyscalculia: state.needs.dyscalculia,
             has_low_vision: state.needs.lowVision,
+            primary_mode: state.primaryMode,
         }).eq('id', state.id);
 
         if (error) set({ error: error.message });
@@ -175,7 +178,7 @@ const useProfileStore = create((set, get) => ({
 
     reset: () => set({
         id: null, email: '', username: '', name: '', bio: '', pronouns: '', gender: '', avatar_base64: '',
-        role: 'student', language: 'en',
+        role: 'student', language: 'en', primaryMode: null,
         needs: { dyslexia: false, adhd: false, autism: false, dyscalculia: false, lowVision: false },
         progress: { readingStreak: 0, focusSessionsWeek: 0, mathAccuracy: 0, dailyStreak: 0 },
         isAuthenticated: false, loading: false, error: null,
