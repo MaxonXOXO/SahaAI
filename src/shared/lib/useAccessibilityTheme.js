@@ -23,6 +23,7 @@
  */
 
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import useProfileStore from '../../store/useProfileStore';
 
 // Default CSS var values — what the app looks like with NO accessibility mode
@@ -50,8 +51,14 @@ const DEFAULTS = {
     '--a11y-shadow':           '0 1px 3px rgba(0,0,0,0.08)',
 };
 
+// Routes where the accessibility theme must NOT be applied (onboarding / auth)
+const ONBOARDING_ROUTES = ['/', '/language', '/profile-setup', '/signup', '/login'];
+
 export default function useAccessibilityTheme() {
     const needs = useProfileStore((s) => s.needs);
+    const isAuthenticated = useProfileStore((s) => s.isAuthenticated);
+    const primaryMode = useProfileStore((s) => s.primaryMode);
+    const { pathname } = useLocation();
 
     useEffect(() => {
         const root = document.documentElement;
@@ -70,11 +77,21 @@ export default function useAccessibilityTheme() {
             else root.style.setProperty(k, v);
         });
 
-        // ── Step 2: Check if ANY accessibility mode is active ────────────────
+        // ── Step 2: Determine if theme should be active ──────────────────
+        // Must only begin once user has created their account (isAuthenticated),
+        // selected their mode (primaryMode is set), and is not on onboarding/auth screens.
+        const shouldApplyTheme = 
+            isAuthenticated && 
+            primaryMode !== null && 
+            !ONBOARDING_ROUTES.includes(pathname);
+
+        if (!shouldApplyTheme) return;
+
+        // ── Step 3: Check if ANY accessibility mode is active ────────────────
         const anyActive = Object.values(needs).some(Boolean);
         if (!anyActive) return; // ← No disabilities: app stays exactly as default
 
-        // ── Step 3: Apply changes per active disability ───────────────────────
+        // ── Step 4: Apply changes per active disability ───────────────────────
 
         // LOW VISION — largest footprint: overrides colour, size, contrast
         if (needs.lowVision) {
@@ -90,6 +107,10 @@ export default function useAccessibilityTheme() {
             root.style.setProperty('--a11y-shadow', 'none');
             root.style.setProperty('--a11y-primary', '#FACC15');       // high-contrast yellow
             root.style.setProperty('--a11y-primary-light', '#FDE68A');
+            root.style.setProperty('--a11y-bg', '#0A0A0A');
+            root.style.setProperty('--a11y-surface', '#0A0A0A');
+            root.style.setProperty('--a11y-text', '#FFFFFF');
+            root.style.setProperty('--a11y-text-muted', '#AAAAAA');
         }
 
         // DYSLEXIA — font + spacing + warm background
@@ -141,5 +162,5 @@ export default function useAccessibilityTheme() {
             // by adding data-type="number" to numeric displays
         }
 
-    }, [needs]);
+    }, [needs, pathname, isAuthenticated, primaryMode]);
 }

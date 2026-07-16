@@ -421,3 +421,14 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Utility: hide scrollbar (used by horizontal scroll containers)
+   ══════════════════════════════════════════════════════════════════════════ */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
