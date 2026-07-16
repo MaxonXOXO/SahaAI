@@ -24,6 +24,7 @@ export default function TaskBreakdownTab() {
     ];
 
     const handleGenerateBreakdown = async (promptText) => {
+        console.log("[TaskBreakdown] Started:", promptText);
         setIsLoading(true);
         setErrorMsg(null);
         setCurrentTaskTitle(promptText);
@@ -37,20 +38,28 @@ export default function TaskBreakdownTab() {
 ]
 Task to break down: "${promptText}"`;
 
+            console.log("[TaskBreakdown] Sending AI request");
             const reply = await sendMessage(systemPrompt, [{ role: 'user', content: userPrompt }]);
+            console.log("[TaskBreakdown] Raw AI response:", reply);
 
             // Parse JSON response
             const cleanedJson = reply.replace(/```json/g, '').replace(/```/g, '').trim();
+            console.log("[TaskBreakdown] Cleaned JSON:", cleanedJson);
             const parsedSteps = JSON.parse(cleanedJson);
+            console.log("[TaskBreakdown] Parsed steps:", parsedSteps);
 
             if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
                 setSteps(parsedSteps);
+                console.log("[TaskBreakdown] Setting steps");
             } else {
                 setSteps(generateFallbackSteps(promptText));
+                console.log("[TaskBreakdown] Setting steps");
             }
         } catch (err) {
-            console.warn('[TaskBreakdown] API breakdown error, using fallback:', err);
+            console.error("[TaskBreakdown] Error:", err);
+            console.log("[TaskBreakdown] Using fallback steps:", generateFallbackSteps(promptText));
             setSteps(generateFallbackSteps(promptText));
+            console.log("[TaskBreakdown] Setting steps");
         } finally {
             setIsLoading(false);
         }
@@ -72,6 +81,8 @@ Task to break down: "${promptText}"`;
             });
         }
     };
+
+    console.log("[TaskBreakdown] Current steps state:", steps);
 
     return (
         <div className="flex flex-col gap-6 w-full">
