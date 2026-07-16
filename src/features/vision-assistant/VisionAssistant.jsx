@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Card from '../../shared/components/Card';
@@ -9,6 +10,8 @@ import TextRecognitionPanel from './TextRecognitionPanel';
 import AskAIBar from './AskAIBar';
 import useSpeak from './useSpeak';
 import useVisionAI from './useVisionAI';
+import { logActivity } from '../../shared/lib/logActivity';
+import useProfileStore from '../../store/useProfileStore';
 
 /**
  * VisionAssistant - Main container for Low Vision Mode
@@ -16,14 +19,20 @@ import useVisionAI from './useVisionAI';
  * font scaling, AI camera capture, voice Q&A, and persistent scan history.
  */
 export default function VisionAssistant() {
+    const userId = useProfileStore((s) => s.id);
     // Accessibility Settings State
     const [contrastMode, setContrastMode] = useState(() => localStorage.getItem('saha_vision_contrast') || 'standard');
     const [fontScale, setFontScale] = useState(() => parseFloat(localStorage.getItem('saha_vision_font_scale')) || 1.0);
     const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('saha_vision_speech_rate')) || 1.0);
     const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('saha_gemini_api_key') || '');
 
+    // Deep-link tab support: /vision-assistant?tab=identify|read|describe
+    const [searchParams] = useSearchParams();
+    const TAB_PARAM_MAP = { identify: 'object', read: 'ocr', describe: 'scene' };
+    const initialTab = TAB_PARAM_MAP[searchParams.get('tab')] || 'object';
+
     // Feature Mode State
-    const [activeMode, setActiveMode] = useState('object'); // 'object' | 'ocr' | 'scene'
+    const [activeMode, setActiveMode] = useState(initialTab); // 'object' | 'ocr' | 'scene'
     const [capturedImage, setCapturedImage] = useState(null);
     const [analysisResult, setAnalysisResult] = useState('');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -124,6 +133,13 @@ export default function VisionAssistant() {
                 image: base64Image,
             };
             setScanHistory((prev) => [newScan, ...prev.slice(0, 9)]); // Cap at 10 items
+
+            // Activity logging — powers Dashboard "Recently Used" and Progress tab
+            if (activeMode === 'ocr') {
+                logActivity(userId, 'ocr_scan_used', { chars: resultText.length });
+            } else {
+                logActivity(userId, 'document_read', { mode: activeMode });
+            }
         } catch (err) {
             console.error('[VisionAI] Vision analysis failure:', err);
             const msg = err?.message || '';
