@@ -11,6 +11,7 @@ import ChatScreen from '../features/ai-chat/ChatScreen';
 import ProfileScreen from '../features/profile/ProfileScreen';
 import EditProfileScreen from '../features/profile/EditProfileScreen';
 import ReadingModeScreen from '../features/reading-mode/ReadingModeScreen';
+import MathHelperScreen from '../features/math-helper/MathHelperScreen';
 import VisionAssistant from '../features/vision-assistant/VisionAssistant';
 import ToolsScreen from '../features/tools/ToolsScreen';
 import ProgressScreen from '../features/progress/ProgressScreen';
@@ -60,7 +61,7 @@ export default function AppRoutes() {
                     {/* Feature screens */}
                     <Route path="/reading-mode"          element={<ReadingModeScreen />} />
                     <Route path="/text-simplifier"       element={<Placeholder name="AI Text Simplifier" />} />
-                    <Route path="/math-helper"           element={<Placeholder name="Dyscalculia Math Helper" />} />
+                    <Route path="/math-helper"           element={<MathHelperScreen />} />
                     <Route path="/focus-mode"            element={<Placeholder name="ADHD Focus Mode" />} />
                     <Route path="/routine-builder"       element={<Placeholder name="Routine Builder" />} />
                     <Route path="/social-story"          element={<Placeholder name="Social Story Generator" />} />

@@ -326,3 +326,62 @@ export async function generateSpeech(text, options = {}) {
     return await res.blob();
 }
 
+/**
+ * Send a prompt to OpenAI and guarantee a structured JSON response matching a described shape.
+ *
+ * @param {string} prompt - The user prompt detailing the task or context
+ * @param {string} schemaDescription - Text description of the desired JSON structure
+ * @returns {Promise<Object>} - Parsed JSON object
+ */
+export async function generateStructuredJSON(prompt, schemaDescription) {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error('Missing VITE_OPENAI_API_KEY in .env');
+    }
+
+    const systemPrompt = `You are a helpful assistant that outputs structured data in JSON format.
+You MUST respond ONLY with a valid JSON object matching the described shape.
+Do NOT wrap the response in markdown code blocks (do not use \`\`\`json or \`\`\` code fences).
+Do NOT include any commentary, greetings, explanation, or notes outside of the JSON object.
+
+Required JSON Structure Description:
+${schemaDescription}`;
+
+    const url = 'https://api.openai.com/v1/chat/completions';
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: prompt }
+            ],
+            response_format: { type: 'json_object' } // Force OpenAI JSON output mode
+        })
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`OpenAI structured JSON error ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    
+    if (!content) {
+        throw new Error('OpenAI returned an empty content body.');
+    }
+
+    try {
+        const parsed = JSON.parse(content.trim());
+        return parsed;
+    } catch (err) {
+        throw new Error(`Failed to parse OpenAI response as JSON. Content: "${content}". Error: ${err.message}`);
+    }
+}
+
+
