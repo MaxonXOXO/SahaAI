@@ -13,8 +13,8 @@ export default function LayoutProvider({ children }) {
     const maxWidth = needs.lowVision ? 'max-w-3xl' : 'max-w-[420px] sm:max-w-[520px]';
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex justify-center transition-colors duration-300">
-            <div className={`w-full ${maxWidth} min-h-screen relative flex flex-col shadow-xl`}>
+        <div className="h-screen max-h-screen overflow-hidden bg-gray-100 dark:bg-gray-950 flex justify-center transition-colors duration-300">
+            <div className={`w-full ${maxWidth} h-full relative flex flex-col shadow-xl overflow-hidden`}>
                 {children}
             </div>
         </div>

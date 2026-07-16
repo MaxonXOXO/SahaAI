@@ -31,8 +31,8 @@ export default function BottomNav() {
                 background:   'var(--a11y-surface)',
                 borderColor:  isLowVision ? '#FACC15' : 'rgba(0,0,0,0.08)',
                 borderWidth:  isLowVision ? '3px' : '1px',
-                paddingTop:   isLowVision ? '10px' : '6px',
-                paddingBottom: isLowVision ? '14px' : '8px',
+                paddingTop:   isLowVision ? '0.625rem' : '0.375rem',
+                paddingBottom: isLowVision ? '0.875rem' : '0.5rem',
                 minHeight:    'var(--a11y-min-touch)',
                 transition:   'var(--a11y-transition)',
             }}
@@ -55,8 +55,8 @@ export default function BottomNav() {
                     >
                         <Icon
                             style={{
-                                width:  isLowVision ? '28px' : isAdhd ? '24px' : 'var(--a11y-icon-size)',
-                                height: isLowVision ? '28px' : isAdhd ? '24px' : 'var(--a11y-icon-size)',
+                                width:  isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
+                                height: isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
                                 color:  isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
                                 strokeWidth: isActive ? 2.5 : 1.8,
                             }}
@@ -64,7 +64,7 @@ export default function BottomNav() {
                         <span
                             style={{
                                 fontFamily:  'var(--a11y-font-body)',
-                                fontSize:    isLowVision ? '13px' : '11px',
+                                fontSize:    isLowVision ? '0.8125rem' : '0.6875rem',
                                 fontWeight:  isActive ? 700 : 400,
                                 color:       isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
                                 letterSpacing: 'var(--a11y-letter-spacing)',

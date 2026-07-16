@@ -24,8 +24,8 @@
   --a11y-primary-light:    #8B5CF6;
   --a11y-border-width:     2px;
   --a11y-border-radius:    16px;
-  --a11y-min-touch:        48px;
-  --a11y-icon-size:        20px;
+  --a11y-min-touch:        3rem;
+  --a11y-icon-size:        1.25rem;
   --a11y-spacing-section:  16px;
   --a11y-transition:       all 0.2s ease;
   --a11y-shadow:           0 1px 3px rgba(0,0,0,0.08);
