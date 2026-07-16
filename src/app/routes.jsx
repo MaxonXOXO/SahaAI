@@ -16,6 +16,7 @@ import VisionAssistant from '../features/vision-assistant/VisionAssistant';
 import ToolsScreen from '../features/tools/ToolsScreen';
 import ProgressScreen from '../features/progress/ProgressScreen';
 import FocusModeScreen from '../features/focus-mode/FocusModeScreen';
+import SocialStoryScreen from '../features/social-story/SocialStoryScreen';
 import { getRouteMeta } from './config/routeMeta';
 
 /**
@@ -64,9 +65,8 @@ export default function AppRoutes() {
                     <Route path="/text-simplifier" element={<Placeholder name="AI Text Simplifier" />} />
                     <Route path="/focus-mode" element={<FocusModeScreen />} />
                     <Route path="/math-helper" element={<MathHelperScreen />} />
-                    <Route path="/focus-mode" element={<Placeholder name="ADHD Focus Mode" />} />
                     <Route path="/routine-builder" element={<Placeholder name="Routine Builder" />} />
-                    <Route path="/social-story" element={<Placeholder name="Social Story Generator" />} />
+                    <Route path="/social-story" element={<SocialStoryScreen />} />
                     <Route path="/conversation-practice" element={<Placeholder name="Conversation Practice" />} />
                     <Route path="/vision-assistant" element={<VisionAssistant />} />
                     <Route path="/document-reader" element={<Placeholder name="Document Reader" />} />
