@@ -40,7 +40,7 @@ export default function AppRoutes() {
 
     return (
         <>
-            <div className={`flex-1 flex flex-col ${hideNav ? '' : 'pb-16'}`}>
+            <div className={`flex-1 flex flex-col min-h-0 ${hideNav ? '' : 'pb-16'}`}>
                 <Routes>
                     {/* Onboarding */}
                     <Route path="/"              element={<SplashScreen />} />

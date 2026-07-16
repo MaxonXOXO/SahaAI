@@ -2,14 +2,20 @@
  * App.jsx — Root application shell.
  *
  * Composes providers in the correct order:
- *   BrowserRouter → SessionProvider → AccessibilityProvider → AppRoutes
+ *   BrowserRouter
+ *     → SessionProvider
+ *       → AccessibilityProvider
+ *         → LayoutProvider
+ *           → ThemeProvider
+ *             → AppRoutes
  *
- * All adaptive logic lives in the providers and hooks layers.
- * This file should stay under ~30 lines. Do not add logic here.
+ * All concerns (Session, Accessibility, Viewport/Layout, Theme) are split cleanly.
  */
 import { BrowserRouter }         from 'react-router-dom';
 import SessionProvider           from './providers/SessionProvider';
 import AccessibilityProvider     from './providers/AccessibilityProvider';
+import LayoutProvider            from './providers/LayoutProvider';
+import ThemeProvider             from './providers/ThemeProvider';
 import AppRoutes                 from './routes';
 
 export default function App() {
@@ -17,7 +23,11 @@ export default function App() {
         <BrowserRouter>
             <SessionProvider>
                 <AccessibilityProvider>
-                    <AppRoutes />
+                    <LayoutProvider>
+                        <ThemeProvider>
+                            <AppRoutes />
+                        </ThemeProvider>
+                    </LayoutProvider>
                 </AccessibilityProvider>
             </SessionProvider>
         </BrowserRouter>

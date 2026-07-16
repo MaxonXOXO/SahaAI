@@ -286,15 +286,135 @@ export async function recognizeText(imageFileOrBlob, options = {}) {
 }
 
 /**
- * Convert text to speech using OpenAI's TTS endpoint.
+ * Build a WAV file container around raw PCM audio bytes.
+ * Gemini TTS returns raw L16 (16-bit signed PCM) at 24 kHz mono.
+ * Browsers require a WAV/RIFF header to decode it.
+ *
+ * @param {Uint8Array} pcmData — Raw 16-bit PCM bytes
+ * @param {number} sampleRate — e.g. 24000
+ * @param {number} numChannels — 1 (mono) or 2 (stereo)
+ * @param {number} bitsPerSample — 16
+ * @returns {Blob} — Playable audio/wav Blob
+ */
+function pcmToWav(pcmData, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
+    const dataLength = pcmData.length;
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const byteRate = sampleRate * blockAlign;
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
+
+    // RIFF chunk descriptor
+    const writeStr = (offset, str) => {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);   // file size - 8
+    writeStr(8, 'WAVE');
+
+    // fmt sub-chunk
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);               // sub-chunk size
+    view.setUint16(20, 1, true);                // PCM = 1
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+
+    // data sub-chunk
+    writeStr(36, 'data');
+    view.setUint32(40, dataLength, true);
+    new Uint8Array(buffer, 44).set(pcmData);
+
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+/**
+ * Convert text to speech using Google Gemini TTS (3.1 Flash series).
  * @param {string} text — Text to convert
- * @param {Object} options — Optional configurations (voice, provider)
+ * @param {Object} options — Optional configurations (voice, model)
+ * @returns {Promise<Blob>} — Playable audio/wav Blob
+ */
+export async function generateGoogleSpeech(text, options = {}) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
+    }
+
+    const modelName = options.model || 'gemini-3.1-flash-tts-preview';
+    const voiceName = options.voice || 'Puck'; // Kore, Puck, Charon, Aoede, Fenrir
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+    const body = {
+        contents: [
+            {
+                role: 'user',
+                parts: [{ text }]
+            }
+        ],
+        generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName }
+                }
+            }
+        }
+    };
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Google TTS error ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+
+    if (!inlineData?.data) {
+        throw new Error('No audio data returned from Gemini TTS');
+    }
+
+    // Decode base64 → raw bytes
+    const binaryStr = atob(inlineData.data);
+    const pcmBytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+        pcmBytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    // Gemini TTS returns raw L16 PCM at 24 kHz mono.
+    // Wrap it in a WAV container so the browser can play it.
+    const mimeType = (inlineData.mimeType || '').toLowerCase();
+    if (mimeType.includes('wav') || mimeType.includes('audio/wav')) {
+        // Already a full WAV – return as-is
+        return new Blob([pcmBytes], { type: 'audio/wav' });
+    }
+
+    // Raw PCM (audio/L16 or audio/pcm) → wrap in WAV
+    return pcmToWav(pcmBytes, 24000, 1, 16);
+}
+
+/**
+ * Convert text to speech using the selected AI provider.
+ * @param {string} text — Text to convert
+ * @param {Object} options — Optional configurations (voice, provider, model)
  * @returns {Promise<Blob>} — Audio binary data as a Blob
  */
 export async function generateSpeech(text, options = {}) {
     const provider = options.provider || currentProvider;
+
+    if (provider === 'gemini') {
+        return generateGoogleSpeech(text, options);
+    }
+
     if (provider !== 'openai') {
-        throw new Error('TTS only supported via OpenAI provider currently');
+        throw new Error(`TTS unsupported for provider: ${provider}`);
     }
 
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
