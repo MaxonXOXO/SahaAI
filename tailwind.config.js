@@ -23,10 +23,10 @@ export default {
         },
       },
       fontSize: {
-        'base-sm': ['16px', '1.5'],
-        'base-md': ['18px', '1.6'],
-        'base-lg': ['22px', '1.8'],   // accessibility mode default
-        'base-xl': ['26px', '2'],
+        'base-sm': ['1rem', '1.5'],       // 16px
+        'base-md': ['1.125rem', '1.6'],   // 18px
+        'base-lg': ['1.375rem', '1.8'],   // 22px
+        'base-xl': ['1.625rem', '2'],     // 26px
       },
       spacing: {
         'touch': '48px', // min tap target for accessibility
