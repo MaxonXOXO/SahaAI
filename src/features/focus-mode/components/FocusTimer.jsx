@@ -123,22 +123,20 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
             <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-full">
                 <button
                     onClick={() => handleSetMode('focus', 25)}
-                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                        isFocus
+                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${isFocus
                             ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm border border-red-200 dark:border-red-800'
                             : 'text-gray-500 hover:text-gray-800 dark:text-gray-400'
-                    }`}
+                        }`}
                 >
                     <Flame size={16} />
                     Focus (25m)
                 </button>
                 <button
                     onClick={() => handleSetMode('break', 5)}
-                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                        !isFocus
+                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${!isFocus
                             ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-200 dark:border-emerald-800'
                             : 'text-gray-500 hover:text-gray-800 dark:text-gray-400'
-                    }`}
+                        }`}
                 >
                     <Coffee size={16} />
                     Short Break (5m)
@@ -152,11 +150,10 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
                         <button
                             key={mins}
                             onClick={() => handleSetMode('focus', mins)}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                                durationMinutes === mins
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${durationMinutes === mins
                                     ? 'bg-red-500 text-white shadow-xs'
                                     : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
-                            }`}
+                                }`}
                         >
                             {mins} min
                         </button>
@@ -202,39 +199,53 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
                 </div>
             </div>
 
-            {/* Primary Action Controls */}
-            <div className="flex items-center gap-4 w-full justify-center">
-                <button
-                    onClick={handleReset}
-                    aria-label="Reset timer"
-                    className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-200 transition-all border border-gray-200 dark:border-gray-700 active:scale-95"
-                >
-                    <RotateCcw size={20} />
-                </button>
+            {/* Primary Action Controls — Explicit Icon + Text for ADHD low cognitive load */}
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+                <div className="flex items-center gap-3 w-full">
+                    {!isRunning ? (
+                        <button
+                            onClick={toggleStartPause}
+                            aria-label="Start timer"
+                            className={`flex-1 py-3.5 px-5 rounded-2xl font-bold text-base-sm text-white shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 ${isFocus
+                                    ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+                                }`}
+                        >
+                            <Play size={20} className="fill-current" />
+                            Start {isFocus ? 'Focus' : 'Break'}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={toggleStartPause}
+                            aria-label="Pause timer"
+                            className="flex-1 py-3.5 px-5 rounded-2xl font-bold text-base-sm text-white bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 transition-all active:scale-95"
+                        >
+                            <Pause size={20} />
+                            Pause
+                        </button>
+                    )}
 
-                <button
-                    onClick={toggleStartPause}
-                    aria-label={isRunning ? 'Pause session' : 'Start session'}
-                    className={`px-8 py-4 rounded-2xl font-bold text-base-md text-white shadow-lg flex items-center gap-2 transition-all active:scale-95 ${
-                        isFocus
-                            ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20'
-                            : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
-                    }`}
-                >
-                    {isRunning ? <Pause size={22} /> : <Play size={22} className="fill-current" />}
-                    {isRunning ? 'Pause' : 'Start Focus'}
-                </button>
+                    <button
+                        onClick={handleReset}
+                        aria-label="Reset timer to selected duration"
+                        className="py-3.5 px-4 rounded-2xl font-bold text-base-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0"
+                    >
+                        <RotateCcw size={18} />
+                        Reset
+                    </button>
+                </div>
 
+                {/* Sound Cue Toggle */}
                 <button
                     onClick={() => setSoundEnabled((prev) => !prev)}
                     aria-label={soundEnabled ? 'Mute Audio Cues' : 'Unmute Audio Cues'}
-                    className={`p-3 rounded-full transition-all border ${
-                        soundEnabled
-                            ? 'bg-gray-100 dark:bg-gray-800 text-primary border-primary/30'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700'
-                    }`}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 ${soundEnabled
+                            ? 'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700'
+                        }`}
                 >
-                    {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                    {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                    {soundEnabled ? 'Audio Cues: ON' : 'Audio Cues: OFF'}
                 </button>
             </div>
 
