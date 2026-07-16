@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../shared/lib/supabaseClient';
+import useSettingsStore from './useSettingsStore';
 
 /**
  * useProfileStore — single source of truth for auth + accessibility profile.
@@ -83,6 +84,8 @@ const useProfileStore = create((set, get) => ({
         if (session?.user) {
             set({ isAuthenticated: true });
             await get().fetchProfile();
+        } else {
+            useSettingsStore.getState().loadSettings(null);
         }
     },
 
@@ -138,6 +141,7 @@ const useProfileStore = create((set, get) => ({
             isAuthenticated: true,
             loading: false,
         });
+        useSettingsStore.getState().loadSettings(data.id);
     },
 
     updateProfile: async (updates) => {
@@ -176,13 +180,16 @@ const useProfileStore = create((set, get) => ({
         if (error) set({ error: error.message });
     },
 
-    reset: () => set({
-        id: null, email: '', username: '', name: '', bio: '', pronouns: '', gender: '', avatar_base64: '',
-        role: 'student', language: 'en', primaryMode: null,
-        needs: { dyslexia: false, adhd: false, autism: false, dyscalculia: false, lowVision: false },
-        progress: { readingStreak: 0, focusSessionsWeek: 0, mathAccuracy: 0, dailyStreak: 0 },
-        isAuthenticated: false, loading: false, error: null,
-    }),
+    reset: () => {
+        set({
+            id: null, email: '', username: '', name: '', bio: '', pronouns: '', gender: '', avatar_base64: '',
+            role: 'student', language: 'en', primaryMode: null,
+            needs: { dyslexia: false, adhd: false, autism: false, dyscalculia: false, lowVision: false },
+            progress: { readingStreak: 0, focusSessionsWeek: 0, mathAccuracy: 0, dailyStreak: 0 },
+            isAuthenticated: false, loading: false, error: null,
+        });
+        useSettingsStore.getState().resetSettings();
+    },
 }));
 
 export default useProfileStore;

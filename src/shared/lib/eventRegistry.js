@@ -34,6 +34,9 @@ export const EVENT_REGISTRY = {
   ocr_scan_used:            { path: '/vision-assistant', tab: 'read', label: 'Text Scan' },
   high_contrast_toggled:   { path: '/settings', tab: null, label: 'High Contrast' },
   magnifier_used:           { path: '/vision-assistant', tab: null, label: 'Magnifier' },
+
+  // AAC Board
+  aac_phrase_spoken:       { path: '/aac-board', tab: null, label: 'AAC Board' },
 };
 
 /** Turns an event_type into its route + query string, e.g. '/math-helper?tab=games' */
