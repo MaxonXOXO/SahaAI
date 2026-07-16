@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Check, Loader2, BookOpen, Zap, Users, Calculator, Eye } from 'lucide-react';
+import { Camera, Check, Loader2 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
 import useProfileStore from '../../store/useProfileStore';
+import useSettingsStore from '../../store/useSettingsStore';
+import { translate } from '../../shared/lib/translations';
 import { supabase } from '../../shared/lib/supabaseClient';
 
 // ─── Crop helper ────────────────────────────────────────────────────────────
@@ -29,17 +31,23 @@ function getCroppedImg(imageSrc, pixelCrop) {
     });
 }
 
-// ─── Needs meta ──────────────────────────────────────────────────────────────
-const NEEDS_META = [
-    { key: 'dyslexia', label: 'Dyslexia', Icon: BookOpen, color: 'bg-accent-dyslexia' },
-    { key: 'adhd', label: 'ADHD', Icon: Zap, color: 'bg-accent-adhd' },
-    { key: 'autism', label: 'Autism', Icon: Users, color: 'bg-accent-autism' },
-    { key: 'dyscalculia', label: 'Dyscalculia', Icon: Calculator, color: 'bg-accent-dyscalculia' },
-    { key: 'lowVision', label: 'Low Vision', Icon: Eye, color: 'bg-accent-lowvision' },
+const PRONOUN_OPTIONS = [
+    { value: 'He/Him', labelEn: 'He/Him', labelMl: 'അവൻ' },
+    { value: 'She/Her', labelEn: 'She/Her', labelMl: 'അവൾ' },
+    { value: 'They/Them', labelEn: 'They/Them', labelMl: 'അവർ' },
+    { value: 'He/They', labelEn: 'He/They', labelMl: 'അവൻ/അവർ' },
+    { value: 'She/They', labelEn: 'She/They', labelMl: 'അവൾ/അവർ' },
+    { value: 'Prefer not to say', labelEn: 'Prefer not to say', labelMl: 'പറയാൻ താല്പര്യമില്ല' }
 ];
 
-const PRONOUN_OPTIONS = ['He/Him', 'She/Her', 'They/Them', 'He/They', 'She/They', 'Prefer not to say'];
-const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Genderfluid', 'Prefer not to say', 'Prefer to self-describe'];
+const GENDER_OPTIONS = [
+    { value: 'Male', labelEn: 'Male', labelMl: 'പുരുഷൻ' },
+    { value: 'Female', labelEn: 'Female', labelMl: 'സ്ത്രീ' },
+    { value: 'Non-binary', labelEn: 'Non-binary', labelMl: 'നോൺ-ബൈനറി' },
+    { value: 'Genderfluid', labelEn: 'Genderfluid', labelMl: 'ജെൻഡർ ഫ്ലൂയിഡ്' },
+    { value: 'Prefer not to say', labelEn: 'Prefer not to say', labelMl: 'പറയാൻ താല്പര്യമില്ല' },
+    { value: 'Prefer to self-describe', labelEn: 'Prefer to self-describe', labelMl: 'സ്വയം വിശേഷിപ്പിക്കാൻ താല്പര്യപ്പെടുന്നു' }
+];
 
 // ─── Input helper ────────────────────────────────────────────────────────────
 function Field({ label, sublabel, children }) {
@@ -91,19 +99,7 @@ export default function EditProfileScreen() {
 
     const handleField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-    // Get active needs list
-    const activeNeeds = Object.entries(profile.needs || {})
-        .filter(([, active]) => active)
-        .map(([key]) => key);
-
-    // Automatically sync primaryMode if only 1 need is selected
-    useEffect(() => {
-        if (activeNeeds.length === 1 && form.primaryMode !== activeNeeds[0]) {
-            setForm(f => ({ ...f, primaryMode: activeNeeds[0] }));
-        } else if (activeNeeds.length === 0 && form.primaryMode !== '') {
-            setForm(f => ({ ...f, primaryMode: '' }));
-        }
-    }, [activeNeeds, form.primaryMode]);
+    // Automatically sync primaryMode based on store for saving if needed, but not edited here anymore.
 
     // ── Image pick ──
     const handleFilePick = (e) => {
@@ -172,7 +168,7 @@ export default function EditProfileScreen() {
     // ─── Crop UI overlay ─────────────────────────────────────────────────────
     if (cropping && rawImage) {
         return (
-            <div className="fixed inset-0 bg-black z-50 flex flex-col">
+            <div className="absolute inset-0 bg-black z-50 flex flex-col">
                 <div className="relative flex-1">
                     <Cropper
                         image={rawImage}
@@ -211,11 +207,13 @@ export default function EditProfileScreen() {
         );
     }
 
+    const { displayLanguage } = useSettingsStore();
+
     // ─── Main form ───────────────────────────────────────────────────────────
     return (
         <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto">
             <ScreenHeader
-                title="Edit Profile"
+                title={translate('editProfile', displayLanguage)}
                 rightAction={
                     <button
                         onClick={handleSave}
@@ -223,7 +221,7 @@ export default function EditProfileScreen() {
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-full"
                     >
                         {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} /> : null}
-                        {saving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+                        {saving ? (displayLanguage === 'ml' ? 'സേവ് ചെയ്യുന്നു...' : 'Saving...') : saved ? (displayLanguage === 'ml' ? 'സേവ് ചെയ്തു!' : 'Saved!') : (displayLanguage === 'ml' ? 'സേവ് ചെയ്യുക' : 'Save')}
                     </button>
                 }
             />
@@ -254,20 +252,22 @@ export default function EditProfileScreen() {
                         onClick={() => fileRef.current?.click()}
                         className="text-primary text-base-sm font-semibold"
                     >
-                        Change Photo
+                        {displayLanguage === 'ml' ? 'ഫോട്ടോ മാറ്റുക' : 'Change Photo'}
                     </button>
                     <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFilePick} />
                 </div>
 
                 {/* ── Section: Basic Info ── */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-4">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Basic Info</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        {displayLanguage === 'ml' ? 'അടിസ്ഥാന വിവരങ്ങൾ' : 'Basic Info'}
+                    </p>
 
-                    <Field label="Display Name">
-                        <TextInput value={form.name} onChange={handleField('name')} placeholder="Your full name" />
+                    <Field label={displayLanguage === 'ml' ? 'പേര്' : 'Display Name'}>
+                        <TextInput value={form.name} onChange={handleField('name')} placeholder={displayLanguage === 'ml' ? 'നിങ്ങളുടെ മുഴുവൻ പേര്' : 'Your full name'} />
                     </Field>
 
-                    <Field label="Username">
+                    <Field label={displayLanguage === 'ml' ? 'യൂസർനെയിം' : 'Username'}>
                         <div className="flex items-center bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden focus-within:border-primary/60 transition-colors">
                             <span className="pl-4 text-gray-400 font-semibold text-base-sm select-none">@</span>
                             <input
@@ -280,119 +280,65 @@ export default function EditProfileScreen() {
                         </div>
                     </Field>
 
-                    <Field label="Email" sublabel="Cannot be changed here">
+                    <Field label={displayLanguage === 'ml' ? 'ഇമെയിൽ' : 'Email'} sublabel={displayLanguage === 'ml' ? 'ഇവിടെ മാറ്റാൻ കഴിയില്ല' : 'Cannot be changed here'}>
                         <TextInput value={profile.email || ''} disabled placeholder="your@email.com" />
                     </Field>
 
-                    <Field label="Bio" sublabel="A short intro — helps SahaAI understand you better">
+                    <Field label={displayLanguage === 'ml' ? 'ബയോ (Bio)' : 'Bio'} sublabel={displayLanguage === 'ml' ? 'ചെറിയ വിവരണം - നിങ്ങളെ നന്നായി മനസ്സിലാക്കാൻ സഹായകരമാകും' : 'A short intro — helps SahaAI understand you better'}>
                         <TextInput
                             multiline
                             value={form.bio}
                             onChange={handleField('bio')}
-                            placeholder="Tell us about yourself... (e.g. I'm a 9th grader who loves art and finds reading tough)"
+                            placeholder={displayLanguage === 'ml' ? 'നിങ്ങളെക്കുറിച്ച് പറയുക...' : "Tell us about yourself... (e.g. I'm a 9th grader who loves art and finds reading tough)"}
                         />
                     </Field>
                 </div>
 
                 {/* ── Section: Identity ── */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-4">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Identity</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        {displayLanguage === 'ml' ? 'സ്വത്വ വിവരം' : 'Identity'}
+                    </p>
 
-                    <Field label="Pronouns">
+                    <Field label={displayLanguage === 'ml' ? 'സർവ്വനാമം (Pronouns)' : 'Pronouns'}>
                         <div className="flex flex-wrap gap-2">
                             {PRONOUN_OPTIONS.map((p) => (
                                 <button
-                                    key={p}
-                                    onClick={() => setForm((f) => ({ ...f, pronouns: f.pronouns === p ? '' : p }))}
+                                    key={p.value}
+                                    onClick={() => setForm((f) => ({ ...f, pronouns: f.pronouns === p.value ? '' : p.value }))}
                                     className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-colors ${
-                                        form.pronouns === p
+                                        form.pronouns === p.value
                                             ? 'bg-primary border-primary text-white'
                                             : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary/40'
                                     }`}
                                 >
-                                    {p}
+                                    {displayLanguage === 'ml' ? p.labelMl : p.labelEn}
                                 </button>
                             ))}
                         </div>
                     </Field>
 
-                    <Field label="Gender">
+                    <Field label={displayLanguage === 'ml' ? 'ലിംഗഭേദം (Gender)' : 'Gender'}>
                         <div className="flex flex-wrap gap-2">
                             {GENDER_OPTIONS.map((g) => (
                                 <button
-                                    key={g}
-                                    onClick={() => setForm((f) => ({ ...f, gender: f.gender === g ? '' : g }))}
+                                    key={g.value}
+                                    onClick={() => setForm((f) => ({ ...f, gender: f.gender === g.value ? '' : g.value }))}
                                     className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-colors ${
-                                        form.gender === g
+                                        form.gender === g.value
                                             ? 'bg-primary border-primary text-white'
                                             : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary/40'
                                     }`}
                                 >
-                                    {g}
+                                    {displayLanguage === 'ml' ? g.labelMl : g.labelEn}
                                 </button>
                             ))}
                         </div>
                     </Field>
                 </div>
 
-                {/* ── Section: Accessibility Profile ── */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Accessibility Needs</p>
-                        <button
-                            onClick={() => navigate('/profile-setup')}
-                            className="text-xs text-primary font-semibold"
-                        >
-                            Edit →
-                        </button>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                        {NEEDS_META.map(({ key, label, Icon, color }) => (
-                            <div
-                                key={key}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-full ${
-                                    profile.needs[key]
-                                        ? `${color} text-white`
-                                        : 'bg-gray-100 dark:bg-gray-750 text-gray-400'
-                                }`}
-                            >
-                                <Icon size={14} />
-                                <span className="text-xs font-semibold">{label}</span>
-                            </div>
-                        ))}
-                    </div>
-                    
-                    {activeNeeds.length > 1 && (
-                        <Field label="Primary Mode Focus" sublabel="Choose which need to optimize your home screen for">
-                            <div className="flex flex-wrap gap-2 mt-1">
-                                {activeNeeds.map((needKey) => {
-                                    const meta = NEEDS_META.find(n => n.key === needKey);
-                                    if (!meta) return null;
-                                    const Icon = meta.Icon;
-                                    const isSelected = form.primaryMode === needKey;
-                                    return (
-                                        <button
-                                            key={needKey}
-                                            type="button"
-                                            onClick={() => setForm(f => ({ ...f, primaryMode: needKey }))}
-                                            className={`flex items-center gap-2 px-3 py-2 rounded-full border-2 transition-colors ${
-                                                isSelected
-                                                    ? 'bg-primary border-primary text-white'
-                                                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary/40'
-                                            }`}
-                                        >
-                                            <Icon size={14} />
-                                            <span className="text-xs font-semibold">{meta.label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </Field>
-                    )}
-                </div>
-
                 <Button onClick={handleSave} disabled={saving || saved} className="w-full">
-                    {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save Changes'}
+                    {saving ? (displayLanguage === 'ml' ? 'സേവ് ചെയ്യുന്നു...' : 'Saving...') : saved ? (displayLanguage === 'ml' ? '✓ സേവ് ചെയ്തു!' : '✓ Saved!') : (displayLanguage === 'ml' ? 'മാറ്റങ്ങൾ സേവ് ചെയ്യുക' : 'Save Changes')}
                 </Button>
             </div>
         </div>

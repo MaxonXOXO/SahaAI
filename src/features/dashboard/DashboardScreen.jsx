@@ -3,16 +3,19 @@ import { Bell, Settings, Clock, ChevronRight } from 'lucide-react';
 import Card from '../../shared/components/Card';
 import IconButton from '../../shared/components/IconButton';
 import useProfileStore from '../../store/useProfileStore';
+import useSettingsStore from '../../store/useSettingsStore';
 import { DASHBOARD_MODES, TILE_REGISTRY } from './dashboardModes';
 import Button from '../../shared/components/Button';
 import useRecentActivity from '../../shared/hooks/useRecentActivity';
 import { getEventLabel, getEventLink, EVENT_REGISTRY } from '../../shared/lib/eventRegistry';
+import { translate } from '../../shared/lib/translations';
 
 export default function DashboardScreen() {
     const navigate = useNavigate();
     const name = useProfileStore((s) => s.name);
     const username = useProfileStore((s) => s.username);
     const primaryMode = useProfileStore((s) => s.primaryMode);
+    const displayLanguage = useSettingsStore((s) => s.displayLanguage);
     const { recentItems, loading: recentLoading } = useRecentActivity(5);
 
     const displayName = name || username || 'there';
@@ -24,7 +27,7 @@ export default function DashboardScreen() {
     // For Low Vision, we might want a darker background. 
     // Just a quick check to apply a specific wrapper style if needed based on the config.
     const isLowVision = modeKey === 'lowVision';
-    const containerClasses = `flex-1 flex flex-col px-4 py-4 overflow-y-auto transition-colors duration-300 ${isLowVision ? 'bg-gray-950 text-white' : 'bg-white dark:bg-gray-900'}`;
+    const containerClasses = `flex-1 flex flex-col px-4 py-4 overflow-y-auto pb-24 transition-colors duration-300 ${isLowVision ? 'bg-gray-950 text-white' : 'bg-white dark:bg-gray-900'}`;
     const textClasses = isLowVision ? 'text-gray-100' : 'text-gray-800 dark:text-gray-100';
     const subTextClasses = isLowVision ? 'text-gray-300' : 'text-gray-400';
 
@@ -33,15 +36,15 @@ export default function DashboardScreen() {
             <div className="flex items-center justify-between mb-5">
                 <div>
                     <h1 className={`text-base-md font-bold ${textClasses}`}>
-                        Hi, {displayName}! {isLowVision ? '👁️' : '👋'}
+                        {translate('welcomeBack', displayLanguage)}, {displayName}! {isLowVision ? '👁️' : '👋'}
                     </h1>
                     <p className={`text-base-sm mt-1 ${subTextClasses}`}>
-                        {config.greeting}
+                        {translate('greeting_' + modeKey, displayLanguage)}
                     </p>
                 </div>
                 <IconButton 
                     icon={Bell} 
-                    label="Notifications" 
+                    label={translate('notifications', displayLanguage)} 
                     variant="default" 
                     className={isLowVision ? 'text-yellow-400 border-yellow-400' : ''} 
                 />
@@ -49,28 +52,19 @@ export default function DashboardScreen() {
 
             {/* Configurable Hero Card based on Mode */}
             <p className={`text-xs font-bold tracking-wider mb-2 uppercase ${config.themeColor}`}>
-                {config.heroTitle}
+                {translate('hero_' + modeKey, displayLanguage)}
             </p>
             <Card className={`mb-6 p-5 border-2 ${isLowVision ? 'border-yellow-400 bg-gray-900' : `border-transparent ${config.bgLight}`}`}>
                 <div className="flex flex-col items-center justify-center py-4">
                     <p className={`text-center font-medium ${isLowVision ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
-                        {modeKey === 'adhd' && 'Stay focused • Structured • Reduce distractions'}
-                        {modeKey === 'autism' && 'Calm • Predictable • Clear routines'}
-                        {modeKey === 'dyslexia' && 'Readable • Simple • Distraction free'}
-                        {modeKey === 'dyscalculia' && 'Step-by-step • Visual • Build confidence'}
-                        {modeKey === 'lowVision' && 'High contrast • Large • Easy to see'}
-                        {modeKey === 'default' && 'Welcome to your adaptive workspace'}
+                        {translate('hero_text_' + modeKey, displayLanguage)}
                     </p>
                     
-                    {/* Placeholder for the main feature button based on the mockup */}
                     <Button 
                         className={`mt-6 w-full ${isLowVision ? 'bg-yellow-400 text-black hover:bg-yellow-500' : ''}`}
                         onClick={() => navigate('/settings')}
                     >
-                        {modeKey === 'adhd' ? 'Start Focus' : 
-                         modeKey === 'dyslexia' ? 'Open Reader →' : 
-                         modeKey === 'dyscalculia' ? 'Solve Now →' : 
-                         modeKey === 'lowVision' ? 'Open Camera' : 'Start Day'}
+                        {translate('hero_btn_' + modeKey, displayLanguage)}
                     </Button>
                 </div>
             </Card>
@@ -81,19 +75,26 @@ export default function DashboardScreen() {
                     <div className="flex items-center gap-2 mb-3">
                         <Clock size={14} className={isLowVision ? 'text-yellow-400' : 'text-gray-400'} />
                         <p className={`text-xs font-bold tracking-wider uppercase ${isLowVision ? 'text-yellow-400' : 'text-gray-400'}`}>
-                            Recently Used
+                            {translate('recentlyUsed', displayLanguage)}
                         </p>
                     </div>
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                         {recentItems.map((item, idx) => {
                             const link = getEventLink(item.event_type);
-                            const label = getEventLabel(item.event_type);
+                            const rawLabel = getEventLabel(item.event_type);
                             const entry = EVENT_REGISTRY[item.event_type];
-                            // Try to find a matching tile for its icon
-                            const matchedTile = Object.values(TILE_REGISTRY).find(
-                                (t) => entry && t.path === entry.path
+                            
+                            // Try to find a matching tile for translation and its icon
+                            const matchedTileEntry = Object.entries(TILE_REGISTRY).find(
+                                ([_, t]) => entry && t.path === entry.path
                             );
+                            const matchedTileKey = matchedTileEntry ? matchedTileEntry[0] : null;
+                            const matchedTile = matchedTileEntry ? matchedTileEntry[1] : null;
                             const Icon = matchedTile?.icon;
+                            
+                            const label = matchedTileKey 
+                                ? translate('tile_' + matchedTileKey, displayLanguage) 
+                                : rawLabel;
 
                             return (
                                 <button
@@ -119,12 +120,12 @@ export default function DashboardScreen() {
 
             <div className="flex items-center justify-between mb-3">
                 <p className={`text-xs font-bold tracking-wider uppercase ${config.themeColor}`}>
-                    Quick Access
+                    {translate('quickAccess', displayLanguage)}
                 </p>
                 <IconButton 
                     icon={Settings} 
                     size={16} 
-                    label="Edit Tiles" 
+                    label={translate('editTiles', displayLanguage)} 
                     onClick={() => navigate('/settings')}
                     className={isLowVision ? 'text-yellow-400 border-transparent' : 'text-gray-400 border-transparent'}
                 />
@@ -149,7 +150,7 @@ export default function DashboardScreen() {
                                 <Icon size={20} className={isLowVision ? 'text-yellow-400' : 'text-white'} />
                             </div>
                             <span className={`text-xs text-center font-medium ${isLowVision ? 'text-yellow-400' : 'text-gray-700 dark:text-gray-200'}`}>
-                                {tile.label}
+                                {translate('tile_' + tileKey, displayLanguage)}
                             </span>
                         </button>
                     );
@@ -159,12 +160,7 @@ export default function DashboardScreen() {
             <div className={`mt-8 p-3 rounded-card text-center text-xs font-medium border
                 ${isLowVision ? 'bg-yellow-400 text-black border-yellow-400' : `${config.bgLight} ${config.themeColor} border-transparent`}
             `}>
-                {modeKey === 'adhd' && '💡 Tip: Break tasks, take short breaks, stay hydrated!'}
-                {modeKey === 'autism' && '🌸 You\'re doing great! One step at a time.'}
-                {modeKey === 'dyslexia' && '🌙 Focus on progress, not perfection.'}
-                {modeKey === 'dyscalculia' && '⭐ Small steps lead to big progress!'}
-                {modeKey === 'lowVision' && '☀️ You\'ve got this! Keep going.'}
-                {modeKey === 'default' && '✨ One step at a time.'}
+                {translate('tip_' + modeKey, displayLanguage)}
             </div>
         </div>
     );

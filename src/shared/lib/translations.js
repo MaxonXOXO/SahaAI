@@ -1,0 +1,406 @@
+export const TRANSLATIONS = {
+    en: {
+        // BottomNav
+        home: 'Home',
+        ai: 'AI',
+        tools: 'Tools',
+        progress: 'Progress',
+        profile: 'Profile',
+
+        // Dashboard
+        welcomeBack: 'Hi',
+        greeting_adhd: "Let's focus on one step at a time.",
+        greeting_dyslexia: "Let's make reading easier.",
+        greeting_autism: "Here's your plan for today.",
+        greeting_dyscalculia: "Math can be simple!",
+        greeting_lowVision: "We've enhanced everything for better visibility.",
+        greeting_default: "Ready to learn something new?",
+        
+        hero_adhd: 'FOCUS TIMER',
+        hero_dyslexia: 'READING ASSISTANT',
+        hero_autism: "TODAY'S SCHEDULE",
+        hero_dyscalculia: 'MATH HELPER',
+        hero_lowVision: 'VISION ASSISTANT',
+        hero_default: 'GET STARTED',
+
+        hero_text_adhd: 'Stay focused • Structured • Reduce distractions',
+        hero_text_autism: 'Calm • Predictable • Clear routines',
+        hero_text_dyslexia: 'Readable • Simple • Distraction free',
+        hero_text_dyscalculia: 'Step-by-step • Visual • Build confidence',
+        hero_text_lowVision: 'High contrast • Large • Easy to see',
+        hero_text_default: 'Welcome to your adaptive workspace',
+
+        hero_btn_adhd: 'Start Focus',
+        hero_btn_dyslexia: 'Open Reader →',
+        hero_btn_dyscalculia: 'Solve Now →',
+        hero_btn_lowVision: 'Open Camera',
+        hero_btn_default: 'Start Day',
+
+        recentlyUsed: 'Recently Used',
+        quickAccess: 'Quick Access',
+        editTiles: 'Edit Tiles',
+        notifications: 'Notifications',
+
+        tip_adhd: '💡 Tip: Break tasks, take short breaks, stay hydrated!',
+        tip_autism: "🌸 You're doing great! One step at a time.",
+        tip_dyslexia: '🌙 Focus on progress, not perfection.',
+        tip_dyscalculia: '⭐ Small steps lead to big progress!',
+        tip_lowVision: "☀️ You've got this! Keep going.",
+        tip_default: 'One step at a time.',
+
+        tile_read: 'Read Text',
+        tile_read_desc: 'Read scanned images and documents with text-to-speech support.',
+        tile_math: 'Math Helper',
+        tile_math_desc: 'Solve arithmetic problems with step-by-step guidance.',
+        tile_social: 'Social Stories',
+        tile_social_desc: 'Practice conversations with custom AI-generated social scripts.',
+        tile_focus: 'Focus Mode',
+        tile_focus_desc: 'A calming screen with a structured task list and white noise timer.',
+        tile_vision: 'Vision Assistant',
+        tile_vision_desc: 'Speech and contrast helpers tailored for low-vision reading.',
+        tile_routine: 'Routine Builder',
+        tile_routine_desc: 'Organize your day with simple checklists and visual milestones.',
+        tile_textSimplifier: 'Text Simplifier',
+        tile_textSimplifier_desc: 'Simplify advanced vocabulary and paragraphs using AI.',
+        tile_readAloud: 'Read Aloud',
+        tile_readAloud_desc: 'Read text contents aloud with custom speed.',
+        tile_dyslexiaFont: 'Dyslexia Font',
+        tile_dyslexiaFont_desc: 'Enable readable font overlays across the app.',
+        tile_spellCheck: 'Spell Check',
+        tile_spellCheck_desc: 'AI-assisted writing assistant with dyslexia corrections.',
+        tile_highlighter: 'Highlighter',
+        tile_highlighter_desc: 'Custom digital highlights to assist visual reading tracking.',
+        tile_aiChat: 'AI Chat',
+        tile_aiChat_desc: 'Personalized AI assistant configured for your accessibility needs.',
+        tile_mathSolver: 'Math Solver',
+        tile_mathSolver_desc: 'Break down complex math calculations visually.',
+        tile_numberSense: 'Number Sense',
+        tile_numberSense_desc: 'Train visual recognition of quantities and calculations.',
+        tile_stepSolver: 'Step Solver',
+        tile_stepSolver_desc: 'Step-by-step helper to solve math homework questions.',
+        tile_formulaSheet: 'Formula Sheet',
+        tile_formulaSheet_desc: 'Interactive cheatsheet with clear, spaced math formulas.',
+        tile_mathGames: 'Math Games',
+        tile_mathGames_desc: 'Engage with numeric games to build math confidence.',
+        tile_visualAssistant: 'Visual Assistant',
+        tile_visualAssistant_desc: 'Voice-based description assistant for surroundings.',
+        tile_calmCorner: 'Calm Corner',
+        tile_calmCorner_desc: 'Soothing sounds, animations, and breathing exercises.',
+        tile_magnifier: 'Magnifier',
+        tile_magnifier_desc: 'Use your camera zoom to enlarge reading surfaces.',
+        tile_highContrast: 'High Contrast',
+        tile_highContrast_desc: 'Toggle high-contrast themes for visual clarity.',
+        tile_textReader: 'Text Reader',
+        tile_textReader_desc: 'Scans printed texts and reads them aloud instantly.',
+        tile_largeKeyboard: 'Large Keyboard',
+        tile_largeKeyboard_desc: 'Larger keyboard layout settings for ease of input.',
+        tile_colorInverter: 'Color Inverter',
+        tile_colorInverter_desc: 'Toggle inverted color mapping to reduce glare.',
+
+        // Tools Screen
+        toolsTitle: 'Tools Directory',
+        toolsDesc: 'Explore all specialized tools across all learning modes.',
+        searchPlaceholder: 'Search tools...',
+        primaryFocus: 'Primary Focus',
+        categories: {
+            readingWriting: 'Reading & Writing',
+            readingWriting_desc: 'Tools for reading assistance, speech, and translation',
+            mathNumbers: 'Math & Numbers',
+            mathNumbers_desc: 'Calculators, visual step solvers, and arithmetic assistance',
+            focusRoutines: 'Focus & Routines',
+            focusRoutines_desc: 'ADHD focus helpers, structured routines, and sensory relaxation',
+            sensoryVision: 'Sensory & Vision',
+            sensoryVision_desc: 'High contrast screens, text readers, color adjustment, and magnification',
+            aiChatbot: 'AI Assistant & Chat',
+            aiChatbot_desc: 'Interactive conversation helpers and social story generators'
+        },
+
+        // Progress Screen
+        progressTitle: 'Progress & Streaks',
+        progressDesc: 'Visualize your daily streaks, completed lessons, and accuracy trends.',
+        dailyStreak: 'Daily Streak',
+        streakValue: '{count} Days',
+        streakSubtitle: 'Keep the flame burning! Log in daily to complete learning activities.',
+        streakGridTitle: 'Streak Activity (Last 7 Days)',
+        weeklyFocus: 'Weekly Focus',
+        sessionsGoal: '{current} of {goal} sessions completed this week',
+        mathAccuracy: 'Math Accuracy',
+        accuracySubtitle: 'Based on your recent math exercises and helpers',
+        completed: 'Completed',
+        active: 'Active',
+        today: 'Today',
+        loading: 'Loading stats...',
+
+        // Profile Screen
+        profileTitle: 'Profile & Settings',
+        student: 'Student',
+        editProfile: 'Edit Profile',
+        menuAccessibility: 'Accessibility Preferences',
+        menuAccessibilityDesc: 'Configure learning aids & support.',
+        menuDisplay: 'Display & Font Settings',
+        menuDisplayDesc: 'Dyslexia Fonts, contrast, scaling.',
+        menuSpeech: 'Speech & Voice Settings',
+        menuSpeechDesc: 'Text-to-speech rate, pitch, language.',
+        menuLanguage: 'Language Selection',
+        menuLanguageDesc: 'Change display and TTS language.',
+        logout: 'Log Out',
+
+        // Settings Dialogs
+        close: 'Close',
+        saveChanges: 'Save Changes',
+        accPreferencesTitle: 'Accessibility Preferences',
+        accPreferencesDesc: 'Select the learning difficulties you want us to optimize your workspace for.',
+        primaryModeSelect: 'Primary Interface Mode',
+        primaryModeSelectDesc: 'Choose the main difficulty to optimize your dashboard dashboard tiles and assistant prompts.',
+        
+        fontStyle: 'Font Style',
+        fontStyleStandard: 'Standard (Inter)',
+        fontStyleDyslexic: 'OpenDyslexic',
+        fontStyleMalayalamStandard: 'Noto Sans',
+        fontStyleMalayalamDyslexic: 'Baloo Chettan 2',
+        
+        uiDisplayScale: 'UI Display Scale',
+        scaleSmall: 'Small',
+        scaleMedium: 'Medium',
+        scaleLarge: 'Large',
+        
+        textThickness: 'Text Thickness',
+        normal: 'Normal',
+        medium: 'Medium',
+        bold: 'Bold',
+        
+        themeContrastMode: 'Theme & Contrast Mode',
+        themeLight: 'Light Theme',
+        themeLightDesc: 'Regular bright mode',
+        themeDark: 'Dark Theme (Standard)',
+        themeDarkDesc: 'Regular dark mode',
+        themeSoft: 'Soft Contrast',
+        themeSoftDesc: 'Toned down highlights',
+        themeHigh: 'Maximum Contrast',
+        themeHighDesc: 'Pure black & vibrant yellow',
+
+        langTitle: 'Language Selection',
+        langDisplay: 'Display Language (UI)',
+        langTts: 'Text-to-Speech Voice',
+        langAi: 'AI Assistant Language',
+        langSpeech: 'Speech Practice Recognition'
+    },
+    ml: {
+        // BottomNav
+        home: 'ഹോം',
+        ai: 'എഐ',
+        tools: 'ടൂളുകൾ',
+        progress: 'പുരോഗതി',
+        profile: 'പ്രൊഫൈൽ',
+
+        // Dashboard
+        welcomeBack: 'ഹലോ',
+        greeting_adhd: "നമുക്ക് ഓരോ ചുവടായി ശ്രദ്ധ കേന്ദ്രീകരിക്കാം.",
+        greeting_dyslexia: "വായന എളുപ്പമാക്കാം.",
+        greeting_autism: "ഇന്നത്തെ നിങ്ങളുടെ പ്ലാൻ ഇതാ.",
+        greeting_dyscalculia: "ഗണിതം ലളിതമാക്കാം!",
+        greeting_lowVision: "മെച്ചപ്പെട്ട കാഴ്ചയ്ക്കായി ഞങ്ങൾ എല്ലാം ക്രമീകരിച്ചിട്ടുണ്ട്.",
+        greeting_default: "പുതിയ എന്തെങ്കിലും പഠിക്കാൻ തയ്യാറാണോ?",
+        
+        hero_adhd: 'ഫോക്കസ് ടൈമർ',
+        hero_dyslexia: 'റീഡിംഗ് അസിസ്റ്റന്റ്',
+        hero_autism: 'ഇന്നത്തെ ഷെഡ്യൂൾ',
+        hero_dyscalculia: 'മാത്സ് ഹെൽപ്പർ',
+        hero_lowVision: 'വിഷൻ അസിസ്റ്റന്റ്',
+        hero_default: 'ആരംഭിക്കുക',
+
+        hero_text_adhd: 'ശ്രദ്ധ കേന്ദ്രീകരിക്കുക • ചിട്ടപ്പെടുത്തുക • ശ്രദ്ധാശൈഥില്യം കുറയ്ക്കുക',
+        hero_text_autism: 'ശാന്തത • പ്രവചനാതീതത • വ്യക്തമായ ദിനചര്യകൾ',
+        hero_text_dyslexia: 'വായിക്കാൻ എളുപ്പമുള്ളത് • ലളിതം • ശ്രദ്ധ വ്യതിചലിക്കാത്തത്',
+        hero_text_dyscalculia: 'ഘട്ടം ഘട്ടമായുള്ളത് • ദൃശ്യവൽക്കരണം • ആത്മവിശ്വാസം വളർത്തുക',
+        hero_text_lowVision: 'ഉയർന്ന കോൺട്രാസ്റ്റ് • വലുത് • കാണാൻ എളുപ്പമുള്ളത്',
+        hero_text_default: 'നിങ്ങളുടെ അഡാപ്റ്റീവ് വർക്ക്സ്പേസിലേക്ക് സ്വാഗതം',
+
+        hero_btn_adhd: 'ഫോക്കസ് ആരംഭിക്കുക',
+        hero_btn_dyslexia: 'റീഡർ തുറക്കുക →',
+        hero_btn_dyscalculia: 'ഇപ്പോൾ പരിഹരിക്കുക →',
+        hero_btn_lowVision: 'ക്യാമറ തുറക്കുക',
+        hero_btn_default: 'ദിവസം ആരംഭിക്കുക',
+
+        recentlyUsed: 'അടുത്തിടെ ഉപയോഗിച്ചവ',
+        quickAccess: 'ദ്രുത പ്രവേശനം',
+        editTiles: 'ടൈലുകൾ മാറ്റുക',
+        notifications: 'അറിയിപ്പുകൾ',
+
+        tip_adhd: '💡 ടിപ്പ്: ജോലികൾ വിഭജിക്കുക, ചെറിയ ഇടവേളകൾ എടുക്കുക, വെള്ളം കുടിക്കുക!',
+        tip_autism: '🌸 നിങ്ങൾ നന്നായി ചെയ്യുന്നുണ്ട്! ഓരോ ചുവടായി മുന്നോട്ട് പോകുക.',
+        tip_dyslexia: '🌙 പുരോഗതിയിൽ ശ്രദ്ധ കേന്ദ്രീകരിക്കുക, പൂർണ്ണതയിലല്ല.',
+        tip_dyscalculia: '⭐ ചെറിയ ചുവടുകൾ വലിയ പുരോഗതിയിലേക്ക് നയിക്കുന്നു!',
+        tip_lowVision: '☀️ നിങ്ങൾക്ക് ഇതിന് സാധിക്കും! മുന്നോട്ട് പോകുക.',
+        tip_default: 'ഓരോ ചുവടായി മുന്നോട്ട് പോകുക.',
+
+        // Tiles
+        tile_read: 'ടെക്സ്റ്റ് വായിക്കുക',
+        tile_read_desc: 'സ്കാൻ ചെയ്ത ചിത്രങ്ങളും ഡോക്യുമെന്റുകളും ടെക്സ്റ്റ്-ടു-സ്പീച്ച് പിന്തുണയോടെ വായിക്കുക.',
+        tile_math: 'മാത്സ് ഹെൽപ്പർ',
+        tile_math_desc: 'ഘട്ടം ഘട്ടമായുള്ള മാർഗ്ഗനിർദ്ദേശത്തോടെ ഗണിത പ്രശ്നങ്ങൾ പരിഹരിക്കുക.',
+        tile_social: 'സോഷ്യൽ സ്റ്റോറികൾ',
+        tile_social_desc: 'ഇഷ്ടാനുസൃതമായി എഐ നിർമ്മിച്ച സോഷ്യൽ സ്ക്രിപ്റ്റുകൾ ഉപയോഗിച്ച് സംഭാഷണം പരിശീലിക്കുക.',
+        tile_focus: 'ഫോക്കസ് മോഡ്',
+        tile_focus_desc: 'ക്രമീകരിച്ച ടാസ്ക് ലിസ്റ്റും വൈറ്റ് നോയിസ് ടൈമറും ഉള്ള ശാന്തമായ സ്ക്രീൻ.',
+        tile_vision: 'വിഷൻ അസിസ്റ്റന്റ്',
+        tile_vision_desc: 'കുറഞ്ഞ കാഴ്ചയുള്ള വായനയ്ക്കായി രൂപകൽപ്പന ചെയ്ത സംസാര, കോൺട്രാസ്റ്റ് സഹായികൾ.',
+        tile_routine: 'ദിനചര്യ നിർമ്മാതാവ്',
+        tile_routine_desc: 'ലളിതമായ ചെക്ക്‌ലിസ്റ്റുകളും വിഷ്വൽ നാഴികക്കല്ലുകളും ഉപയോഗിച്ച് നിങ്ങളുടെ ദിവസം ക്രമീകരിക്കുക.',
+        tile_textSimplifier: 'ടെക്സ്റ്റ് ലളിതമാക്കൽ',
+        tile_textSimplifier_desc: 'എഐ ഉപയോഗിച്ച് ബുദ്ധിമുട്ടുള്ള വാക്കുകളും ഖണ്ഡികകളും ലളിതമാക്കുക.',
+        tile_readAloud: 'ഉറക്കെ വായിക്കുക',
+        tile_readAloud_desc: 'നിങ്ങൾ ആവശ്യപ്പെടുന്ന വേഗതയിൽ ടെക്സ്റ്റ് ഉള്ളടക്കങ്ങൾ ഉറക്കെ വായിക്കുക.',
+        tile_dyslexiaFont: 'ഡിസ്‌ലെക്സിയ ഫോണ്ട്',
+        tile_dyslexiaFont_desc: 'ആപ്പിലുടനീളം വായിക്കാൻ എളുപ്പമുള്ള ഫോണ്ട് ഓവർലേകൾ പ്രവർത്തനക്ഷമമാക്കുക.',
+        tile_spellCheck: 'അക്ഷരവിന്യാസ പരിശോധന',
+        tile_spellCheck_desc: 'ഡിസ്‌ലെക്സിയ തിരുത്തലുകളുള്ള എഐ അസിസ്റ്റഡ് റൈറ്റിംഗ് അസിസ്റ്റന്റ്.',
+        tile_highlighter: 'ഹൈലൈറ്റർ',
+        tile_highlighter_desc: 'വായന എളുപ്പമാക്കാൻ സഹായിക്കുന്ന ഡിജിറ്റൽ ഹൈലൈറ്റുകൾ.',
+        tile_aiChat: 'എഐ ചാറ്റ്',
+        tile_aiChat_desc: 'നിങ്ങളുടെ അക്സസിബിലിറ്റി ആവശ്യങ്ങൾക്കായി ക്രമീകരിച്ച വ്യക്തിഗത എഐ അസിസ്റ്റന്റ്.',
+        tile_mathSolver: 'മാത്സ് സോൾവർ',
+        tile_mathSolver_desc: 'സങ്കീർണ്ണമായ കണക്കുകൂട്ടലുകൾ ദൃശ്യപരമായി ലളിതമാക്കുക.',
+        tile_numberSense: 'നമ്പർ സെൻസ്',
+        tile_numberSense_desc: 'സംഖ്യകളുടെയും കണക്കുകൂട്ടലുകളുടെയും ദൃശ്യപരമായ തിരിച്ചറിവ് പരിശീലിക്കുക.',
+        tile_stepSolver: 'സ്റ്റെപ്പ് സോൾവർ',
+        tile_stepSolver_desc: 'ഗൃഹപാഠം ചെയ്യാൻ സഹായിക്കുന്ന ഘട്ടം ഘട്ടമായുള്ള സഹായി.',
+        tile_formulaSheet: 'ഫോർമുല ഷീറ്റ്',
+        tile_formulaSheet_desc: 'വ്യക്തമായി ക്രമീകരിച്ചിരിക്കുന്ന കണക്ക് ഫോർമുലകളുടെ ഒരു ലിസ്റ്റ്.',
+        tile_mathGames: 'കണക്ക് കളികൾ',
+        tile_mathGames_desc: 'കണക്കിലുള്ള ആത്മവിശ്വാസം വളർത്താൻ സഹായിക്കുന്ന കളികളിൽ ഏർപ്പെടുക.',
+        tile_visualAssistant: 'വിഷ്വൽ അസിസ്റ്റന്റ്',
+        tile_visualAssistant_desc: 'നിങ്ങളുടെ ചുറ്റുപാടുകൾ ശബ്ദത്തിലൂടെ വിവരിക്കുന്ന സഹായി.',
+        tile_calmCorner: 'കാം കോർണർ',
+        tile_calmCorner_desc: 'ശാന്തമായ ശബ്ദങ്ങൾ, ആനിമേറ്റുകൾ, ശ്വസന വ്യായാമങ്ങൾ.',
+        tile_magnifier: 'മാഗ്നിഫയർ',
+        tile_magnifier_desc: 'വായനാ പ്രതലങ്ങൾ വലുതാക്കി കാണാൻ ക്യാമറ സൂം ഉപയോഗിക്കുക.',
+        tile_highContrast: 'ഹൈ കോൺട്രാസ്റ്റ്',
+        tile_highContrast_desc: 'കാഴ്ച വ്യക്തമാക്കാൻ ഉയർന്ന കോൺട്രാസ്റ്റ് തീമുകൾ മാറ്റുക.',
+        tile_textReader: 'ടെക്സ്റ്റ് റീഡർ',
+        tile_textReader_desc: 'അച്ചടിച്ച ടെക്സ്റ്റുകൾ സ്കാൻ ചെയ്ത് പെട്ടെന്ന് ഉറക്കെ വായിക്കുക.',
+        tile_largeKeyboard: 'വലിയ കീബോർഡ്',
+        tile_largeKeyboard_desc: 'എളുപ്പത്തിൽ എഴുതാൻ വലിയ കീബോർഡ് ക്രമീകരണങ്ങൾ.',
+        tile_colorInverter: 'കളർ ഇൻവെർട്ടർ',
+        tile_colorInverter_desc: 'കണ്ണുകൾക്ക് ആയാസം കുറയ്ക്കാൻ നിറങ്ങൾ തിരിച്ചുനൽകുക.',
+
+        // Tools Screen
+        toolsTitle: 'ഉപകരണങ്ങളുടെ ഡയറക്ടറി',
+        toolsDesc: 'എല്ലാ പഠന രീതികളിലുമുള്ള എല്ലാ പ്രത്യേക ഉപകരണങ്ങളും പര്യവേക്ഷണം ചെയ്യുക.',
+        searchPlaceholder: 'ഉപകരണങ്ങൾ തിരയുക...',
+        primaryFocus: 'പ്രധാന ശ്രദ്ധാകേന്ദ്രം',
+        categories: {
+            readingWriting: 'വായനയും എഴുത്തും',
+            readingWriting_desc: 'വായന, സംസാരം, വിവർത്തനം എന്നിവയ്ക്കുള്ള സഹായികൾ',
+            mathNumbers: 'കണക്കും സംഖ്യകളും',
+            mathNumbers_desc: 'കാൽക്കുലേറ്ററുകൾ, വിഷ്വൽ സ്റ്റെപ്പ് സോൾവറുകൾ, കണക്ക് സഹായികൾ',
+            focusRoutines: 'ഫോക്കസും ദിനചര്യകളും',
+            focusRoutines_desc: 'ശ്രദ്ധ സഹായികൾ, ദിനചര്യകൾ, മാനസിക ശാന്തത',
+            sensoryVision: 'സെൻസറിയും കാഴ്ചയും',
+            sensoryVision_desc: 'ഉയർന്ന കോൺട്രാസ്റ്റ് സ്ക്രീനുകൾ, ടെക്സ്റ്റ് റീഡറുകൾ, സൂം സഹായികൾ',
+            aiChatbot: 'എഐ അസിസ്റ്റന്റും ചാറ്റും',
+            aiChatbot_desc: 'സംഭാഷണ സഹായികളും സോഷ്യൽ സ്റ്റോറി നിർമ്മാതാക്കളും'
+        },
+
+        // Progress Screen
+        progressTitle: 'പുരോഗതി വിവരങ്ങൾ',
+        progressDesc: 'നിങ്ങളുടെ പ്രതിദിന സ്ട്രീക്കുകൾ, പൂർത്തിയാക്കിയ പാഠങ്ങൾ, കൃത്യതയുടെ ട്രെൻഡുകൾ എന്നിവ കാണുക.',
+        dailyStreak: 'പ്രതിദിന സ്ട്രീക്ക്',
+        streakValue: '{count} ദിവസങ്ങൾ',
+        streakSubtitle: 'ജ്വാല നിലനിർത്തുക! പഠന പ്രവർത്തനങ്ങൾ പൂർത്തിയാക്കാൻ ദിവസവും ലോഗിൻ ചെയ്യുക.',
+        streakGridTitle: 'സ്ട്രീക്ക് പ്രവർത്തനം (കഴിഞ്ഞ 7 ദിവസങ്ങൾ)',
+        weeklyFocus: 'പ്രതിവാര ഫോക്കസ്',
+        sessionsGoal: 'ഈ ആഴ്ച {goal}-ൽ {current} സെഷനുകൾ പൂർത്തിയായി',
+        mathAccuracy: 'കണക്ക് കൃത്യത',
+        accuracySubtitle: 'നിങ്ങളുടെ സമീപകാല ഗണിത അഭ്യാസങ്ങളെ അടിസ്ഥാനമാക്കി',
+        completed: 'പൂർത്തിയായി',
+        active: 'സജീവം',
+        today: 'ഇന്ന്',
+        loading: 'വിവരങ്ങൾ ശേഖരിക്കുന്നു...',
+
+        // Profile Screen
+        profileTitle: 'പ്രൊഫൈലും ക്രമീകരണങ്ങളും',
+        student: 'വിദ്യാർത്ഥി',
+        editProfile: 'പ്രൊഫൈൽ തിരുത്തുക',
+        menuAccessibility: 'അക്സസിബിലിറ്റി ക്രമീകരണങ്ങൾ',
+        menuAccessibilityDesc: 'പഠന സഹായങ്ങളും പിന്തുണയും ക്രമീകരിക്കുക.',
+        menuDisplay: 'ഡിസ്പ്ലേ & ഫോണ്ട് ക്രമീകരണങ്ങൾ',
+        menuDisplayDesc: 'ഡിസ്‌ലെക്സിയ ഫോണ്ടുകൾ, ഉയർന്ന കോൺട്രാസ്റ്റ്, വലുപ്പം.',
+        menuSpeech: 'സ്പീച്ച് & വോയ്സ് ക്രമീകരണങ്ങൾ',
+        menuSpeechDesc: 'ടെക്സ്റ്റ്-ടു-സ്പീച്ച് വേഗത, ശബ്ദം, ഭാഷ.',
+        menuLanguage: 'ഭാഷ തിരഞ്ഞെടുക്കൽ',
+        menuLanguageDesc: 'ഡിസ്പ്ലേ, ടിടിഎസ് ഭാഷ മാറ്റുക.',
+        logout: 'ലോഗ് ഔട്ട്',
+
+        // Settings Dialogs
+        close: 'അടയ്ക്കുക',
+        saveChanges: 'മാറ്റങ്ങൾ സൂക്ഷിക്കുക',
+        accPreferencesTitle: 'അക്സസിബിലിറ്റി ക്രമീകരണങ്ങൾ',
+        accPreferencesDesc: 'നിങ്ങളുടെ വർക്ക്സ്പേസ് ഒപ്റ്റിമൈസ് ചെയ്യാൻ താല്പര്യമുള്ള പഠന ബുദ്ധിമുട്ടുകൾ തിരഞ്ഞെടുക്കുക.',
+        primaryModeSelect: 'പ്രധാന ഇന്റർഫേസ് മോഡ്',
+        primaryModeSelectDesc: 'ഡാഷ്‌ബോർഡ് ടൈലുകളും അസിസ്റ്റന്റ് പ്രോംപ്റ്റുകളും ഒപ്റ്റിമൈസ് ചെയ്യുന്നതിന് പ്രധാന മോഡ് തിരഞ്ഞെടുക്കുക.',
+        
+        fontStyle: 'ഫോണ്ട് ശൈലി',
+        fontStyleStandard: 'സ്റ്റാൻഡേർഡ് (Inter)',
+        fontStyleDyslexic: 'OpenDyslexic',
+        fontStyleMalayalamStandard: 'നോട്ടോ സാൻസ്',
+        fontStyleMalayalamDyslexic: 'ബാലു ചേട്ടൻ 2',
+        
+        uiDisplayScale: 'ഡിസ്പ്ലേ സ്കെയിൽ',
+        scaleSmall: 'ചെറുത്',
+        scaleMedium: 'സാധാരണ',
+        scaleLarge: 'വലുത്',
+        
+        textThickness: 'ടെക്സ്റ്റിന്റെ കനം',
+        normal: 'സാധാരണ',
+        medium: 'മീഡിയം',
+        bold: 'ബോൾഡ്',
+        
+        themeContrastMode: 'തീമും കോൺട്രാസ്റ്റും',
+        themeLight: 'ലൈറ്റ് തീം',
+        themeLightDesc: 'സാധാരണ വെളിച്ചമുള്ള മോഡ്',
+        themeDark: 'ഡാർക്ക് തീം',
+        themeDarkDesc: 'സാധാരണ ഇരുണ്ട മോഡ്',
+        themeSoft: 'സോഫ്റ്റ് കോൺട്രാസ്റ്റ്',
+        themeSoftDesc: 'മൃദുവായ വെളിച്ചമുള്ള മോഡ്',
+        themeHigh: 'ഉയർന്ന കോൺട്രാസ്റ്റ്',
+        themeHighDesc: 'കറുപ്പും തിളങ്ങുന്ന മഞ്ഞയും',
+
+        langTitle: 'ഭാഷ തിരഞ്ഞെടുക്കുക',
+        langDisplay: 'ഡിസ്പ്ലേ ഭാഷ (UI)',
+        langTts: 'ടെക്സ്റ്റ്-ടു-സ്പീച്ച് ശബ്ദം',
+        langAi: 'എഐ അസിസ്റ്റന്റ് ഭാഷ',
+        langSpeech: 'സ്പീച്ച് പ്രാക്ടീസ് തിരിച്ചറിയൽ'
+    }
+};
+
+/**
+ * t helper - returns the translated string based on key and target locale
+ * Supports simple parameter interpolation like {count}
+ */
+export function translate(key, locale = 'en', params = {}) {
+    const dict = TRANSLATIONS[locale] || TRANSLATIONS['en'];
+    let str = dict[key] || TRANSLATIONS['en'][key] || key;
+    
+    // Support category nesting
+    if (key.includes('.')) {
+        const parts = key.split('.');
+        let current = dict;
+        for (const p of parts) {
+            current = current ? current[p] : undefined;
+        }
+        if (current) str = current;
+        else {
+            let fallback = TRANSLATIONS['en'];
+            for (const p of parts) {
+                fallback = fallback ? fallback[p] : undefined;
+            }
+            str = fallback || key;
+        }
+    }
+
+    Object.entries(params).forEach(([k, v]) => {
+        str = str.replace(`{${k}}`, v);
+    });
+    return str;
+}

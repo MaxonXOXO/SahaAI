@@ -8,9 +8,11 @@
 :root {
   --a11y-font-body:        'Inter', system-ui, sans-serif;
   --a11y-font-heading:     'Inter', system-ui, sans-serif;
-  --a11y-font-size-base:   16px;
-  --a11y-font-size-md:     18px;
-  --a11y-font-size-lg:     22px;
+  --a11y-font-size-base:   1rem;       /* 16px default */
+  --a11y-font-size-md:     1.125rem;   /* 18px default */
+  --a11y-font-size-lg:     1.375rem;   /* 22px default */
+  --a11y-font-weight-base: 400;
+  --a11y-font-weight-bold: 700;
   --a11y-line-height:      1.55;
   --a11y-letter-spacing:   0.01em;
   --a11y-word-spacing:     normal;
@@ -38,6 +40,7 @@ body {
   margin: 0;
   font-family:    var(--a11y-font-body);
   font-size:      var(--a11y-font-size-base);
+  font-weight:    var(--a11y-font-weight-base);
   line-height:    var(--a11y-line-height);
   letter-spacing: var(--a11y-letter-spacing);
   word-spacing:   var(--a11y-word-spacing);
@@ -144,44 +147,55 @@ body {
  * Black (#0A0A0A)  = all backgrounds and surfaces
  */
 
+/* ── HIGH CONTRAST (theme-high) ─────────────────────────────────────────── */
+/*
+ * Strategy: Tailwind generates bg-white, bg-gray-50, text-gray-800, etc.
+ * as inline class names. CSS vars alone don't override those.
+ * We use aggressive !important rules on ALL known Tailwind color patterns
+ * to force the full UI into high-contrast black/white/yellow mode.
+ * Yellow (#FACC15) = primary interactive / headings
+ * White (#FFFFFF)  = body text
+ * Black (#0A0A0A)  = all backgrounds and surfaces
+ */
+
 /* ── Body and root backgrounds ── */
-.a11y-low-vision,
-.a11y-low-vision body,
-.a11y-low-vision #root,
-.a11y-low-vision > div {
+.theme-high,
+.theme-high body,
+.theme-high #root,
+.theme-high > div {
   background-color: #0A0A0A !important;
 }
 
 /* Nuke ALL Tailwind white/gray/light background classes */
-.a11y-low-vision [class*="bg-white"],
-.a11y-low-vision [class*="bg-gray-50"],
-.a11y-low-vision [class*="bg-gray-100"],
-.a11y-low-vision [class*="bg-gray-200"],
-.a11y-low-vision [class*="bg-surface"],
-.a11y-low-vision [class*="bg-slate"],
-.a11y-low-vision [class*="bg-zinc"],
-.a11y-low-vision [class*="bg-neutral"],
-.a11y-low-vision [class*="bg-stone"] {
+.theme-high [class*="bg-white"],
+.theme-high [class*="bg-gray-50"],
+.theme-high [class*="bg-gray-100"],
+.theme-high [class*="bg-gray-200"],
+.theme-high [class*="bg-surface"],
+.theme-high [class*="bg-slate"],
+.theme-high [class*="bg-zinc"],
+.theme-high [class*="bg-neutral"],
+.theme-high [class*="bg-stone"] {
   background-color: #141414 !important;
 }
 
-.a11y-low-vision [class*="bg-gray-700"],
-.a11y-low-vision [class*="bg-gray-800"],
-.a11y-low-vision [class*="bg-gray-900"],
-.a11y-low-vision [class*="dark:bg-"] {
+.theme-high [class*="bg-gray-700"],
+.theme-high [class*="bg-gray-800"],
+.theme-high [class*="bg-gray-900"],
+.theme-high [class*="dark:bg-"] {
   background-color: #0A0A0A !important;
 }
 
 /* Nuke primary/purple/violet background tints */
-.a11y-low-vision [class*="bg-primary"],
-.a11y-low-vision [class*="bg-purple"],
-.a11y-low-vision [class*="bg-violet"],
-.a11y-low-vision [class*="bg-indigo"] {
+.theme-high [class*="bg-primary"],
+.theme-high [class*="bg-purple"],
+.theme-high [class*="bg-violet"],
+.theme-high [class*="bg-indigo"] {
   background-color: #1a1a00 !important; /* dark yellow tint */
 }
 
 /* ── All text → white by default ── */
-.a11y-low-vision * {
+.theme-high * {
   color: #FFFFFF !important;
   border-color: #333333 !important;
   box-shadow: none !important;
@@ -189,38 +203,38 @@ body {
 }
 
 /* ── Headings and labels → bright yellow ── */
-.a11y-low-vision h1,
-.a11y-low-vision h2,
-.a11y-low-vision h3,
-.a11y-low-vision h4,
-.a11y-low-vision [class*="font-bold"],
-.a11y-low-vision [class*="font-semibold"],
-.a11y-low-vision [class*="font-extrabold"] {
+.theme-high h1,
+.theme-high h2,
+.theme-high h3,
+.theme-high h4,
+.theme-high [class*="font-bold"],
+.theme-high [class*="font-semibold"],
+.theme-high [class*="font-extrabold"] {
   color: #FACC15 !important;
 }
 
 /* ── Muted/placeholder text → light gray (still readable) ── */
-.a11y-low-vision [class*="text-gray-400"],
-.a11y-low-vision [class*="text-gray-500"],
-.a11y-low-vision [class*="text-gray-600"],
-.a11y-low-vision [class*="text-muted"],
-.a11y-low-vision placeholder {
+.theme-high [class*="text-gray-400"],
+.theme-high [class*="text-gray-500"],
+.theme-high [class*="text-gray-600"],
+.theme-high [class*="text-muted"],
+.theme-high placeholder {
   color: #AAAAAA !important;
 }
 
 /* ── Primary colored text → yellow ── */
-.a11y-low-vision [class*="text-primary"],
-.a11y-low-vision [class*="text-purple"],
-.a11y-low-vision [class*="text-violet"],
-.a11y-low-vision [class*="text-indigo"] {
+.theme-high [class*="text-primary"],
+.theme-high [class*="text-purple"],
+.theme-high [class*="text-violet"],
+.theme-high [class*="text-indigo"] {
   color: #FACC15 !important;
 }
 
 /* ── Cards, panels, modals, navbars → very dark surfaces ── */
-.a11y-low-vision .saha-card,
-.a11y-low-vision .saha-surface,
-.a11y-low-vision [class*="rounded"],
-.a11y-low-vision nav {
+.theme-high .saha-card,
+.theme-high .saha-surface,
+.theme-high [class*="rounded"],
+.theme-high nav {
   background-color: #141414 !important;
   border-color: #FACC15 !important;
   border-width: 2px !important;
@@ -228,8 +242,8 @@ body {
 }
 
 /* ── Buttons → black bg, yellow border and text ── */
-.a11y-low-vision button,
-.a11y-low-vision [role="button"] {
+.theme-high button,
+.theme-high [role="button"] {
   background-color: #1C1C00 !important;
   color: #FACC15 !important;
   border: 2px solid #FACC15 !important;
@@ -241,55 +255,263 @@ body {
 }
 
 /* Primary filled buttons stay yellow-on-black (not transparent) */
-.a11y-low-vision .bg-primary,
-.a11y-low-vision [class*="bg-primary"] {
+.theme-high .bg-primary,
+.theme-high [class*="bg-primary"] {
   background-color: #FACC15 !important;
   color: #000000 !important;
 }
 
 /* ── Inputs / textareas ── */
-.a11y-low-vision input,
-.a11y-low-vision textarea,
-.a11y-low-vision select {
+.theme-high input,
+.theme-high textarea,
+.theme-high select {
   background-color: #0A0A0A !important;
   color: #FFFFFF !important;
   border: 2px solid #FACC15 !important;
   caret-color: #FACC15 !important;
 }
 
-.a11y-low-vision input::placeholder,
-.a11y-low-vision textarea::placeholder {
+.theme-high input::placeholder,
+.theme-high textarea::placeholder {
   color: #888888 !important;
 }
 
 /* ── Dividers / borders ── */
-.a11y-low-vision [class*="border"],
-.a11y-low-vision [class*="divide"] > * {
+.theme-high [class*="border"],
+.theme-high [class*="divide"] > * {
   border-color: #333333 !important;
 }
 
 /* ── Avatars / icon circles → dark with yellow icon ── */
-.a11y-low-vision [class*="rounded-full"]:not(button):not(img) {
+.theme-high [class*="rounded-full"]:not(button):not(img) {
   background-color: #1C1C00 !important;
   border: 2px solid #FACC15 !important;
 }
 
 /* ── Images stay intact ── */
-.a11y-low-vision img {
+.theme-high img {
   filter: contrast(1.2) brightness(0.95);
   border: 2px solid #555 !important;
 }
 
 /* ── SVG icons → inherit white ── */
-.a11y-low-vision svg,
-.a11y-low-vision svg * {
+.theme-high svg,
+.theme-high svg * {
   color: inherit !important;
 }
 
 /* ── Scrollbar ── */
-.a11y-low-vision ::-webkit-scrollbar { width: 6px; }
-.a11y-low-vision ::-webkit-scrollbar-track { background: #0A0A0A; }
-.a11y-low-vision ::-webkit-scrollbar-thumb { background: #FACC15; border-radius: 4px; }
+.theme-high ::-webkit-scrollbar { width: 6px; }
+.theme-high ::-webkit-scrollbar-track { background: #0A0A0A; }
+.theme-high ::-webkit-scrollbar-thumb { background: #FACC15; border-radius: 4px; }
+
+/* ── Active / Selected states in High Contrast ── */
+.theme-high button.border-primary,
+.theme-high button.bg-white,
+.theme-high button[class*="border-yellow-400"],
+.theme-high button.border-yellow-400 {
+  background-color: #FACC15 !important;
+  color: #000000 !important;
+  border-color: #FACC15 !important;
+}
+.theme-high button.border-primary *,
+.theme-high button.bg-white *,
+.theme-high button[class*="border-yellow-400"] *,
+.theme-high button.border-yellow-400 * {
+  color: #000000 !important;
+}
+.theme-high [class*="border-yellow-400"] [class*="bg-yellow-400"] {
+  background-color: #FACC15 !important;
+  border-color: #FACC15 !important;
+  color: #000000 !important;
+}
+
+/* ── BottomNav button styling in High Contrast ── */
+.theme-high nav button {
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  min-height: unset !important;
+}
+.theme-high nav button[aria-current="page"] *,
+.theme-high nav button[aria-current="page"] svg {
+  color: #FACC15 !important;
+}
+.theme-high nav button:not([aria-current="page"]) *,
+.theme-high nav button:not([aria-current="page"]) svg {
+  color: #AAAAAA !important;
+}
+
+
+
+/* ── SOFT CONTRAST (theme-soft) ─────────────────────────────────────────── */
+.theme-soft,
+.theme-soft body,
+.theme-soft #root,
+.theme-soft > div {
+  background-color: #171717 !important;
+}
+
+.theme-soft [class*="bg-white"],
+.theme-soft [class*="bg-gray-50"],
+.theme-soft [class*="bg-gray-100"],
+.theme-soft [class*="bg-gray-200"],
+.theme-soft [class*="bg-surface"],
+.theme-soft [class*="bg-slate"],
+.theme-soft [class*="bg-zinc"],
+.theme-soft [class*="bg-neutral"],
+.theme-soft [class*="bg-stone"] {
+  background-color: #1F2937 !important;
+}
+
+.theme-soft [class*="bg-gray-700"],
+.theme-soft [class*="bg-gray-800"],
+.theme-soft [class*="bg-gray-900"],
+.theme-soft [class*="dark:bg-"] {
+  background-color: #171717 !important;
+}
+
+.theme-soft [class*="bg-primary"],
+.theme-soft [class*="bg-purple"],
+.theme-soft [class*="bg-violet"],
+.theme-soft [class*="bg-indigo"] {
+  background-color: #2a2512 !important; /* dark gold/yellow tint */
+}
+
+.theme-soft * {
+  color: #F3F4F6 !important;
+  border-color: #2d3748 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.theme-soft h1,
+.theme-soft h2,
+.theme-soft h3,
+.theme-soft h4,
+.theme-soft [class*="font-bold"],
+.theme-soft [class*="font-semibold"],
+.theme-soft [class*="font-extrabold"] {
+  color: #FCD34D !important;
+}
+
+.theme-soft [class*="text-gray-400"],
+.theme-soft [class*="text-gray-500"],
+.theme-soft [class*="text-gray-600"],
+.theme-soft [class*="text-muted"],
+.theme-soft placeholder {
+  color: #9CA3AF !important;
+}
+
+.theme-soft [class*="text-primary"],
+.theme-soft [class*="text-purple"],
+.theme-soft [class*="text-violet"],
+.theme-soft [class*="text-indigo"] {
+  color: #FCD34D !important;
+}
+
+.theme-soft .saha-card,
+.theme-soft .saha-surface,
+.theme-soft [class*="rounded"],
+.theme-soft nav {
+  background-color: #1F2937 !important;
+  border-color: #FCD34D !important;
+  border-width: 2px !important;
+  box-shadow: none !important;
+}
+
+.theme-soft button,
+.theme-soft [role="button"] {
+  background-color: #2D2D15 !important;
+  color: #FCD34D !important;
+  border: 2px solid #FCD34D !important;
+  min-height: var(--a11y-min-touch) !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+
+.theme-soft .bg-primary,
+.theme-soft [class*="bg-primary"] {
+  background-color: #FCD34D !important;
+  color: #171717 !important;
+}
+
+.theme-soft input,
+.theme-soft textarea,
+.theme-soft select {
+  background-color: #171717 !important;
+  color: #F3F4F6 !important;
+  border: 2px solid #FCD34D !important;
+  caret-color: #FCD34D !important;
+}
+
+.theme-soft input::placeholder,
+.theme-soft textarea::placeholder {
+  color: #777777 !important;
+}
+
+.theme-soft [class*="border"],
+.theme-soft [class*="divide"] > * {
+  border-color: #2d3748 !important;
+}
+
+.theme-soft [class*="rounded-full"]:not(button):not(img) {
+  background-color: #2D2D15 !important;
+  border: 2px solid #FCD34D !important;
+}
+
+.theme-soft img {
+  filter: contrast(1.1) brightness(0.95);
+  border: 2px solid #444 !important;
+}
+
+.theme-soft svg,
+.theme-soft svg * {
+  color: inherit !important;
+}
+
+/* ── Scrollbar ── */
+.theme-soft ::-webkit-scrollbar { width: 6px; }
+.theme-soft ::-webkit-scrollbar-track { background: #171717; }
+.theme-soft ::-webkit-scrollbar-thumb { background: #FCD34D; border-radius: 4px; }
+
+/* ── Active / Selected states in Soft Contrast ── */
+.theme-soft button.border-primary,
+.theme-soft button.bg-white,
+.theme-soft button[class*="border-yellow-400"],
+.theme-soft button.border-yellow-400 {
+  background-color: #FCD34D !important;
+  color: #171717 !important;
+  border-color: #FCD34D !important;
+}
+.theme-soft button.border-primary *,
+.theme-soft button.bg-white *,
+.theme-soft button[class*="border-yellow-400"] *,
+.theme-soft button.border-yellow-400 * {
+  color: #171717 !important;
+}
+.theme-soft [class*="border-yellow-400"] [class*="bg-yellow-400"] {
+  background-color: #FCD34D !important;
+  border-color: #FCD34D !important;
+  color: #171717 !important;
+}
+
+/* ── BottomNav button styling in Soft Contrast ── */
+.theme-soft nav button {
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  min-height: unset !important;
+}
+.theme-soft nav button[aria-current="page"] *,
+.theme-soft nav button[aria-current="page"] svg {
+  color: #FCD34D !important;
+}
+.theme-soft nav button:not([aria-current="page"]) *,
+.theme-soft nav button:not([aria-current="page"]) svg {
+  color: #9CA3AF !important;
+}
+
 
 
 /* ── DYSLEXIA ────────────────────────────────────────────────────────────── */
@@ -410,7 +632,8 @@ body {
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 8px; }
-.a11y-low-vision ::-webkit-scrollbar-thumb { background: #FACC15; }
+.theme-high ::-webkit-scrollbar-thumb { background: #FACC15; }
+.theme-soft ::-webkit-scrollbar-thumb { background: #FCD34D; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    App shell
@@ -431,4 +654,14 @@ body {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Global Accessibility Font Weight Overrides
+   ══════════════════════════════════════════════════════════════════════════ */
+h1, h2, h3, h4, h5, h6, b, strong, .font-bold, .font-semibold, .font-extrabold {
+  font-weight: var(--a11y-font-weight-bold) !important;
+}
+.font-medium, .font-normal {
+  font-weight: var(--a11y-font-weight-base) !important;
 }
