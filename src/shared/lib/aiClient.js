@@ -286,10 +286,54 @@ export async function recognizeText(imageFileOrBlob, options = {}) {
 }
 
 /**
- * Convert text to speech using Google Gemini 2.0 Flash audio output modality.
+ * Build a WAV file container around raw PCM audio bytes.
+ * Gemini TTS returns raw L16 (16-bit signed PCM) at 24 kHz mono.
+ * Browsers require a WAV/RIFF header to decode it.
+ *
+ * @param {Uint8Array} pcmData — Raw 16-bit PCM bytes
+ * @param {number} sampleRate — e.g. 24000
+ * @param {number} numChannels — 1 (mono) or 2 (stereo)
+ * @param {number} bitsPerSample — 16
+ * @returns {Blob} — Playable audio/wav Blob
+ */
+function pcmToWav(pcmData, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
+    const dataLength = pcmData.length;
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const byteRate = sampleRate * blockAlign;
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
+
+    // RIFF chunk descriptor
+    const writeStr = (offset, str) => {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);   // file size - 8
+    writeStr(8, 'WAVE');
+
+    // fmt sub-chunk
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);               // sub-chunk size
+    view.setUint16(20, 1, true);                // PCM = 1
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+
+    // data sub-chunk
+    writeStr(36, 'data');
+    view.setUint32(40, dataLength, true);
+    new Uint8Array(buffer, 44).set(pcmData);
+
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+/**
+ * Convert text to speech using Google Gemini TTS (3.1 Flash series).
  * @param {string} text — Text to convert
  * @param {Object} options — Optional configurations (voice, model)
- * @returns {Promise<Blob>} — Audio binary data as a Blob
+ * @returns {Promise<Blob>} — Playable audio/wav Blob
  */
 export async function generateGoogleSpeech(text, options = {}) {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -306,16 +350,14 @@ export async function generateGoogleSpeech(text, options = {}) {
         contents: [
             {
                 role: 'user',
-                parts: [{ text: `Please read this text aloud exactly as written, with natural pronunciation and no extra conversational text or commentary: ${text}` }]
+                parts: [{ text }]
             }
         ],
         generationConfig: {
-            responseModalities: ["AUDIO"],
+            responseModalities: ['AUDIO'],
             speechConfig: {
                 voiceConfig: {
-                    prebuiltVoiceConfig: {
-                        voiceName: voiceName
-                    }
+                    prebuiltVoiceConfig: { voiceName }
                 }
             }
         }
@@ -335,18 +377,27 @@ export async function generateGoogleSpeech(text, options = {}) {
     const data = await res.json();
     const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
 
-    if (!inlineData || !inlineData.data) {
+    if (!inlineData?.data) {
         throw new Error('No audio data returned from Gemini TTS');
     }
 
-    // Convert base64 to binary blob
-    const byteCharacters = atob(inlineData.data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    // Decode base64 → raw bytes
+    const binaryStr = atob(inlineData.data);
+    const pcmBytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+        pcmBytes[i] = binaryStr.charCodeAt(i);
     }
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: inlineData.mimeType || 'audio/wav' });
+
+    // Gemini TTS returns raw L16 PCM at 24 kHz mono.
+    // Wrap it in a WAV container so the browser can play it.
+    const mimeType = (inlineData.mimeType || '').toLowerCase();
+    if (mimeType.includes('wav') || mimeType.includes('audio/wav')) {
+        // Already a full WAV – return as-is
+        return new Blob([pcmBytes], { type: 'audio/wav' });
+    }
+
+    // Raw PCM (audio/L16 or audio/pcm) → wrap in WAV
+    return pcmToWav(pcmBytes, 24000, 1, 16);
 }
 
 /**
