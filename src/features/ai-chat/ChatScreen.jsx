@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Volume2, VolumeX } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import { supabase } from '../../shared/lib/supabaseClient';
-import { buildSystemPrompt, sendMessage } from '../../shared/lib/aiClient';
+import { buildSystemPrompt, sendMessage, generateSpeech } from '../../shared/lib/aiClient';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 
 export default function ChatScreen() {
@@ -15,6 +15,64 @@ export default function ChatScreen() {
     const [sending, setSending] = useState(false);
     const [chatTitle, setChatTitle] = useState('Chat');
     const bottomRef = useRef(null);
+
+    // Audio text-to-speech states
+    const [playingMessageId, setPlayingMessageId] = useState(null);
+    const [loadingMessageId, setLoadingMessageId] = useState(null);
+    const audioRef = useRef(null);
+
+    // Clean up audio on unmount
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+            }
+        };
+    }, []);
+
+    const handlePlaySpeech = async (msgId, text) => {
+        if (playingMessageId === msgId) {
+            audioRef.current?.pause();
+            setPlayingMessageId(null);
+            return;
+        }
+
+        if (audioRef.current) {
+            audioRef.current.pause();
+        }
+
+        setLoadingMessageId(msgId);
+
+        try {
+            // Strip markdown tags before sending to text-to-speech
+            const cleanText = text.replace(/\*\*|\*/g, '');
+            const blob = await generateSpeech(cleanText);
+            const url = URL.createObjectURL(blob);
+            
+            const audio = new Audio(url);
+            audioRef.current = audio;
+            
+            audio.onplay = () => {
+                setLoadingMessageId(null);
+                setPlayingMessageId(msgId);
+            };
+            
+            audio.onended = () => {
+                setPlayingMessageId(null);
+            };
+
+            audio.onerror = () => {
+                setLoadingMessageId(null);
+                setPlayingMessageId(null);
+            };
+
+            await audio.play();
+        } catch (err) {
+            console.error('Gemini TTS Playback failed:', err);
+            setLoadingMessageId(null);
+            setPlayingMessageId(null);
+        }
+    };
 
     // Load existing messages
     useEffect(() => {
@@ -129,15 +187,38 @@ export default function ChatScreen() {
                         key={msg.id}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                        <div
-                            className={`
-                                max-w-[80%] px-4 py-3 rounded-2xl text-base-sm whitespace-pre-wrap
-                                ${msg.role === 'user'
-                                    ? 'bg-primary text-white rounded-br-md'
-                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md'}
-                            `}
-                        >
-                            {renderMarkdown(msg.content)}
+                        <div className="flex flex-col gap-1 max-w-[80%]">
+                            <div
+                                className={`
+                                    px-4 py-3 rounded-2xl text-base-sm whitespace-pre-wrap
+                                    ${msg.role === 'user'
+                                        ? 'bg-primary text-white rounded-br-md'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md'}
+                                `}
+                            >
+                                {renderMarkdown(msg.content)}
+                            </div>
+                            {msg.role === 'assistant' && msg.id !== 'error' && (
+                                <button
+                                    onClick={() => handlePlaySpeech(msg.id, msg.content)}
+                                    className="self-start text-xs text-gray-400 hover:text-primary transition-colors flex items-center gap-1 mt-0.5 ml-1"
+                                >
+                                    {loadingMessageId === msg.id ? (
+                                        <Loader2 size={12} className="animate-spin" />
+                                    ) : playingMessageId === msg.id ? (
+                                        <VolumeX size={12} />
+                                    ) : (
+                                        <Volume2 size={12} />
+                                    )}
+                                    <span>
+                                        {loadingMessageId === msg.id 
+                                            ? 'Generating...' 
+                                            : playingMessageId === msg.id 
+                                                ? 'Stop' 
+                                                : 'Listen'}
+                                    </span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}

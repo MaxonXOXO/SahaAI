@@ -286,15 +286,84 @@ export async function recognizeText(imageFileOrBlob, options = {}) {
 }
 
 /**
- * Convert text to speech using OpenAI's TTS endpoint.
+ * Convert text to speech using Google Gemini 2.0 Flash audio output modality.
  * @param {string} text — Text to convert
- * @param {Object} options — Optional configurations (voice, provider)
+ * @param {Object} options — Optional configurations (voice, model)
+ * @returns {Promise<Blob>} — Audio binary data as a Blob
+ */
+export async function generateGoogleSpeech(text, options = {}) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
+    }
+
+    const modelName = options.model || 'gemini-2.0-flash';
+    const voiceName = options.voice || 'Puck'; // Kore, Puck, Charon, Aoede, Fenrir
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+    const body = {
+        contents: [
+            {
+                role: 'user',
+                parts: [{ text: `Please read this text aloud exactly as written, with natural pronunciation and no extra conversational text or commentary: ${text}` }]
+            }
+        ],
+        generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: {
+                        voiceName: voiceName
+                    }
+                }
+            }
+        }
+    };
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Google TTS error ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+
+    if (!inlineData || !inlineData.data) {
+        throw new Error('No audio data returned from Gemini TTS');
+    }
+
+    // Convert base64 to binary blob
+    const byteCharacters = atob(inlineData.data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: inlineData.mimeType || 'audio/wav' });
+}
+
+/**
+ * Convert text to speech using the selected AI provider.
+ * @param {string} text — Text to convert
+ * @param {Object} options — Optional configurations (voice, provider, model)
  * @returns {Promise<Blob>} — Audio binary data as a Blob
  */
 export async function generateSpeech(text, options = {}) {
     const provider = options.provider || currentProvider;
+
+    if (provider === 'gemini') {
+        return generateGoogleSpeech(text, options);
+    }
+
     if (provider !== 'openai') {
-        throw new Error('TTS only supported via OpenAI provider currently');
+        throw new Error(`TTS unsupported for provider: ${provider}`);
     }
 
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
