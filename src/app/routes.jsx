@@ -16,6 +16,8 @@ import VisionAssistant from '../features/vision-assistant/VisionAssistant';
 import ToolsScreen from '../features/tools/ToolsScreen';
 import ProgressScreen from '../features/progress/ProgressScreen';
 import AACBoardScreen from '../features/aac-board/AACBoardScreen';
+import FocusModeScreen from '../features/focus-mode/FocusModeScreen';
+import SocialStoryScreen from '../features/social-story/SocialStoryScreen';
 import { getRouteMeta } from './config/routeMeta';
 
 /**
@@ -44,33 +46,33 @@ export default function AppRoutes() {
             <div className={`flex-1 flex flex-col min-h-0 ${hideNav ? '' : 'pb-16'}`}>
                 <Routes>
                     {/* Onboarding */}
-                    <Route path="/"              element={<SplashScreen />} />
-                    <Route path="/language"      element={<LanguageSelectionScreen />} />
-                    <Route path="/signup"        element={<SignupScreen />} />
-                    <Route path="/login"         element={<LoginScreen />} />
+                    <Route path="/" element={<SplashScreen />} />
+                    <Route path="/language" element={<LanguageSelectionScreen />} />
+                    <Route path="/signup" element={<SignupScreen />} />
+                    <Route path="/login" element={<LoginScreen />} />
                     <Route path="/profile-setup" element={<ProfileSetupScreen />} />
 
                     {/* Main tabs */}
-                    <Route path="/dashboard"     element={<DashboardScreen />} />
-                    <Route path="/ai-chat"       element={<ChatListScreen />} />
+                    <Route path="/dashboard" element={<DashboardScreen />} />
+                    <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
-                    <Route path="/tools"         element={<ToolsScreen />} />
-                    <Route path="/progress"      element={<ProgressScreen />} />
-                    <Route path="/profile"       element={<ProfileScreen />} />
-                    <Route path="/edit-profile"  element={<EditProfileScreen />} />
+                    <Route path="/tools" element={<ToolsScreen />} />
+                    <Route path="/progress" element={<ProgressScreen />} />
+                    <Route path="/profile" element={<ProfileScreen />} />
+                    <Route path="/edit-profile" element={<EditProfileScreen />} />
 
                     {/* Feature screens */}
-                    <Route path="/reading-mode"          element={<ReadingModeScreen />} />
-                    <Route path="/text-simplifier"       element={<Placeholder name="AI Text Simplifier" />} />
-                    <Route path="/math-helper"           element={<MathHelperScreen />} />
-                    <Route path="/focus-mode"            element={<Placeholder name="ADHD Focus Mode" />} />
-                    <Route path="/routine-builder"       element={<Placeholder name="Routine Builder" />} />
-                    <Route path="/social-story"          element={<Placeholder name="Social Story Generator" />} />
+                    <Route path="/reading-mode" element={<ReadingModeScreen />} />
+                    <Route path="/text-simplifier" element={<Placeholder name="AI Text Simplifier" />} />
+                    <Route path="/focus-mode" element={<FocusModeScreen />} />
+                    <Route path="/math-helper" element={<MathHelperScreen />} />
+                    <Route path="/routine-builder" element={<Placeholder name="Routine Builder" />} />
+                    <Route path="/social-story" element={<SocialStoryScreen />} />
                     <Route path="/conversation-practice" element={<Placeholder name="Conversation Practice" />} />
-                    <Route path="/vision-assistant"      element={<VisionAssistant />} />
-                    <Route path="/document-reader"       element={<Placeholder name="Document Reader" />} />
-                    <Route path="/settings"              element={<Placeholder name="Settings" />} />
-                    <Route path="/aac-board"             element={<AACBoardScreen />} />
+                    <Route path="/vision-assistant" element={<VisionAssistant />} />
+                    <Route path="/document-reader" element={<Placeholder name="Document Reader" />} />
+                    <Route path="/settings" element={<Placeholder name="Settings" />} />
+                    <Route path="/aac-board" element={<AACBoardScreen />} />
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
