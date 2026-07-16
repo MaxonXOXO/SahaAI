@@ -5,6 +5,7 @@ import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import { supabase } from '../../shared/lib/supabaseClient';
 import { buildSystemPrompt, sendMessage } from '../../shared/lib/aiClient';
+import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 
 export default function ChatScreen() {
     const { chatId } = useParams();
@@ -136,7 +137,7 @@ export default function ChatScreen() {
                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md'}
                             `}
                         >
-                            {msg.content}
+                            {renderMarkdown(msg.content)}
                         </div>
                     </div>
                 ))}
