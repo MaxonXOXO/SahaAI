@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Card from '../../shared/components/Card';
 import Button from '../../shared/components/Button';
@@ -25,7 +25,6 @@ export default function VisionAssistant() {
     const [contrastMode, setContrastMode] = useState(() => localStorage.getItem('saha_vision_contrast') || 'standard');
     const [fontScale, setFontScale] = useState(() => parseFloat(localStorage.getItem('saha_vision_font_scale')) || 1.0);
     const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('saha_vision_speech_rate')) || 1.0);
-    const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('saha_gemini_api_key') || '');
 
     // Deep-link tab support: /vision-assistant?tab=identify|read|describe
     const [searchParams] = useSearchParams();
@@ -37,6 +36,7 @@ export default function VisionAssistant() {
     const [capturedImage, setCapturedImage] = useState(null);
     const [analysisResult, setAnalysisResult] = useState('');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
     const [scanHistory, setScanHistory] = useState(() => {
         try {
             return JSON.parse(localStorage.getItem('saha_vision_history')) || [];
@@ -202,16 +202,10 @@ export default function VisionAssistant() {
         playBeep(580, 0.08);
         setIsSettingsOpen((prev) => !prev);
         if (!isSettingsOpen) {
-            speak("Settings menu opened. Adjust high contrast, sizes, speech speed, or add API Key.", speechRate);
+            speak("Settings menu opened. Adjust high contrast, sizes, or speech speed.", speechRate);
         } else {
             speak("Settings closed.", speechRate);
         }
-    };
-
-    const handleSaveKey = (e) => {
-        const val = e.target.value;
-        setGeminiKey(val);
-        localStorage.setItem('saha_gemini_api_key', val);
     };
 
     // Font scale is applied to the root container via CSS style.
@@ -237,15 +231,7 @@ export default function VisionAssistant() {
         return 'bg-surface dark:bg-surface-dark border border-gray-200 dark:border-gray-800 rounded-card p-4 shadow-sm';
     };
 
-    const getInputClasses = () => {
-        if (contrastMode === 'high-dark') {
-            return 'bg-black border-2 border-yellow-400 text-yellow-400 placeholder:text-yellow-700 rounded-card p-3 w-full outline-none';
-        }
-        if (contrastMode === 'high-light') {
-            return 'bg-white border-2 border-black text-black placeholder:text-gray-400 rounded-card p-3 w-full outline-none';
-        }
-        return 'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-card p-3 w-full outline-none';
-    };
+
 
     return (
         <div className={getThemeClasses()} style={{ fontSize: `${fontScale}rem` }}>
@@ -271,9 +257,10 @@ export default function VisionAssistant() {
             />
 
             <div className="p-4 flex flex-col gap-6 max-w-[420px] mx-auto">
-                {/* --- SETTINGS DRAWER OVERLAY --- */}
-                {isSettingsOpen && (
-                    <div className={`${getCardClasses()} border-primary`}>
+            {/* --- SETTINGS DRAWER OVERLAY MODAL --- */}
+            {isSettingsOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className={`${getCardClasses()} border-primary max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl`}>
                         <h2 className="text-base-lg font-bold mb-4 flex items-center gap-2">
                             <Settings size={22} />
                             Assistant Controls
@@ -356,28 +343,14 @@ export default function VisionAssistant() {
                                     ))}
                                 </div>
                             </div>
-
-                            {/* Gemini API Key */}
-                            <div className="flex flex-col gap-1.5">
-                                <span className="text-base-sm font-bold">Gemini API Key</span>
-                                <input
-                                    type="password"
-                                    placeholder="Enter your Gemini Key"
-                                    value={geminiKey}
-                                    onChange={handleSaveKey}
-                                    className={getInputClasses()}
-                                />
-                                <p className="text-[12px] text-gray-400 mt-1">
-                                    Enter key to use live vision descriptions. Key is stored securely on your browser.
-                                </p>
-                            </div>
                         </div>
 
                         <Button variant="secondary" className="w-full mt-4" onClick={toggleSettings}>
                             Close Settings
                         </Button>
                     </div>
-                )}
+                </div>
+            )}
 
                 {/* --- MODE SELECTION TABS --- */}
                 <div className="grid grid-cols-3 gap-2">
@@ -419,7 +392,7 @@ export default function VisionAssistant() {
                 />
 
                 {/* --- AI SCAN RESULTS DISPLAY --- */}
-                {activeMode === 'object' && (
+                {activeMode === 'object' && (!capturedImage || analysisResult) && (
                     <ObjectDetectionPanel
                         result={analysisResult}
                         isSpeaking={speaking}
@@ -430,7 +403,7 @@ export default function VisionAssistant() {
                     />
                 )}
 
-                {activeMode === 'ocr' && (
+                {activeMode === 'ocr' && (!capturedImage || analysisResult) && (
                     <TextRecognitionPanel
                         result={analysisResult}
                         isSpeaking={speaking}
@@ -442,6 +415,18 @@ export default function VisionAssistant() {
                         playBeep={playBeep}
                         resultRef={resultRef}
                     />
+                )}
+
+                {activeMode === 'scene' && !capturedImage && !analysisResult && (
+                    <Card className="border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 flex flex-col items-center justify-center text-center">
+                        <HelpCircle size={40} className="text-gray-400 mb-2" />
+                        <p className="text-base-md font-bold text-gray-700 dark:text-gray-300">
+                            Ready to Describe Scene
+                        </p>
+                        <p className="text-base-sm text-gray-400 mt-1 leading-relaxed">
+                            Select "Describe" mode, point your camera at the room or area, and tap "Capture & Read Aloud" for a detailed scene description.
+                        </p>
+                    </Card>
                 )}
 
                 {activeMode === 'scene' && analysisResult && (
@@ -511,57 +496,67 @@ export default function VisionAssistant() {
                 {scanHistory.length > 0 && (
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between">
-                            <span className="text-base-md font-bold flex items-center gap-2">
-                                <History size={20} className="text-primary" />
-                                Recent Scans
-                            </span>
                             <button
-                                onClick={clearHistory}
-                                aria-label="Clear all scan history"
-                                className="flex items-center gap-1.5 text-base-sm text-red-500 hover:underline min-h-touch px-2"
+                                onClick={() => setIsHistoryExpanded((prev) => !prev)}
+                                aria-expanded={isHistoryExpanded}
+                                aria-label={`Toggle Recent Scans list (${scanHistory.length} items)`}
+                                className="flex items-center gap-2 text-base-md font-bold text-gray-800 dark:text-gray-100 hover:text-primary transition-colors min-h-touch py-1"
                             >
-                                <Trash2 size={16} />
-                                Clear All
+                                <History size={20} className="text-primary" />
+                                <span>Recent Scans ({scanHistory.length})</span>
+                                {isHistoryExpanded ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
                             </button>
+                            {isHistoryExpanded && (
+                                <button
+                                    onClick={clearHistory}
+                                    aria-label="Clear all scan history"
+                                    className="flex items-center gap-1.5 text-base-sm text-red-500 hover:underline min-h-touch px-2"
+                                >
+                                    <Trash2 size={16} />
+                                    Clear All
+                                </button>
+                            )}
                         </div>
 
-                        <div className="flex flex-col gap-3">
-                            {scanHistory.map((scan) => (
-                                <div
-                                    key={scan.id}
-                                    className={`${getCardClasses()} flex items-center gap-4 transition-all`}
-                                >
-                                    {scan.image && (
-                                        <img
-                                            src={scan.image}
-                                            alt="Scan Snapshot Thumbnail"
-                                            className="w-14 h-14 object-cover rounded-md border border-gray-300 dark:border-gray-700"
-                                        />
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-0.5">
-                                            <span className="text-[12px] font-bold text-primary uppercase">
-                                                {scan.mode} Mode
-                                            </span>
-                                            <span className="text-[11px] text-gray-400">{scan.timestamp}</span>
-                                        </div>
-                                        <p className="text-base-sm font-semibold truncate text-gray-800 dark:text-gray-200">
-                                            {renderMarkdown(scan.result.replace(/\(Note: Simulator.*\)/g, '').trim())}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            playBeep(440, 0.08);
-                                            speak(stripMarkdown(scan.result), speechRate);
-                                        }}
-                                        aria-label={`Play audio description for this ${scan.mode} scan`}
-                                        className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20"
+                        {isHistoryExpanded && (
+                            <div className="flex flex-col gap-3">
+                                {scanHistory.map((scan) => (
+                                    <div
+                                        key={scan.id}
+                                        className={`${getCardClasses()} flex items-center gap-4 transition-all`}
                                     >
-                                        <Volume2 size={18} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                                        {scan.image && (
+                                            <img
+                                                src={scan.image}
+                                                alt="Scan Snapshot Thumbnail"
+                                                className="w-14 h-14 object-cover rounded-md border border-gray-300 dark:border-gray-700"
+                                            />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-0.5">
+                                                <span className="text-[12px] font-bold text-primary uppercase">
+                                                    {scan.mode} Mode
+                                                </span>
+                                                <span className="text-[11px] text-gray-400">{scan.timestamp}</span>
+                                            </div>
+                                            <p className="text-base-sm font-semibold truncate text-gray-800 dark:text-gray-200">
+                                                {renderMarkdown(scan.result.replace(/\(Note: Simulator.*\)/g, '').trim())}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                playBeep(440, 0.08);
+                                                speak(stripMarkdown(scan.result), speechRate);
+                                            }}
+                                            aria-label={`Play audio description for this ${scan.mode} scan`}
+                                            className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20"
+                                        >
+                                            <Volume2 size={18} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
