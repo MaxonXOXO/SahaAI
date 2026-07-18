@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Camera, RefreshCw, ZoomIn, ZoomOut, Play, Square } from 'lucide-react';
+import { Camera, RefreshCw, Play, Square } from 'lucide-react';
 import Button from '../../shared/components/Button';
 
 /**
  * CameraCapture - Component that hooks up the webcam stream
- * Features digital zooming (CSS transform scale for compatibility),
+ * Features digital zooming (CSS transform scale for compatibility & pinch-to-zoom gesture),
  * camera toggle (front/back), and image frame capturing.
  */
 export default function CameraCapture({ onCapture, isProcessing, speakFeedback, playBeep }) {
@@ -16,6 +16,10 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
     const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
     const [zoom, setZoom] = useState(1);
     const [isActive, setIsActive] = useState(true);
+
+    // Touch Pinch-to-Zoom Refs
+    const initialPinchDistRef = useRef(null);
+    const initialZoomRef = useRef(1);
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -133,7 +137,6 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
         canvas.height = video.videoHeight || 480;
 
         // Draw current video frame to canvas
-        // To support digital zoom in the captured image as well, we apply canvas clipping/drawing
         if (zoom > 1) {
             const w = canvas.width / zoom;
             const h = canvas.height / zoom;
@@ -149,23 +152,51 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
         onCapture(dataUrl);
     };
 
-    const handleZoomChange = (e) => {
-        const val = parseFloat(e.target.value);
-        setZoom(val);
-        // Play small ticking click sound for low vision feedback
-        playBeep(300 + val * 100, 0.02);
-    };
-
     const toggleActive = () => {
         playBeep(520, 0.08);
         setIsActive((prev) => !prev);
         speakFeedback(isActive ? "Camera paused." : "Camera resuming.");
     };
 
+    // Touch Pinch-to-Zoom Gesture Handlers
+    const handleTouchStart = (e) => {
+        if (e.touches.length === 2) {
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            initialPinchDistRef.current = dist;
+            initialZoomRef.current = zoom;
+        }
+    };
+
+    const handleTouchMove = (e) => {
+        if (e.touches.length === 2 && initialPinchDistRef.current) {
+            const currentDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            if (initialPinchDistRef.current > 0) {
+                const scaleFactor = currentDist / initialPinchDistRef.current;
+                const newZoom = Math.min(3, Math.max(1, initialZoomRef.current * scaleFactor));
+                setZoom(newZoom);
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        initialPinchDistRef.current = null;
+    };
+
     return (
-        <div className="flex flex-col gap-4">
-            {/* Viewfinder Container */}
-            <div className="relative aspect-[4/3] w-full bg-black rounded-card overflow-hidden border-4 border-gray-800 dark:border-gray-900 shadow-lg">
+        <div className="w-full h-full">
+            {/* Viewfinder Container with Pinch-to-Zoom gesture */}
+            <div
+                className="relative w-full h-full bg-black touch-none overflow-hidden"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
                 {hasPermission === null && isActive && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
                         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -250,46 +281,15 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
                 )}
             </div>
 
-            {/* Magnifier / Digital Zoom Controls */}
-            {hasPermission && isActive && (
-                <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-card flex flex-col gap-2">
-                    <label htmlFor="camera-zoom" className="flex items-center justify-between text-base-md font-bold text-gray-800 dark:text-gray-100">
-                        <span className="flex items-center gap-2">
-                            <ZoomIn size={20} className="text-primary" />
-                            Digital Magnifier
-                        </span>
-                        <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-base-sm">
-                            {zoom.toFixed(1)}x
-                        </span>
-                    </label>
-                    <div className="flex items-center gap-3">
-                        <ZoomOut size={18} className="text-gray-500" />
-                        <input
-                            id="camera-zoom"
-                            type="range"
-                            min="1"
-                            max="4"
-                            step="0.2"
-                            value={zoom}
-                            onChange={handleZoomChange}
-                            className="flex-1 h-3 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
-                        />
-                        <ZoomIn size={18} className="text-gray-500" />
-                    </div>
-                </div>
-            )}
-
-            {/* Giant High Contrast Capture Button */}
-            {hasPermission && isActive && (
-                <button
-                    onClick={handleCapture}
-                    disabled={isProcessing}
-                    className="w-full min-h-touch bg-primary hover:bg-primary-dark disabled:bg-gray-400 text-white rounded-card flex items-center justify-center gap-3 font-bold text-base-lg py-4 shadow-md transition-colors border-2 border-white focus:ring-4 focus:ring-primary/50"
-                >
-                    <Camera size={26} />
-                    Capture & Read Aloud
-                </button>
-            )}
+            {/* Hidden capture button for parent trigger */}
+            <button
+                onClick={handleCapture}
+                disabled={isProcessing}
+                data-capture-btn="true"
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+            />
 
             {/* Hidden canvas for snapshotting */}
             <canvas ref={canvasRef} className="hidden" />

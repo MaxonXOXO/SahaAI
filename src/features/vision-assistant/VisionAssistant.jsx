@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
-import Card from '../../shared/components/Card';
 import Button from '../../shared/components/Button';
+import Card from '../../shared/components/Card';
 import CameraCapture from './CameraCapture';
 import ObjectDetectionPanel from './ObjectDetectionPanel';
 import TextRecognitionPanel from './TextRecognitionPanel';
@@ -17,7 +17,7 @@ import useProfileStore from '../../store/useProfileStore';
 /**
  * VisionAssistant - Main container for Low Vision Mode
  * Orchestrates local high-contrast theme overrides, speech speed rate,
- * font scaling, AI camera capture, voice Q&A, and persistent scan history.
+ * font scaling, AI camera capture, voice Q&A, live YouTube-style subtitles, and persistent scan history.
  */
 export default function VisionAssistant() {
     const userId = useProfileStore((s) => s.id);
@@ -31,12 +31,14 @@ export default function VisionAssistant() {
     const TAB_PARAM_MAP = { identify: 'object', read: 'ocr', describe: 'scene' };
     const initialTab = TAB_PARAM_MAP[searchParams.get('tab')] || 'object';
 
-    // Feature Mode State
+    // Feature Mode & View State
     const [activeMode, setActiveMode] = useState(initialTab); // 'object' | 'ocr' | 'scene'
     const [capturedImage, setCapturedImage] = useState(null);
     const [analysisResult, setAnalysisResult] = useState('');
+    const [currentSubtitle, setCurrentSubtitle] = useState('');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showAskBar, setShowAskBar] = useState(false);
     const [scanHistory, setScanHistory] = useState(() => {
         try {
             return JSON.parse(localStorage.getItem('saha_vision_history')) || [];
@@ -47,6 +49,7 @@ export default function VisionAssistant() {
 
     // Custom Speech & AI Hooks
     const resultRef = useRef(null);
+    const cameraContainerRef = useRef(null);
     const { speak, stop, pause, resume, speaking, paused, playBeep } = useSpeak();
     const { analyzeImage, loading, stripMarkdown } = useVisionAI();
 
@@ -61,13 +64,28 @@ export default function VisionAssistant() {
         speak(text, speechRate, onEnd);
     }, [speak, speechRate]);
 
+    const handleStopSpeaking = useCallback(() => {
+        stop();
+        setCurrentSubtitle('');
+    }, [stop]);
+
     const speakObjectResult = useCallback(() => {
-        speak(stripMarkdown(analysisResult), speechRate);
+        if (!analysisResult) return;
+        speak(stripMarkdown(analysisResult), speechRate, null, setCurrentSubtitle);
     }, [speak, stripMarkdown, analysisResult, speechRate]);
 
     const speakOcrResult = useCallback(() => {
-        speak(stripMarkdown(analysisResult), speechRate);
+        if (!analysisResult) return;
+        speak(stripMarkdown(analysisResult), speechRate, null, setCurrentSubtitle);
     }, [speak, stripMarkdown, analysisResult, speechRate]);
+
+    const pauseSpeaking = useCallback(() => {
+        pause();
+    }, [pause]);
+
+    const resumeSpeaking = useCallback(() => {
+        resume();
+    }, [resume]);
 
     // Persist accessibility configurations
     useEffect(() => {
@@ -86,25 +104,6 @@ export default function VisionAssistant() {
         localStorage.setItem('saha_vision_history', JSON.stringify(scanHistory));
     }, [scanHistory]);
 
-    // Processing audio/speech cues during AI loading gap
-    useEffect(() => {
-        let intervalId;
-        if (loading) {
-            // First speak a message
-            speakFeedback("Analyzing, please wait.");
-            
-            // Then play a soft repeating tone so they know it is still processing
-            intervalId = setInterval(() => {
-                playBeep(660, 0.08);
-            }, 1200);
-        }
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [loading, speakFeedback, playBeep]);
-
     // Initial greeting voice announcement
     const hasGreetedRef = useRef(false);
     useEffect(() => {
@@ -112,9 +111,8 @@ export default function VisionAssistant() {
             speak("Vision Assistant loaded. Use the top menu to customize high contrast and speed. Camera is ready.", speechRate);
             hasGreetedRef.current = true;
         }
-        return () => stop();
-    }, [speak, speechRate, stop]);
-
+        return () => handleStopSpeaking();
+    }, [speak, speechRate, handleStopSpeaking]);
 
     // Mode changer
     const selectMode = (mode) => {
@@ -122,6 +120,8 @@ export default function VisionAssistant() {
         setActiveMode(mode);
         setCapturedImage(null);
         setAnalysisResult('');
+        setCurrentSubtitle('');
+        setShowAskBar(false);
         stop();
 
         let announcement = '';
@@ -136,6 +136,7 @@ export default function VisionAssistant() {
     const handleCapture = async (base64Image) => {
         setCapturedImage(base64Image);
         stop();
+        setCurrentSubtitle("Analyzing image, please wait...");
 
         try {
             const resultText = await analyzeImage(base64Image, activeMode);
@@ -151,24 +152,19 @@ export default function VisionAssistant() {
             };
             setScanHistory((prev) => [newScan, ...prev.slice(0, 9)]); // Cap at 10 items
 
-            // Activity logging — powers Dashboard "Recently Used" and Progress tab
+            // Activity logging
             if (activeMode === 'ocr') {
                 logActivity(userId, 'ocr_scan_used', { chars: resultText.length });
             } else {
                 logActivity(userId, 'document_read', { mode: activeMode });
             }
+
+            // Speak result sentence-by-sentence with live subtitle tracking
+            speak(stripMarkdown(resultText), speechRate, null, setCurrentSubtitle);
         } catch (err) {
             console.error('[VisionAI] Vision analysis failure:', err);
-            const msg = err?.message || '';
-            if (msg.includes('401') || msg.includes('403')) {
-                speak("API key rejected. Please check your Gemini key in Settings and make sure it is valid.", speechRate);
-            } else if (msg.includes('404')) {
-                speak("API model not found. The app configuration needs an update — please contact support.", speechRate);
-            } else if (msg.includes('429')) {
-                speak("Rate limit reached. Please wait a moment, then try again.", speechRate);
-            } else {
-                speak("Analysis failed. Please check your internet connection and try again.", speechRate);
-            }
+            setCurrentSubtitle('');
+            speak("Analysis failed. Please check your internet connection and try again.", speechRate);
         }
     };
 
@@ -180,16 +176,34 @@ export default function VisionAssistant() {
         }
 
         stop();
-        speak("Thinking, please wait.", speechRate);
+        setCurrentSubtitle("Thinking, please wait...");
 
         try {
             const resultText = await analyzeImage(capturedImage, 'qa', questionText);
             setAnalysisResult(resultText);
-            speak(stripMarkdown(resultText), speechRate);
+            speak(stripMarkdown(resultText), speechRate, null, setCurrentSubtitle);
         } catch (err) {
             console.error('[VisionAI] Q&A analysis failure:', err);
+            setCurrentSubtitle('');
             speak("Failed to answer. Please check your API key in Settings and try again.", speechRate);
         }
+    };
+
+    const triggerCapture = () => {
+        if (loading) return;
+        const btn = cameraContainerRef.current?.querySelector('button[data-capture-btn="true"], button[class*="min-h-touch"], button:has(svg.lucide-camera)');
+        if (btn) {
+            btn.click();
+        }
+    };
+
+    const handleAskClick = () => {
+        playBeep(440, 0.08);
+        if (!capturedImage) {
+            speak("Please capture an image first before asking questions.", speechRate);
+            return;
+        }
+        setShowAskBar((prev) => !prev);
     };
 
     const clearHistory = () => {
@@ -208,17 +222,16 @@ export default function VisionAssistant() {
         }
     };
 
-    // Font scale is applied to the root container via CSS style.
-
     // Theme tokens based on active contrast mode
     const getThemeClasses = () => {
+        const base = 'flex-1 flex flex-col h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-20 selection:bg-yellow-400 selection:text-black overflow-y-auto';
         if (contrastMode === 'high-dark') {
-            return 'flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-black text-yellow-400 pb-24 selection:bg-yellow-400 selection:text-black';
+            return `${base} bg-black text-yellow-400`;
         }
         if (contrastMode === 'high-light') {
-            return 'flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-white text-black pb-24 selection:bg-black selection:text-white';
+            return `${base} bg-white text-black`;
         }
-        return 'flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-100 pb-24';
+        return `${base} bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-100`;
     };
 
     const getCardClasses = () => {
@@ -231,294 +244,43 @@ export default function VisionAssistant() {
         return 'bg-surface dark:bg-surface-dark border border-gray-200 dark:border-gray-800 rounded-card p-4 shadow-sm';
     };
 
-
-
-    return (
-        <div className={getThemeClasses()} style={{ fontSize: `${fontScale}rem` }}>
-            {/* Header with Settings Toggle */}
-            <ScreenHeader
-                title="Vision Assistant"
-                showBack={true}
-                rightAction={
-                    <button
-                        onClick={toggleSettings}
-                        aria-label="Vision Assistant Settings"
-                        className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${
-                            contrastMode === 'high-dark'
-                                ? 'border-yellow-400 bg-black text-yellow-400'
-                                : contrastMode === 'high-light'
-                                ? 'border-black bg-white text-black'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'
-                        }`}
-                    >
-                        <Settings size={22} className={isSettingsOpen ? 'animate-spin' : ''} />
-                    </button>
-                }
-            />
-
-            <div className="p-4 flex flex-col gap-6 max-w-[420px] mx-auto">
-            {/* --- SETTINGS DRAWER OVERLAY MODAL --- */}
-            {isSettingsOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className={`${getCardClasses()} border-primary max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl`}>
-                        <h2 className="text-base-lg font-bold mb-4 flex items-center gap-2">
-                            <Settings size={22} />
-                            Assistant Controls
-                        </h2>
-
-                        <div className="flex flex-col gap-4">
-                            {/* Contrast Setting */}
-                            <div className="flex flex-col gap-2">
-                                <span className="text-base-sm font-bold">Contrast Mode</span>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {[
-                                        { key: 'standard', label: 'Standard' },
-                                        { key: 'high-dark', label: 'Yellow/Black' },
-                                        { key: 'high-light', label: 'Black/White' },
-                                    ].map((mode) => (
-                                        <button
-                                            key={mode.key}
-                                            onClick={() => {
-                                                playBeep(440, 0.05);
-                                                setContrastMode(mode.key);
-                                            }}
-                                            aria-label={`Set contrast mode to ${mode.label}`}
-                                            className={`py-2 px-1 rounded-card text-base-sm font-bold border-2 transition-colors flex items-center justify-center gap-1 ${
-                                                contrastMode === mode.key
-                                                    ? 'border-primary bg-primary/10 text-primary'
-                                                    : 'border-gray-300 dark:border-gray-700'
-                                            }`}
-                                        >
-                                            {contrastMode === mode.key && <Check size={14} />}
-                                            {mode.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Text Scaling */}
-                            <div className="flex flex-col gap-2">
-                                <span className="text-base-sm font-bold">Text Zoom Multiplier</span>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[1.0, 1.25, 1.5, 2.0].map((scale) => (
-                                        <button
-                                            key={scale}
-                                            onClick={() => {
-                                                playBeep(500, 0.05);
-                                                setFontScale(scale);
-                                            }}
-                                            aria-label={`Set text zoom to ${scale}x`}
-                                            className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
-                                                fontScale === scale
-                                                    ? 'border-primary bg-primary/10 text-primary'
-                                                    : 'border-gray-300 dark:border-gray-700'
-                                            }`}
-                                        >
-                                            {scale}x
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Speech Speed Rate */}
-                            <div className="flex flex-col gap-2">
-                                <span className="text-base-sm font-bold">Speech Rate Speed</span>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[0.8, 1.0, 1.2, 1.5].map((rate) => (
-                                        <button
-                                            key={rate}
-                                            onClick={() => {
-                                                playBeep(550, 0.05);
-                                                setSpeechRate(rate);
-                                            }}
-                                            aria-label={`Set speech rate speed to ${rate}x`}
-                                            className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
-                                                speechRate === rate
-                                                    ? 'border-primary bg-primary/10 text-primary'
-                                                    : 'border-gray-300 dark:border-gray-700'
-                                            }`}
-                                        >
-                                            {rate}x
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <Button variant="secondary" className="w-full mt-4" onClick={toggleSettings}>
-                            Close Settings
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-                {/* --- MODE SELECTION TABS --- */}
-                <div className="grid grid-cols-3 gap-2">
-                    {[
-                        { key: 'object', label: 'Identify', icon: Map },
-                        { key: 'ocr', label: 'Read Text', icon: BookOpen },
-                        { key: 'scene', label: 'Describe', icon: Sparkles },
-                    ].map((mode) => {
-                        const isSelected = activeMode === mode.key;
-                        const Icon = mode.icon;
-                        return (
-                            <button
-                                key={mode.key}
-                                onClick={() => selectMode(mode.key)}
-                                aria-label={`Select ${mode.label} mode`}
-                                className={`flex flex-col items-center justify-center py-3 rounded-card border-2 font-bold text-base-sm transition-colors min-h-touch ${
-                                    isSelected
-                                        ? contrastMode === 'high-dark'
-                                            ? 'border-yellow-400 bg-yellow-400/20 text-yellow-400'
-                                            : contrastMode === 'high-light'
-                                            ? 'border-black bg-black/10 text-black'
-                                            : 'border-primary bg-primary/10 text-primary'
-                                        : 'border-gray-200 dark:border-gray-800'
-                                }`}
-                            >
-                                <Icon size={22} className="mb-1" />
-                                {mode.label}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* --- LIVE CAMERA COMPONENT --- */}
-                <CameraCapture
-                    onCapture={handleCapture}
-                    isProcessing={loading}
-                    speakFeedback={speakFeedback}
-                    playBeep={playBeep}
+    // Full Screen Scan History View
+    if (showHistory) {
+        return (
+            <div className={getThemeClasses()} style={{ fontSize: `${fontScale}rem` }}>
+                <ScreenHeader
+                    title="Recent Scans"
+                    showBack={true}
+                    onBack={() => setShowHistory(false)}
                 />
-
-                {/* --- AI SCAN RESULTS DISPLAY --- */}
-                {activeMode === 'object' && (!capturedImage || analysisResult) && (
-                    <ObjectDetectionPanel
-                        result={analysisResult}
-                        isSpeaking={speaking}
-                        speakResult={speakObjectResult}
-                        stopSpeaking={stop}
-                        playBeep={playBeep}
-                        resultRef={resultRef}
-                    />
-                )}
-
-                {activeMode === 'ocr' && (!capturedImage || analysisResult) && (
-                    <TextRecognitionPanel
-                        result={analysisResult}
-                        isSpeaking={speaking}
-                        isPaused={paused}
-                        speakResult={speakOcrResult}
-                        stopSpeaking={stop}
-                        pauseSpeaking={pause}
-                        resumeSpeaking={resume}
-                        playBeep={playBeep}
-                        resultRef={resultRef}
-                    />
-                )}
-
-                {activeMode === 'scene' && !capturedImage && !analysisResult && (
-                    <Card className="border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 flex flex-col items-center justify-center text-center">
-                        <HelpCircle size={40} className="text-gray-400 mb-2" />
-                        <p className="text-base-md font-bold text-gray-700 dark:text-gray-300">
-                            Ready to Describe Scene
-                        </p>
-                        <p className="text-base-sm text-gray-400 mt-1 leading-relaxed">
-                            Select "Describe" mode, point your camera at the room or area, and tap "Capture & Read Aloud" for a detailed scene description.
-                        </p>
-                    </Card>
-                )}
-
-                {activeMode === 'scene' && analysisResult && (
-                    <Card
-                        title="Scene Description"
-                        icon={Sparkles}
-                        iconColor="bg-primary"
-                        className="border-2 border-primary/20 bg-white dark:bg-gray-900"
-                    >
-                        <div className="flex justify-between items-center mb-4 mt-2">
-                            <button
-                                onClick={() => {
-                                    if (speaking) {
-                                        playBeep(300, 0.15);
-                                        stop();
-                                    } else {
-                                        playBeep(440, 0.08);
-                                        speak(stripMarkdown(analysisResult), speechRate);
-                                    }
-                                }}
-                                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-card font-bold text-base-md min-h-touch transition-colors border-2 border-white focus:outline-none ${
-                                    speaking
-                                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                                        : 'bg-primary hover:bg-primary-dark text-white'
-                                }`}
-                                aria-label={speaking ? "Stop voice description of scene" : "Describe scene out loud"}
-                            >
-                                {speaking ? <Square size={20} /> : <Volume2 size={20} />}
-                                {speaking ? 'Stop Speech' : 'Describe Scene'}
-                            </button>
-                        </div>
-                        <div
-                            ref={resultRef}
-                            tabIndex={-1}
-                            aria-live="polite"
-                            role="status"
-                            className="bg-gray-50 dark:bg-gray-800 p-4 rounded-card border border-gray-200 dark:border-gray-700 outline-none"
-                        >
-                            <p className="text-base-md font-bold text-gray-800 dark:text-gray-100 leading-relaxed">
-                                {renderMarkdown(analysisResult.replace(/\(Note: Simulator.*\)/g, '').trim())}
+                <div className="p-4 flex flex-col gap-4 max-w-[420px] mx-auto">
+                    {scanHistory.length === 0 ? (
+                        <div className="text-center py-12">
+                            <History size={48} className="text-gray-400 mx-auto mb-3" />
+                            <p className="text-base-md font-bold text-gray-700 dark:text-gray-300">
+                                No Recent Scans
+                            </p>
+                            <p className="text-base-sm text-gray-400 mt-1">
+                                Scanned items and scene descriptions will appear here.
                             </p>
                         </div>
-                        {analysisResult.includes('(Note: Simulator') && (
-                            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-card">
-                                <p className="text-base-sm text-yellow-700 dark:text-yellow-400 font-medium">
-                                    {analysisResult.match(/\(Note: Simulator.*\)/)[0]}
-                                </p>
-                            </div>
-                        )}
-                    </Card>
-                )}
-
-                {/* --- QUESTION & ANSWER COMPONENT --- */}
-                {capturedImage && (
-                    <div className={getCardClasses()}>
-                        <AskAIBar
-                            onSubmit={handleAskAI}
-                            isProcessing={loading}
-                            speakFeedback={speakFeedback}
-                            playBeep={playBeep}
-                            stopSpeaking={stop}
-                        />
-                    </div>
-                )}
-
-                {/* --- RECENT SCANS / HISTORY --- */}
-                {scanHistory.length > 0 && (
-                    <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                            <button
-                                onClick={() => setIsHistoryExpanded((prev) => !prev)}
-                                aria-expanded={isHistoryExpanded}
-                                aria-label={`Toggle Recent Scans list (${scanHistory.length} items)`}
-                                className="flex items-center gap-2 text-base-md font-bold text-gray-800 dark:text-gray-100 hover:text-primary transition-colors min-h-touch py-1"
-                            >
-                                <History size={20} className="text-primary" />
-                                <span>Recent Scans ({scanHistory.length})</span>
-                                {isHistoryExpanded ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
-                            </button>
-                            {isHistoryExpanded && (
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-base-md font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                    <History size={20} className="text-primary" />
+                                    <span>History ({scanHistory.length})</span>
+                                </span>
                                 <button
                                     onClick={clearHistory}
                                     aria-label="Clear all scan history"
-                                    className="flex items-center gap-1.5 text-base-sm text-red-500 hover:underline min-h-touch px-2"
+                                    className="flex items-center gap-1.5 text-base-sm text-red-500 hover:underline min-h-touch px-2 font-bold"
                                 >
                                     <Trash2 size={16} />
                                     Clear All
                                 </button>
-                            )}
-                        </div>
+                            </div>
 
-                        {isHistoryExpanded && (
                             <div className="flex flex-col gap-3">
                                 {scanHistory.map((scan) => (
                                     <div
@@ -546,7 +308,7 @@ export default function VisionAssistant() {
                                         <button
                                             onClick={() => {
                                                 playBeep(440, 0.08);
-                                                speak(stripMarkdown(scan.result), speechRate);
+                                                speak(stripMarkdown(scan.result), speechRate, null, setCurrentSubtitle);
                                             }}
                                             aria-label={`Play audio description for this ${scan.mode} scan`}
                                             className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20"
@@ -556,9 +318,240 @@ export default function VisionAssistant() {
                                     </div>
                                 ))}
                             </div>
-                        )}
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={getThemeClasses()} style={{ fontSize: `${fontScale}rem` }}>
+            <ScreenHeader
+                title="Vision Assistant"
+                showBack={true}
+                rightAction={
+                    <button
+                        onClick={toggleSettings}
+                        aria-label="Vision Assistant Settings"
+                        className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${
+                            contrastMode === 'high-dark'
+                                ? 'border-yellow-400 bg-black text-yellow-400'
+                                : contrastMode === 'high-light'
+                                ? 'border-black bg-white text-black'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:bg-gray-200'
+                        }`}
+                    >
+                        <Settings size={22} className={isSettingsOpen ? 'animate-spin' : ''} />
+                    </button>
+                }
+            />
+
+            <div className="flex-1 flex flex-col min-h-0 p-2 gap-2 max-w-[420px] w-full mx-auto">
+                {/* --- SETTINGS DRAWER OVERLAY MODAL --- */}
+                {isSettingsOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className={`${getCardClasses()} border-primary max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl`}>
+                            <h2 className="text-base-lg font-bold mb-4 flex items-center gap-2">
+                                <Settings size={22} />
+                                Assistant Controls
+                            </h2>
+
+                            <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-base-sm font-bold">Contrast Mode</span>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { key: 'standard', label: 'Standard' },
+                                            { key: 'high-dark', label: 'Yellow/Black' },
+                                            { key: 'high-light', label: 'Black/White' },
+                                        ].map((mode) => (
+                                            <button
+                                                key={mode.key}
+                                                onClick={() => {
+                                                    playBeep(440, 0.05);
+                                                    setContrastMode(mode.key);
+                                                }}
+                                                aria-label={`Set contrast mode to ${mode.label}`}
+                                                className={`py-2 px-1 rounded-card text-base-sm font-bold border-2 transition-colors flex items-center justify-center gap-1 ${
+                                                    contrastMode === mode.key
+                                                        ? 'border-primary bg-primary/10 text-primary'
+                                                        : 'border-gray-300 dark:border-gray-700'
+                                                }`}
+                                            >
+                                                {contrastMode === mode.key && <Check size={14} />}
+                                                {mode.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-base-sm font-bold">Text Zoom Multiplier</span>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[1.0, 1.25, 1.5, 2.0].map((scale) => (
+                                            <button
+                                                key={scale}
+                                                onClick={() => {
+                                                    playBeep(500, 0.05);
+                                                    setFontScale(scale);
+                                                }}
+                                                aria-label={`Set text zoom to ${scale}x`}
+                                                className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
+                                                    fontScale === scale
+                                                        ? 'border-primary bg-primary/10 text-primary'
+                                                        : 'border-gray-300 dark:border-gray-700'
+                                                }`}
+                                            >
+                                                {scale}x
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-base-sm font-bold">Speech Rate Speed</span>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[0.8, 1.0, 1.2, 1.5].map((rate) => (
+                                            <button
+                                                key={rate}
+                                                onClick={() => {
+                                                    playBeep(550, 0.05);
+                                                    setSpeechRate(rate);
+                                                }}
+                                                aria-label={`Set speech rate speed to ${rate}x`}
+                                                className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
+                                                    speechRate === rate
+                                                        ? 'border-primary bg-primary/10 text-primary'
+                                                        : 'border-gray-300 dark:border-gray-700'
+                                                }`}
+                                            >
+                                                {rate}x
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Button variant="secondary" className="w-full mt-4" onClick={toggleSettings}>
+                                Close Settings
+                            </Button>
+                        </div>
                     </div>
                 )}
+
+                {/* --- MODE SELECTION TABS (FIXED HEIGHT) --- */}
+                <div className="grid grid-cols-3 gap-2 shrink-0">
+                    {[
+                        { key: 'object', label: 'Identify', icon: Map },
+                        { key: 'ocr', label: 'Read Text', icon: BookOpen },
+                        { key: 'scene', label: 'Describe', icon: Sparkles },
+                    ].map((mode) => {
+                        const isSelected = activeMode === mode.key;
+                        const Icon = mode.icon;
+                        return (
+                            <button
+                                key={mode.key}
+                                onClick={() => selectMode(mode.key)}
+                                aria-label={`Select ${mode.label} mode`}
+                                className={`flex flex-col items-center justify-center py-2.5 rounded-card border-2 font-bold text-base-sm transition-colors min-h-touch ${
+                                    isSelected
+                                        ? contrastMode === 'high-dark'
+                                            ? 'border-yellow-400 bg-yellow-400/20 text-yellow-400'
+                                            : contrastMode === 'high-light'
+                                            ? 'border-black bg-black/10 text-black'
+                                            : 'border-primary bg-primary/10 text-primary'
+                                        : 'border-gray-200 dark:border-gray-800'
+                                }`}
+                            >
+                                <Icon size={20} className="mb-0.5" />
+                                {mode.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* --- CAMERA & CAPTION OVERLAY CONTAINER (EXPLICIT VIEWPORT HEIGHT) --- */}
+                <div ref={cameraContainerRef} className="relative h-[48dvh] min-h-[300px] w-full rounded-card overflow-hidden border-4 border-gray-800 dark:border-gray-900 shadow-lg bg-black">
+                    <CameraCapture
+                        onCapture={handleCapture}
+                        isProcessing={loading}
+                        speakFeedback={speakFeedback}
+                        playBeep={playBeep}
+                    />
+
+                    {/* YOUTUBE-STYLE LIVE SUBTITLE CAPTION STRIP */}
+                    {(speaking || loading || currentSubtitle) && (
+                        <div className="absolute bottom-2 left-2 right-2 z-20 flex justify-center pointer-events-none">
+                            <div className="bg-black/75 backdrop-blur-sm text-white text-base-md font-semibold px-4 py-2 rounded-lg text-center max-w-[95%] shadow-lg border border-white/15 line-clamp-2 overflow-hidden leading-snug">
+                                {renderMarkdown(currentSubtitle || (loading ? "Analyzing image, please wait..." : ""))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* --- ASK AI OVERLAY BAR (SHRINK-0) --- */}
+                {showAskBar && capturedImage && (
+                    <div className="p-3 bg-surface dark:bg-surface-dark border-2 border-primary rounded-card shadow-lg shrink-0">
+                        <AskAIBar
+                            onSubmit={handleAskAI}
+                            isProcessing={loading}
+                            speakFeedback={speakFeedback}
+                            playBeep={playBeep}
+                            stopSpeaking={handleStopSpeaking}
+                        />
+                    </div>
+                )}
+
+                {/* --- FIXED 4-BUTTON ROW (Stop - Ask - Capture - Recents) (SHRINK-0) --- */}
+                <div className="flex items-center justify-between gap-2 pt-1 pb-1 shrink-0">
+                    {/* STOP BUTTON */}
+                    <button
+                        onClick={() => {
+                            playBeep(300, 0.1);
+                            handleStopSpeaking();
+                        }}
+                        aria-label="Stop audio output"
+                        className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                    >
+                        <Square size={18} />
+                        <span>Stop</span>
+                    </button>
+
+                    {/* ASK BUTTON */}
+                    <button
+                        onClick={handleAskClick}
+                        aria-label="Ask AI question about photo"
+                        className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                    >
+                        <MessageSquare size={18} />
+                        <span>Ask</span>
+                    </button>
+
+                    {/* CAPTURE BUTTON (VISUALLY LARGEST & MOST PROMINENT) */}
+                    <button
+                        onClick={triggerCapture}
+                        disabled={loading}
+                        aria-label="Capture image and analyze"
+                        className="w-20 h-20 rounded-full bg-primary hover:bg-primary-dark disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-xl transition-all border-4 border-white dark:border-gray-800 focus:outline-none focus:ring-4 focus:ring-primary/50"
+                    >
+                        <Camera size={28} />
+                        <span>Capture</span>
+                    </button>
+
+                    {/* RECENTS BUTTON */}
+                    <button
+                        onClick={() => {
+                            playBeep(440, 0.08);
+                            setShowHistory(true);
+                        }}
+                        aria-label="View recent scans history"
+                        className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                    >
+                        <History size={18} />
+                        <span>Recents</span>
+                    </button>
+                </div>
             </div>
         </div>
     );

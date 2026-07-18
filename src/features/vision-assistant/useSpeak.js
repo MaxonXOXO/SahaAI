@@ -25,12 +25,13 @@ export default function useSpeak() {
     }, []);
 
     /**
-     * Speaks the given text with customization
+     * Speaks the given text with customization and sentence-by-sentence subtitle callback
      * @param {string} text - Text to speak
      * @param {number} rate - Speech rate multiplier (0.5 to 2)
      * @param {function} onEnd - Callback function when speech finishes
+     * @param {function} onSentenceChange - Callback function called per sentence with current sentence text
      */
-    const speak = useCallback((text, rate = 1.0, onEnd = null) => {
+    const speak = useCallback((text, rate = 1.0, onEnd = null, onSentenceChange = null) => {
         if (!synthRef.current) return;
 
         // Stop any current reading
@@ -50,32 +51,58 @@ export default function useSpeak() {
         const cleanText = text.trim();
         if (cleanText === '') return;
 
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.rate = rate;
-        currentUtteranceRef.current = utterance;
+        // Split text into sentences for live subtitle synchronization
+        const sentences = cleanText
+            .split(/(?<=[.!?])\s+/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
 
-        utterance.onend = () => {
-            if (currentUtteranceRef.current !== utterance) return;
-            setSpeaking(false);
-            setPaused(false);
-            if (onEnd) onEnd();
-        };
+        if (sentences.length === 0) return;
 
-        utterance.onerror = (e) => {
-            if (currentUtteranceRef.current !== utterance) return;
-            if (e.error === 'interrupted' || e.error === 'canceled') {
+        let index = 0;
+
+        const speakNextSentence = () => {
+            if (index >= sentences.length) {
                 setSpeaking(false);
                 setPaused(false);
+                currentUtteranceRef.current = null;
+                if (onSentenceChange) onSentenceChange('');
+                if (onEnd) onEnd();
                 return;
             }
-            console.error('SpeechSynthesisUtterance error:', e);
-            setSpeaking(false);
+
+            const sentenceText = sentences[index];
+            if (onSentenceChange) onSentenceChange(sentenceText);
+
+            const utterance = new SpeechSynthesisUtterance(sentenceText);
+            utterance.rate = rate;
+            currentUtteranceRef.current = utterance;
+
+            utterance.onend = () => {
+                if (currentUtteranceRef.current !== utterance) return;
+                index++;
+                speakNextSentence();
+            };
+
+            utterance.onerror = (e) => {
+                if (currentUtteranceRef.current !== utterance) return;
+                if (e.error === 'interrupted' || e.error === 'canceled') {
+                    setSpeaking(false);
+                    setPaused(false);
+                    if (onSentenceChange) onSentenceChange('');
+                    return;
+                }
+                console.error('SpeechSynthesisUtterance error:', e);
+                index++;
+                speakNextSentence();
+            };
+
+            setSpeaking(true);
             setPaused(false);
+            synthRef.current.speak(utterance);
         };
 
-        synthRef.current.speak(utterance);
-        setSpeaking(true);
-        setPaused(false);
+        speakNextSentence();
     }, []);
 
     /** Stops current speech output */
