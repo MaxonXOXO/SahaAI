@@ -75,8 +75,12 @@ const useProfileStore = create((set, get) => ({
     },
 
     logout: async () => {
-        await supabase.auth.signOut();
         get().reset();
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error('Supabase signOut error:', error);
+        }
     },
 
     checkSession: async () => {

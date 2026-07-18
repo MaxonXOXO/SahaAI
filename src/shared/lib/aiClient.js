@@ -6,6 +6,42 @@
  */
 
 /**
+ * Helper to safely extract and parse JSON from an LLM response text,
+ * stripping conversational prefixes or markdown backticks if present.
+ */
+export function safeParseJSON(str) {
+    if (!str) return null;
+    const cleanStr = str.trim();
+    try {
+        return JSON.parse(cleanStr);
+    } catch (e) {
+        // Look for the first '{' or '[' and the last '}' or ']'
+        const firstCurly = cleanStr.indexOf('{');
+        const lastCurly = cleanStr.lastIndexOf('}');
+        if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
+            try {
+                return JSON.parse(cleanStr.substring(firstCurly, lastCurly + 1));
+            } catch (innerErr) {
+                // Try stripping backticks
+                const stripped = cleanStr.replace(/```json|```/gi, '').trim();
+                try {
+                    return JSON.parse(stripped);
+                } catch (stripErr) {
+                    throw new Error(`Failed to parse extracted JSON. Content: "${cleanStr}". Error: ${stripErr.message}`);
+                }
+            }
+        }
+        // Try stripping backticks as a last resort
+        const stripped = cleanStr.replace(/```json|```/gi, '').trim();
+        try {
+            return JSON.parse(stripped);
+        } catch (stripErr) {
+            throw new Error(`Failed to parse JSON. Content: "${cleanStr}". Error: ${stripErr.message}`);
+        }
+    }
+}
+
+/**
  * Build a system prompt that tells the AI who the user is.
  * @param {Object} profile — from useProfileStore
  */
@@ -491,13 +527,13 @@ ${schemaDescription}`;
 
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content;
-    
+
     if (!content) {
         throw new Error('OpenAI returned an empty content body.');
     }
 
     try {
-        const parsed = JSON.parse(content.trim());
+        const parsed = safeParseJSON(content);
         return parsed;
     } catch (err) {
         throw new Error(`Failed to parse OpenAI response as JSON. Content: "${content}". Error: ${err.message}`);
@@ -536,6 +572,7 @@ You MUST output ONLY a valid JSON object matching this schema:
     }
   ]
 }
+
 Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in the response. Return ONLY raw JSON.`;
 
     // Try Gemini first
@@ -568,7 +605,7 @@ Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in th
             const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (text) {
                 try {
-                    const parsed = JSON.parse(text.trim());
+                    const parsed = safeParseJSON(text);
                     if (parsed && Array.isArray(parsed.tiles)) {
                         return parsed.tiles;
                     }
@@ -605,7 +642,7 @@ Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in th
             const content = data?.choices?.[0]?.message?.content;
             if (content) {
                 try {
-                    const parsed = JSON.parse(content.trim());
+                    const parsed = safeParseJSON(content);
                     if (parsed && Array.isArray(parsed.tiles)) {
                         return parsed.tiles;
                     }
@@ -617,6 +654,42 @@ Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in th
     }
 
     throw new Error('Could not generate contextual tiles. Check your API keys and connection.');
+}
+
+/** Generate a structured, accessibility-aware learning explainer with the active AI provider. */
+export async function generateLearnExplainer(profile, topic) {
+    const prompt = `${buildSystemPrompt(profile)}\n\nCreate a concise explainer for the topic below. Return ONLY valid JSON with this exact shape:\n{"topic":"short title","explanation":"clear markdown-friendly explanation","diagramSteps":["optional ordered step"],"videoQuery":"short educational YouTube search query"}\nUse diagramSteps only when an ordered process, mechanism, or sequence would genuinely help. Keep explanations practical and accurate.\n\nTopic: ${topic}`;
+    const response = await sendMessage(prompt, [{ role: 'user', content: topic }]);
+    const parsed = safeParseJSON(response);
+    if (!parsed || !parsed.explanation) throw new Error('The explainer response was incomplete.');
+    return { topic: parsed.topic?.trim() || topic, explanation: parsed.explanation.trim(), diagramSteps: Array.isArray(parsed.diagramSteps) ? parsed.diagramSteps.filter(Boolean).slice(0, 8) : [], videoQuery: parsed.videoQuery?.trim() || `${topic} explained` };
+}
+
+/** Create a lightweight visual for explainer cards only. Returns a data URL suitable for learn_cards.image_url. */
+export async function generateLearnImage(topic) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) return null;
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify({ model: 'gemini-3.1-flash-lite-image', input: `Create a simple, calm, accessible educational illustration about ${topic}. Use clear shapes, high contrast, minimal text, and no logos.`, response_format: { type: 'image', mime_type: 'image/jpeg', aspect_ratio: '16:9', image_size: '1K' } }) });
+    if (!response.ok) throw new Error(`Gemini image generation error ${response.status}`);
+    const image = (await response.json())?.output_image;
+    return image?.data ? `data:${image.mime_type || 'image/jpeg'};base64,${image.data}` : null;
+}
+
+/** Find a single safe, embeddable YouTube video. No request is made when no key is configured. */
+export async function findLearnVideo(searchQuery, language = 'en') {
+    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+    if (!apiKey) return null;
+    const params = new URLSearchParams({ part: 'snippet', q: searchQuery, type: 'video', maxResults: '1', safeSearch: 'strict', videoEmbeddable: 'true', key: apiKey, relevanceLanguage: language });
+    const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+    return response.ok ? (await response.json())?.items?.[0]?.id?.videoId || null : null;
+}
+
+/** Suggest a compact daily set of learning topics from the user's mode and recent activity names. */
+export async function generateDailyLearnTopics(profile, eventTypes = []) {
+    const prompt = `${buildSystemPrompt(profile)}\n\nSuggest 3 short, safe, useful learning topics for today. Base them on the user's primary accessibility mode and recent activity labels. Return ONLY JSON: {"topics":["topic"]}. Avoid medical, legal, financial, or current-news topics.\nPrimary mode: ${profile.primaryMode || 'none'}\nRecent activity: ${eventTypes.join(', ') || 'none'}`;
+    const response = await sendMessage(prompt, [{ role: 'user', content: 'Suggest today’s learning topics.' }]);
+    const parsed = safeParseJSON(response);
+    return (parsed && Array.isArray(parsed.topics)) ? parsed.topics.filter((topic) => typeof topic === 'string' && topic.trim()).slice(0, 5) : [];
 }
 
 
