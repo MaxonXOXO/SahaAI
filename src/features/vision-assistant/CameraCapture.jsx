@@ -17,9 +17,16 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
     const [zoom, setZoom] = useState(1);
     const [isActive, setIsActive] = useState(true);
 
-    // Touch Pinch-to-Zoom Refs
+    // Touch Pinch-to-Zoom & Audio Feedback Refs
     const initialPinchDistRef = useRef(null);
     const initialZoomRef = useRef(1);
+    const speakFeedbackRef = useRef(speakFeedback);
+    const playBeepRef = useRef(playBeep);
+
+    useEffect(() => {
+        speakFeedbackRef.current = speakFeedback;
+        playBeepRef.current = playBeep;
+    });
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -35,7 +42,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
     }, []);
 
     const startCamera = useCallback(async () => {
-        if (playBeep) playBeep(440, 0.08);
+        if (playBeepRef.current) playBeepRef.current(440, 0.08);
         stopCamera();
         setHasPermission(null);
 
@@ -79,7 +86,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
                 videoRef.current.srcObject = mockStream;
             }
             setHasPermission(true);
-            speakFeedback("Camera active. Point at your target and tap Capture.");
+            if (speakFeedbackRef.current) speakFeedbackRef.current("Camera active. Point at your target and tap Capture.");
             return;
         }
 
@@ -99,13 +106,13 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
                 videoRef.current.srcObject = stream;
             }
             setHasPermission(true);
-            speakFeedback("Camera active. Point at your target and tap Capture.");
+            if (speakFeedbackRef.current) speakFeedbackRef.current("Camera active. Point at your target and tap Capture.");
         } catch (err) {
             console.error('Camera access error:', err);
             setHasPermission(false);
-            speakFeedback("Camera permission denied or camera not found. Please enable it in browser settings.");
+            if (speakFeedbackRef.current) speakFeedbackRef.current("Camera permission denied or camera not found. Please enable it in browser settings.");
         }
-    }, [facingMode, speakFeedback, stopCamera, playBeep]);
+    }, [facingMode, stopCamera]);
 
     // Initial camera setup
     useEffect(() => {

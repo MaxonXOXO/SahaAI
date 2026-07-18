@@ -239,7 +239,7 @@ export default function VisionAssistant() {
         if (!isSettingsOpen) {
             speak("Settings menu opened. Adjust high contrast, sizes, or speech speed.", speechRate);
         } else {
-            speak("Settings closed.", speechRate);
+            speak("Back to camera", speechRate);
         }
     };
 
