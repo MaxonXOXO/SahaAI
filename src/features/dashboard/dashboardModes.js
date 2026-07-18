@@ -13,7 +13,7 @@ export const TILE_REGISTRY = {
     dyslexiaFont: { label: 'Dyslexia Font', icon: Type, path: '/settings', color: 'bg-accent-dyslexia' },
     spellCheck: { label: 'Spell Check', icon: FileText, path: '/text-simplifier', color: 'bg-gray-500' },
     highlighter: { label: 'Highlighter', icon: Sparkles, path: '/reading-mode', color: 'bg-yellow-400' },
-    aiChat: { label: 'AI Chat', icon: MessageSquare, path: '/ai-chat', color: 'bg-primary' },
+    aiChat: { label: 'Learn', icon: MessageSquare, path: '/learn', color: 'bg-primary' },
     mathSolver: { label: 'Math Solver', icon: Calculator, path: '/math-helper', color: 'bg-accent-dyscalculia' },
     numberSense: { label: 'Number Sense', icon: Calculator, path: '/math-helper', color: 'bg-accent-dyscalculia' },
     stepSolver: { label: 'Step Solver', icon: ListChecks, path: '/math-helper', color: 'bg-accent-dyscalculia' },
@@ -27,6 +27,7 @@ export const TILE_REGISTRY = {
     largeKeyboard: { label: 'Large Keyboard', icon: Type, path: '/settings', color: 'bg-accent-lowvision' },
     colorInverter: { label: 'Color Inverter', icon: Settings2, path: '/settings', color: 'bg-gray-600' },
     aacBoard: { label: 'AAC Board', icon: MessageSquare, path: '/aac-board', color: 'bg-accent-autism' },
+    speechTherapy: { label: 'Speech Therapy', icon: Volume2, path: '/speech-therapy', color: 'bg-primary' },
 };
 
 // Configuration for each primary mode
@@ -53,7 +54,7 @@ export const DASHBOARD_MODES = {
         bgLight: 'bg-accent-autism/10',
         greeting: "Here's your plan for today.",
         heroTitle: "TODAY'S SCHEDULE",
-        tiles: ['social', 'aacBoard', 'routine', 'visualAssistant', 'calmCorner', 'aiChat'],
+        tiles: ['social', 'aacBoard', 'speechTherapy', 'routine', 'visualAssistant', 'calmCorner', 'aiChat'],
     },
     dyscalculia: {
         label: 'Dyscalculia Mode',
@@ -77,6 +78,6 @@ export const DASHBOARD_MODES = {
         bgLight: 'bg-primary/5',
         greeting: "Ready to learn something new?",
         heroTitle: "GET STARTED",
-        tiles: ['read', 'math', 'focus', 'routine', 'aacBoard', 'aiChat'],
+        tiles: ['read', 'math', 'focus', 'routine', 'aacBoard', 'speechTherapy', 'aiChat'],
     }
 };
