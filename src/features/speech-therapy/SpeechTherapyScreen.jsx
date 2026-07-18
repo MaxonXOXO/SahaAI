@@ -35,6 +35,7 @@ export default function SpeechTherapyScreen() {
     const navigate = useNavigate();
     const profile = useProfileStore();
     const displayLanguage = useSettingsStore((s) => s.displayLanguage) || 'en';
+    const languageName = new Intl.DisplayNames(['en'], { type: 'language' }).of(displayLanguage) || 'English';
 
     // Settings State
     const [provider, setProvider] = useState('openai');
@@ -59,6 +60,14 @@ export default function SpeechTherapyScreen() {
     const [timer, setTimer] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
     const isMutedRef = useRef(false);
+
+    // Hybrid Scoring State
+    const [hybridScore, setHybridScore] = useState(null);
+    const audioStatsRef = useRef({
+        isSpeaking: false,
+        speechStartTime: 0,
+        pitchSamples: [],
+    });
 
     // WebRTC, microphone, and visualizer refs
     const peerConnectionRef = useRef(null);
@@ -173,10 +182,33 @@ export default function SpeechTherapyScreen() {
             if (isActive && analyser) {
                 analyser.getByteTimeDomainData(dataArray);
                 let sum = 0;
+                let zeroCrossings = 0;
                 for (let i = 0; i < bufferLength; i++) {
-                    sum += Math.abs(dataArray[i] - 128);
+                    const diff = dataArray[i] - 128;
+                    sum += Math.abs(diff);
+                    if (i > 0) {
+                        const prevDiff = dataArray[i-1] - 128;
+                        if ((prevDiff >= 0 && diff < 0) || (prevDiff < 0 && diff >= 0)) {
+                            zeroCrossings++;
+                        }
+                    }
                 }
                 average = sum / bufferLength;
+
+                // Track heuristic acoustic signals for Hybrid Emotion Score
+                if (average > 1.5 && !isMutedRef.current) {
+                    if (!audioStatsRef.current.isSpeaking) {
+                        audioStatsRef.current.isSpeaking = true;
+                        if (!audioStatsRef.current.speechStartTime) {
+                            audioStatsRef.current.speechStartTime = Date.now();
+                        }
+                    }
+                    const sampleRate = audioContextRef.current?.sampleRate || 48000;
+                    const pitchEstimate = (zeroCrossings * sampleRate) / bufferLength / 2;
+                    audioStatsRef.current.pitchSamples.push(pitchEstimate);
+                } else {
+                    audioStatsRef.current.isSpeaking = false;
+                }
             } else {
                 // Heartbeat breathing animation while connecting
                 average = Math.sin(Date.now() / 200) * 3.5 + 3.5;
@@ -421,10 +453,64 @@ export default function SpeechTherapyScreen() {
         if (!text) return;
         setChatHistory((previous) => {
             const last = previous[previous.length - 1];
-            if (role === 'ai' && last?.role === 'ai') {
-                return [...previous.slice(0, -1), { role: 'ai', text: last.text + text }];
+            
+            if (role === 'ai') {
+                const combined = (last?.role === 'ai' ? last.text : '') + text;
+                const match = combined.match(/{"userTone":\s*"([^"]+)"}/);
+                
+                if (match) {
+                    setHybridScore(prev => ({ ...prev, textSignal: match[1].toLowerCase() }));
+                }
+                
+                if (last?.role === 'ai') {
+                    return [...previous.slice(0, -1), { role: 'ai', text: combined }];
+                }
+                return [...previous, { role, text }];
             }
-            return [...previous, { role, text }];
+            
+            if (role === 'user') {
+                const words = text.trim().split(/\s+/).length;
+                let durationMins = audioStatsRef.current.speechStartTime > 0 
+                    ? (Date.now() - audioStatsRef.current.speechStartTime) / 60000 
+                    : 0;
+                
+                // Fallback heuristic: If mic threshold didn't trigger or network lag caused 
+                // unreasonable duration, estimate duration based on average conversational pace (130wpm).
+                if (durationMins <= 0.01) {
+                    durationMins = Math.max(0.02, words / 130);
+                }
+                
+                let wpm = words / durationMins;
+                
+                // Clamp WPM to realistic human bounds to prevent wild UI jumps
+                wpm = Math.max(40, Math.min(Math.round(wpm), 350));
+                
+                const paceSignal = wpm < 110 ? 'hesitant' : wpm > 160 ? 'rushed' : 'steady';
+                
+                const pitches = audioStatsRef.current.pitchSamples;
+                let variance = 0;
+                if (pitches.length > 0) {
+                    const mean = pitches.reduce((a,b) => a+b, 0) / pitches.length;
+                    variance = pitches.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / pitches.length;
+                }
+                const toneSignal = variance < 500 ? 'flat' : variance > 3000 ? 'highly varied' : 'varied';
+                
+                setHybridScore(prev => {
+                    const textSignal = prev?.textSignal || 'neutral';
+                    const overallLabel = `You sounded ${textSignal} and ${paceSignal} today.`;
+                    
+                    // Log metrics (fire and forget background task)
+                    supabase.from('activity_log').insert([{ 
+                        action: 'speech_therapy_session_completed', 
+                        metadata: { textTone: textSignal, avgWordsPerMinute: wpm, pitchVarianceLevel: toneSignal, rawVariance: variance }
+                    }]).then().catch(()=>null);
+                    
+                    return { textSignal, paceSignal, toneSignal, overallLabel, wpm, variance };
+                });
+                
+                audioStatsRef.current = { isSpeaking: false, speechStartTime: 0, pitchSamples: [] };
+                return [...previous, { role, text }];
+            }
         });
     };
 
@@ -454,6 +540,10 @@ export default function SpeechTherapyScreen() {
 
     // Gemini Live uses a stateful WebSocket and PCM audio rather than WebRTC tracks.
     const startGeminiSession = async () => {
+        const systemPromptWithPiggyback = `${selectedGoal.system}
+IMPORTANT: The user has selected their language preference as ${languageName}. You MUST speak and respond ONLY in ${languageName} for the entirety of this session.
+IMPORTANT: Also classify the emotional tone of what the user just said. Respond with a JSON field: "userTone": one of ["calm", "anxious", "frustrated", "confident", "sad", "neutral", "excited"]. Put this exact JSON substring anywhere in your text response, e.g. {"userTone": "calm"}. Do NOT speak this JSON out loud. Only output it in your text transcript.`;
+
         try {
             setIsConnecting(true);
             setStatusText('Getting secure Gemini Live access…');
@@ -502,7 +592,7 @@ export default function SpeechTherapyScreen() {
                     setup: {
                         model: 'models/gemini-3.1-flash-live-preview',
                         generationConfig: { responseModalities: ['AUDIO'] },
-                        systemInstruction: { parts: [{ text: selectedGoal.system }] },
+                        systemInstruction: { parts: [{ text: systemPromptWithPiggyback }] },
                         inputAudioTranscription: {},
                         outputAudioTranscription: {},
                     },
@@ -535,7 +625,15 @@ export default function SpeechTherapyScreen() {
                         };
                         setIsConnecting(false);
                         setIsActive(true);
-                        setStatusText('Active Gemini session • Go ahead and speak');
+                        setStatusText('Active Gemini session • AI is initiating conversation…');
+                        
+                        // Force AI to speak first
+                        socket.send(JSON.stringify({
+                            clientContent: {
+                                turns: [{ role: 'user', parts: [{ text: `Hello! Please introduce yourself and initiate our session now in ${languageName}.` }] }],
+                                turnComplete: true
+                            }
+                        }));
                     }
 
                     const content = message.serverContent;
@@ -561,6 +659,10 @@ export default function SpeechTherapyScreen() {
 
     // Secure browser client: microphone travels over WebRTC; the Edge Function holds the OpenAI key.
     const startSession = async () => {
+        const systemPromptWithPiggyback = `${selectedGoal.system}
+IMPORTANT: The user has selected their language preference as ${languageName}. You MUST speak and respond ONLY in ${languageName} for the entirety of this session.
+IMPORTANT: Also classify the emotional tone of what the user just said. Respond with a JSON field: "userTone": one of ["calm", "anxious", "frustrated", "confident", "sad", "neutral", "excited"]. Put this exact JSON substring anywhere in your text response, e.g. {"userTone": "calm"}. Do NOT speak this JSON out loud. Only output it in your text transcript.`;
+
         try {
             setIsConnecting(true);
             setStatusText('Connecting to therapist…');
@@ -585,6 +687,20 @@ export default function SpeechTherapyScreen() {
 
             const dataChannel = peerConnection.createDataChannel('oai-events');
             dataChannelRef.current = dataChannel;
+            
+            // Force AI to speak first once connected
+            dataChannel.onopen = () => {
+                dataChannel.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                        type: "message",
+                        role: "user",
+                        content: [{ type: "input_text", text: `Hello! Please introduce yourself and initiate our session now in ${languageName}.` }]
+                    }
+                }));
+                dataChannel.send(JSON.stringify({ type: "response.create" }));
+            };
+            
             dataChannel.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
@@ -624,7 +740,7 @@ export default function SpeechTherapyScreen() {
                     apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
                     Authorization: `Bearer ${session.access_token}`,
                 },
-                body: JSON.stringify({ sdp: offer.sdp, instructions: selectedGoal.system, voice: selectedVoice }),
+                body: JSON.stringify({ sdp: offer.sdp, instructions: systemPromptWithPiggyback, voice: selectedVoice }),
             });
             if (!response.ok) {
                 const detail = await response.json().catch(() => ({}));
@@ -811,7 +927,7 @@ export default function SpeechTherapyScreen() {
                                         <span className={msg.role === 'user' ? 'text-green-400 font-bold' : 'text-indigo-400 font-bold'}>
                                             {msg.role === 'user' ? 'You: ' : 'Therapist: '}
                                         </span>
-                                        {msg.text}
+                                        {msg.text.replace(/{"userTone":\s*"[^"]+"}/g, '')}
                                     </p>
                                 </div>
                             ))
@@ -860,6 +976,31 @@ export default function SpeechTherapyScreen() {
                                 <span className="text-sm font-bold text-indigo-400 mt-2">{formatTime(timer)}</span>
                             </div>
                         </div>
+
+                        {/* Hybrid Heuristic Score Breakdown */}
+                        {hybridScore && (
+                            <div className="w-full mt-6 bg-gray-900 border border-gray-800 p-4 rounded-2xl text-left">
+                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Hybrid Heuristic Score</h4>
+                                <p className="text-sm text-indigo-400 font-bold mb-4">{hybridScore.overallLabel}</p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="bg-gray-800/50 p-3 rounded-xl border border-gray-800 flex flex-col">
+                                        <span className="text-[10px] text-gray-500 font-bold">Text Sentiment</span>
+                                        <span className="text-xs text-gray-200 mt-1 capitalize">{hybridScore.textSignal}</span>
+                                    </div>
+                                    <div className="bg-gray-800/50 p-3 rounded-xl border border-gray-800 flex flex-col">
+                                        <span className="text-[10px] text-gray-500 font-bold">Pace (WPM)</span>
+                                        <span className="text-xs text-gray-200 mt-1 capitalize">{hybridScore.paceSignal} ({Math.round(hybridScore.wpm || 0)})</span>
+                                    </div>
+                                    <div className="bg-gray-800/50 p-3 rounded-xl border border-gray-800 flex flex-col">
+                                        <span className="text-[10px] text-gray-500 font-bold">Pitch Tone</span>
+                                        <span className="text-xs text-gray-200 mt-1 capitalize">{hybridScore.toneSignal}</span>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
+                                    Note: This is a transparent, heuristic breakdown combining text tone, speaking pace, and acoustic variance. It is not an ML-based emotion detector.
+                                </p>
+                            </div>
+                        )}
 
                         {/* Encouraging Feedback Cards */}
                         <div className="w-full mt-6 bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl text-left flex gap-3.5">
