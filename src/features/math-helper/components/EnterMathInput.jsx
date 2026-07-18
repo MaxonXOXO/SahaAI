@@ -18,28 +18,16 @@ export default function EnterMathInput({ onSubmit }) {
         e.preventDefault();
         setError(null);
 
-        const a = parseInt(operandA, 10);
-        const b = parseInt(operandB, 10);
+        const a = parseFloat(operandA);
+        const b = parseFloat(operandB);
 
         if (isNaN(a) || isNaN(b)) {
             setError('Please enter valid numbers for both spaces.');
             return;
         }
 
-        if (a < 1 || b < 1) {
-            setError('Please enter positive numbers greater than 0.');
-            return;
-        }
-
-        // Subtraction bounds check for kid-friendly visual counts
-        if (operation === '-' && a < b) {
-            setError('First number should be greater than or equal to the second number for subtraction.');
-            return;
-        }
-
-        // Limit range for reasonable counting grid rendering
-        if (a > 20 || b > 20) {
-            setError('Please use numbers between 1 and 20 so the items fit on the chalkboard!');
+        if (operation === '/' && b === 0) {
+            setError('Division by zero is not allowed.');
             return;
         }
 
@@ -75,8 +63,7 @@ export default function EnterMathInput({ onSubmit }) {
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">First Number</label>
                     <input
                         type="number"
-                        min="1"
-                        max="20"
+                        step="any"
                         value={operandA}
                         onChange={(e) => setOperandA(e.target.value)}
                         placeholder="e.g. 5"
@@ -90,8 +77,7 @@ export default function EnterMathInput({ onSubmit }) {
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Second Number</label>
                     <input
                         type="number"
-                        min="1"
-                        max="20"
+                        step="any"
                         value={operandB}
                         onChange={(e) => setOperandB(e.target.value)}
                         placeholder="e.g. 3"

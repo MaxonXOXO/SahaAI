@@ -19,6 +19,7 @@ import AACBoardScreen from '../features/aac-board/AACBoardScreen';
 import FocusModeScreen from '../features/focus-mode/FocusModeScreen';
 import SocialStoryScreen from '../features/social-story/SocialStoryScreen';
 import LearnScreen from '../features/learn/LearnScreen';
+import LearnDetailScreen from '../features/learn/LearnDetailScreen';
 import SpeechTherapyScreen from '../features/speech-therapy/SpeechTherapyScreen';
 import { getRouteMeta } from './config/routeMeta';
 
@@ -59,6 +60,7 @@ export default function AppRoutes() {
                     <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
                     <Route path="/learn" element={<LearnScreen />} />
+                    <Route path="/learn/:cardId" element={<LearnDetailScreen />} />
                     <Route path="/tools" element={<ToolsScreen />} />
                     <Route path="/progress" element={<ProgressScreen />} />
                     <Route path="/profile" element={<ProfileScreen />} />

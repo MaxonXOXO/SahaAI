@@ -686,10 +686,12 @@ export async function findLearnVideo(searchQuery, language = 'en') {
 
 /** Suggest a compact daily set of learning topics from the user's mode and recent activity names. */
 export async function generateDailyLearnTopics(profile, eventTypes = []) {
-    const prompt = `${buildSystemPrompt(profile)}\n\nSuggest 3 short, safe, useful learning topics for today. Base them on the user's primary accessibility mode and recent activity labels. Return ONLY JSON: {"topics":["topic"]}. Avoid medical, legal, financial, or current-news topics.\nPrimary mode: ${profile.primaryMode || 'none'}\nRecent activity: ${eventTypes.join(', ') || 'none'}`;
+    const prompt = `${buildSystemPrompt(profile)}\n\nSuggest 9 short, safe, useful learning topics for today. Base them on the user's primary accessibility mode and recent activity labels. 
+IMPORTANT: Include at least 3 topics related to positive or educational current news and world events from today.
+Return ONLY JSON: {"topics":[{"topic": "Title", "summary": "One or two line short description"}]}. Avoid depressing or controversial news.
+Primary mode: ${profile.primaryMode || 'none'}
+Recent activity: ${eventTypes.join(', ') || 'none'}`;
     const response = await sendMessage(prompt, [{ role: 'user', content: 'Suggest today’s learning topics.' }]);
     const parsed = safeParseJSON(response);
-    return (parsed && Array.isArray(parsed.topics)) ? parsed.topics.filter((topic) => typeof topic === 'string' && topic.trim()).slice(0, 5) : [];
+    return (parsed && Array.isArray(parsed.topics)) ? parsed.topics.slice(0, 9) : [];
 }
-
-

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { fetchSpeechAudio, buildSpeechChunks, estimateWordTimings } from '../lib/openai-tts';
+import { fetchSpeechAudio, buildSpeechChunks, estimateWordTimings } from '../../features/reading-mode/lib/openai-tts';
 
 /**
  * useTextToSpeech Hook

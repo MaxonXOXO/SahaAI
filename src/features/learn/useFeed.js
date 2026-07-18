@@ -35,6 +35,19 @@ export default function useFeed(profile) {
         };
     }, [profile, profileId, profileLanguage]);
 
+    const createStubCard = useCallback(async (topicObj, source) => {
+        return {
+            user_id: profileId,
+            topic: topicObj.topic,
+            explanation: JSON.stringify({ stub: true, summary: topicObj.summary }),
+            diagram_steps: null,
+            image_url: null,
+            video_id: null,
+            source,
+            created_at: new Date().toISOString(),
+        };
+    }, [profileId]);
+
     const saveCard = useCallback(async (card) => {
         const { data, error: saveError } = await supabase.from('learn_cards').insert(card).select().single();
         if (saveError) throw saveError;
@@ -47,7 +60,6 @@ export default function useFeed(profile) {
         try {
             return await saveCard(optimistic);
         } catch (saveError) {
-            // The card remains useful during this session when the migration has not run yet.
             console.error('Could not save Learn card:', saveError);
             setError('Your explainer is ready, but could not be saved yet. Run the Learn database migration to keep it in your feed.');
             const local = { ...optimistic, id: `local-${crypto.randomUUID()}` };
@@ -55,6 +67,26 @@ export default function useFeed(profile) {
             return local;
         }
     }, [createCard, saveCard]);
+
+    const expandCard = useCallback(async (cardId, topic) => {
+        const explainer = await generateLearnExplainer(profile, topic);
+        const [imageResult, videoResult] = await Promise.allSettled([
+            generateLearnImage(explainer.topic),
+            findLearnVideo(explainer.videoQuery, profileLanguage || 'en'),
+        ]);
+        const updates = {
+            explanation: explainer.explanation,
+            diagram_steps: explainer.diagramSteps.length ? explainer.diagramSteps : null,
+            image_url: imageResult.status === 'fulfilled' ? imageResult.value : null,
+            video_id: videoResult.status === 'fulfilled' ? videoResult.value : null,
+        };
+        const { data, error } = await supabase.from('learn_cards').update(updates).eq('id', cardId).select().single();
+        if (!error && data) {
+            setCards((current) => current.map((c) => c.id === cardId ? data : c));
+        } else {
+            console.error('Failed to update expanded card', error);
+        }
+    }, [profile, profileLanguage]);
 
     const ensureDailyBatch = useCallback(async () => {
         if (!profileId) return;
@@ -66,14 +98,14 @@ export default function useFeed(profile) {
         const { data: activity } = await supabase.from('activity_log').select('event_type').eq('user_id', profileId)
             .order('created_at', { ascending: false }).limit(12);
         const topics = await generateDailyLearnTopics(profile, (activity || []).map((entry) => entry.event_type));
-        for (const topic of topics) {
+        for (const topicObj of topics) {
             try {
-                await saveCard(await createCard(topic, 'daily_batch'));
+                await saveCard(await createStubCard(topicObj, 'daily_batch'));
             } catch (cardError) {
-                console.error('Could not create daily Learn card:', cardError);
+                console.error('Could not create daily Learn stub card:', cardError);
             }
         }
-    }, [createCard, profile, profileId, saveCard]);
+    }, [createStubCard, profile, profileId, saveCard]);
 
     useEffect(() => {
         if (!profileId) {
@@ -109,5 +141,5 @@ export default function useFeed(profile) {
         return () => { cancelled = true; };
     }, [ensureDailyBatch, profileId]);
 
-    return { cards, loading, error, addUserExplainer };
+    return { cards, loading, error, addUserExplainer, expandCard };
 }
