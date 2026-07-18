@@ -5,6 +5,10 @@ import Button from '../../shared/components/Button';
 import Card from '../../shared/components/Card';
 import useProfileStore from '../../store/useProfileStore';
 import { SCENARIO_TEMPLATES, generateSocialStory } from './lib/storyPrompts';
+import StoryIllustration, {
+  TEMPLATE_ILLUSTRATION_MAP,
+  matchIllustrationFromText,
+} from './lib/storyIllustrations';
 
 /**
  * CreateTab — AI-powered social story generator.
@@ -25,7 +29,6 @@ export default function CreateTab({ onStoryGenerated }) {
   const username = useProfileStore((s) => s.username);
   const language = useProfileStore((s) => s.language);
   const needs = useProfileStore((s) => s.needs);
-  const profile = { name, username, language, needs };
 
   const handleGenerate = async () => {
     let scenario = '';
@@ -49,14 +52,22 @@ export default function CreateTab({ onStoryGenerated }) {
     setIsGenerating(true);
 
     try {
-      const story = await generateSocialStory(scenario, profile);
+      const story = await generateSocialStory(scenario, { name, username, language, needs });
       // Ensure the generated story has required shape
       if (story && story.pages && story.pages.length > 0) {
+        // Pick a free, local illustration — templates map straight to a key;
+        // a custom freeform prompt gets matched by keyword instead.
+        const illustration =
+          selectedTemplate === 'custom'
+            ? matchIllustrationFromText(scenario)
+            : TEMPLATE_ILLUSTRATION_MAP[selectedTemplate] || 'default';
+
         onStoryGenerated({
           ...story,
           id: 'ai-' + Date.now(),
           category: 'custom',
           description: scenario,
+          illustration,
         });
       } else {
         setError('The AI returned an unexpected format. Please try again.');
@@ -210,8 +221,12 @@ export default function CreateTab({ onStoryGenerated }) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center"
+          className="flex flex-col items-center gap-2 text-center"
         >
+          <StoryIllustration
+            illustrationKey={TEMPLATE_ILLUSTRATION_MAP[selectedTemplate] || 'default'}
+            size="sm"
+          />
           <p
             className="text-gray-400 dark:text-gray-500 italic"
             style={{ fontSize: 'var(--a11y-font-size-base, 0.75rem)' }}
