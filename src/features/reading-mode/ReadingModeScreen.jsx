@@ -10,7 +10,7 @@ import './reading-mode.css';
 // Feature components and hooks
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useReadingSettings from './hooks/useReadingSettings';
-import useTextToSpeech from './hooks/useTextToSpeech';
+import useTextToSpeech from '../../shared/hooks/useTextToSpeech';
 import TopToolbar from './components/TopToolbar';
 import FontControls from './components/FontControls';
 import ReadingPane from './components/ReadingPane';
