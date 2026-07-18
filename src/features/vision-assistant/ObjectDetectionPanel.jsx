@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Volume2, VolumeX, List, HelpCircle } from 'lucide-react';
 import Card from '../../shared/components/Card';
+import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 
 /**
  * ObjectDetectionPanel - Displays detected objects/obstacles/currency
@@ -75,7 +76,7 @@ export default function ObjectDetectionPanel({ result, isSpeaking, speakResult, 
                             className="bg-gray-50 dark:bg-gray-800 p-4 rounded-card border border-gray-200 dark:border-gray-700 shadow-sm"
                         >
                             <p className="text-base-md font-bold text-gray-800 dark:text-gray-100 leading-relaxed">
-                                {cleanText}
+                                {renderMarkdown(cleanText)}
                             </p>
                         </div>
                     );

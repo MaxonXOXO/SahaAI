@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Play, Pause, Square, FileText, HelpCircle } from 'lucide-react';
 import Card from '../../shared/components/Card';
+import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 
 /**
  * TextRecognitionPanel - Renders extracted text from OCR mode
@@ -99,7 +100,7 @@ export default function TextRecognitionPanel({
             {/* Document Text Area */}
             <div className="bg-gray-50 dark:bg-gray-800 p-5 rounded-card border border-gray-200 dark:border-gray-700 shadow-inner">
                 <p className="text-base-lg font-bold text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
-                    {textToShow}
+                    {renderMarkdown(textToShow)}
                 </p>
             </div>
 

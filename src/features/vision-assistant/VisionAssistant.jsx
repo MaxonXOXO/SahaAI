@@ -10,6 +10,7 @@ import TextRecognitionPanel from './TextRecognitionPanel';
 import AskAIBar from './AskAIBar';
 import useSpeak from './useSpeak';
 import useVisionAI from './useVisionAI';
+import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 import { logActivity } from '../../shared/lib/logActivity';
 import useProfileStore from '../../store/useProfileStore';
 
@@ -46,11 +47,19 @@ export default function VisionAssistant() {
 
     // Custom Speech & AI Hooks
     const { speak, stop, pause, resume, speaking, paused, playBeep } = useSpeak();
-    const { analyzeImage, loading } = useVisionAI();
+    const { analyzeImage, loading, stripMarkdown } = useVisionAI();
 
     const speakFeedback = useCallback((text, onEnd = null) => {
         speak(text, speechRate, onEnd);
     }, [speak, speechRate]);
+
+    const speakObjectResult = useCallback(() => {
+        speak(stripMarkdown(analysisResult), speechRate);
+    }, [speak, stripMarkdown, analysisResult, speechRate]);
+
+    const speakOcrResult = useCallback(() => {
+        speak(stripMarkdown(analysisResult), speechRate);
+    }, [speak, stripMarkdown, analysisResult, speechRate]);
 
     // Persist accessibility configurations
     useEffect(() => {
@@ -168,7 +177,7 @@ export default function VisionAssistant() {
         try {
             const resultText = await analyzeImage(capturedImage, 'qa', questionText);
             setAnalysisResult(resultText);
-            speak(resultText, speechRate);
+            speak(stripMarkdown(resultText), speechRate);
         } catch (err) {
             console.error('[VisionAI] Q&A analysis failure:', err);
             speak("Failed to answer. Please check your API key in Settings and try again.", speechRate);
@@ -202,12 +211,12 @@ export default function VisionAssistant() {
     // Theme tokens based on active contrast mode
     const getThemeClasses = () => {
         if (contrastMode === 'high-dark') {
-            return 'bg-black text-yellow-400 min-h-screen pb-24 selection:bg-yellow-400 selection:text-black';
+            return 'flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-black text-yellow-400 pb-24 selection:bg-yellow-400 selection:text-black';
         }
         if (contrastMode === 'high-light') {
-            return 'bg-white text-black min-h-screen pb-24 selection:bg-black selection:text-white';
+            return 'flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-white text-black pb-24 selection:bg-black selection:text-white';
         }
-        return 'bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-100 min-h-screen pb-24';
+        return 'flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-100 pb-24';
     };
 
     const getCardClasses = () => {
@@ -406,7 +415,7 @@ export default function VisionAssistant() {
                     <ObjectDetectionPanel
                         result={analysisResult}
                         isSpeaking={speaking}
-                        speakResult={() => speak(analysisResult, speechRate)}
+                        speakResult={speakObjectResult}
                         stopSpeaking={stop}
                         playBeep={playBeep}
                     />
@@ -417,7 +426,7 @@ export default function VisionAssistant() {
                         result={analysisResult}
                         isSpeaking={speaking}
                         isPaused={paused}
-                        speakResult={() => speak(analysisResult, speechRate)}
+                        speakResult={speakOcrResult}
                         stopSpeaking={stop}
                         pauseSpeaking={pause}
                         resumeSpeaking={resume}
@@ -440,7 +449,7 @@ export default function VisionAssistant() {
                                         stop();
                                     } else {
                                         playBeep(440, 0.08);
-                                        speak(analysisResult, speechRate);
+                                        speak(stripMarkdown(analysisResult), speechRate);
                                     }
                                 }}
                                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-card font-bold text-base-md min-h-touch transition-colors border-2 border-white focus:outline-none ${
@@ -456,7 +465,7 @@ export default function VisionAssistant() {
                         </div>
                         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-card border border-gray-200 dark:border-gray-700">
                             <p className="text-base-md font-bold text-gray-800 dark:text-gray-100 leading-relaxed">
-                                {analysisResult.replace(/\(Note: Simulator.*\)/g, '').trim()}
+                                {renderMarkdown(analysisResult.replace(/\(Note: Simulator.*\)/g, '').trim())}
                             </p>
                         </div>
                         {analysisResult.includes('(Note: Simulator') && (
@@ -521,13 +530,13 @@ export default function VisionAssistant() {
                                             <span className="text-[11px] text-gray-400">{scan.timestamp}</span>
                                         </div>
                                         <p className="text-base-sm font-semibold truncate text-gray-800 dark:text-gray-200">
-                                            {scan.result.replace(/\(Note: Simulator.*\)/g, '').trim()}
+                                            {renderMarkdown(scan.result.replace(/\(Note: Simulator.*\)/g, '').trim())}
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => {
                                             playBeep(440, 0.08);
-                                            speak(scan.result, speechRate);
+                                            speak(stripMarkdown(scan.result), speechRate);
                                         }}
                                         aria-label={`Play audio description for this ${scan.mode} scan`}
                                         className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20"

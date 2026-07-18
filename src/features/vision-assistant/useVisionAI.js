@@ -16,6 +16,25 @@ const computeImageHash = (str) => {
     return hash;
 };
 
+/**
+ * Removes markdown formatting syntax for clear text-to-speech reading.
+ * @param {string} text - Raw input text with possible markdown syntax
+ * @returns {string} Clean plain text
+ */
+export function stripMarkdown(text) {
+    if (!text) return '';
+    return text
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/^#+\s+/gm, '')
+        .replace(/\*\*([\s\S]*?)\*\*/g, '$1')
+        .replace(/__([\s\S]*?)__/g, '$1')
+        .replace(/\*([\s\S]*?)\*/g, '$1')
+        .replace(/_([\s\S]*?)_/g, '$1')
+        .replace(/[*_#]/g, '');
+}
+
 export default function useVisionAI() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -189,5 +208,6 @@ export default function useVisionAI() {
         analyzeImage,
         loading,
         error,
+        stripMarkdown,
     };
 }
