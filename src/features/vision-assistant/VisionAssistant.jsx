@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
-import Card from '../../shared/components/Card';
 import CameraCapture from './CameraCapture';
-import ObjectDetectionPanel from './ObjectDetectionPanel';
-import TextRecognitionPanel from './TextRecognitionPanel';
 import AskAIBar from './AskAIBar';
 import useSpeak from './useSpeak';
 import useVisionAI from './useVisionAI';
@@ -17,7 +14,8 @@ import useProfileStore from '../../store/useProfileStore';
 /**
  * VisionAssistant - Main container for Low Vision Mode
  * Orchestrates local high-contrast theme overrides, speech speed rate,
- * font scaling, AI camera capture, voice Q&A, live YouTube-style subtitles, and persistent scan history.
+ * font scaling, AI camera capture, voice Q&A, live YouTube-style subtitles,
+ * persistent scan history, and scan review mode.
  */
 export default function VisionAssistant() {
     const userId = useProfileStore((s) => s.id);
@@ -39,6 +37,7 @@ export default function VisionAssistant() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [showAskBar, setShowAskBar] = useState(false);
+    const [reviewScan, setReviewScan] = useState(null);
     const [scanHistory, setScanHistory] = useState(() => {
         try {
             return JSON.parse(localStorage.getItem('saha_vision_history')) || [];
@@ -50,7 +49,7 @@ export default function VisionAssistant() {
     // Custom Speech & AI Hooks
     const resultRef = useRef(null);
     const cameraContainerRef = useRef(null);
-    const { speak, stop, pause, resume, speaking, paused, playBeep } = useSpeak();
+    const { speak, stop, speaking, playBeep } = useSpeak();
     const { analyzeImage, loading, stripMarkdown } = useVisionAI();
 
     // Automatically shift screen reader focus to new results
@@ -68,24 +67,6 @@ export default function VisionAssistant() {
         stop();
         setCurrentSubtitle('');
     }, [stop]);
-
-    const speakObjectResult = useCallback(() => {
-        if (!analysisResult) return;
-        speak(stripMarkdown(analysisResult), speechRate, null, setCurrentSubtitle);
-    }, [speak, stripMarkdown, analysisResult, speechRate]);
-
-    const speakOcrResult = useCallback(() => {
-        if (!analysisResult) return;
-        speak(stripMarkdown(analysisResult), speechRate, null, setCurrentSubtitle);
-    }, [speak, stripMarkdown, analysisResult, speechRate]);
-
-    const pauseSpeaking = useCallback(() => {
-        pause();
-    }, [pause]);
-
-    const resumeSpeaking = useCallback(() => {
-        resume();
-    }, [resume]);
 
     // Persist accessibility configurations
     useEffect(() => {
@@ -117,6 +98,9 @@ export default function VisionAssistant() {
     // Mode changer
     const selectMode = (mode) => {
         playBeep(440, 0.08);
+        if (reviewScan) {
+            setReviewScan(null);
+        }
         setActiveMode(mode);
         setCapturedImage(null);
         setAnalysisResult('');
@@ -130,6 +114,31 @@ export default function VisionAssistant() {
         if (mode === 'scene') announcement = 'Scene Description active. Point camera at the room and tap Capture.';
 
         speak(announcement, speechRate);
+    };
+
+    // Review Mode Handlers
+    const handleOpenReview = (scan) => {
+        playBeep(520, 0.08);
+        setReviewScan(scan);
+        setShowHistory(false);
+        setAnalysisResult(scan.result);
+        setShowAskBar(false);
+        stop();
+
+        const msg = `Reviewing scan from ${scan.timestamp}`;
+        speak(msg, speechRate, () => {
+            speak(stripMarkdown(scan.result), speechRate, null, setCurrentSubtitle);
+        }, setCurrentSubtitle);
+    };
+
+    const handleExitReview = () => {
+        playBeep(440, 0.08);
+        setReviewScan(null);
+        setAnalysisResult('');
+        setCurrentSubtitle('');
+        setShowAskBar(false);
+        stop();
+        speak("Back to camera", speechRate);
     };
 
     // Frame Capture Handler
@@ -170,7 +179,9 @@ export default function VisionAssistant() {
 
     // Custom voice question handler
     const handleAskAI = async (questionText) => {
-        if (!capturedImage) {
+        const targetImage = reviewScan ? reviewScan.image : capturedImage;
+
+        if (!targetImage) {
             speak("Please capture an image first before asking questions.", speechRate);
             return;
         }
@@ -179,8 +190,17 @@ export default function VisionAssistant() {
         setCurrentSubtitle("Thinking, please wait...");
 
         try {
-            const resultText = await analyzeImage(capturedImage, 'qa', questionText);
+            const resultText = await analyzeImage(targetImage, 'qa', questionText);
             setAnalysisResult(resultText);
+
+            // Update scan history entry if answering in review mode
+            if (reviewScan) {
+                setReviewScan((prev) => (prev ? { ...prev, result: resultText } : null));
+                setScanHistory((prevHistory) =>
+                    prevHistory.map((s) => (s.id === reviewScan.id ? { ...s, result: resultText } : s))
+                );
+            }
+
             speak(stripMarkdown(resultText), speechRate, null, setCurrentSubtitle);
         } catch (err) {
             console.error('[VisionAI] Q&A analysis failure:', err);
@@ -190,7 +210,7 @@ export default function VisionAssistant() {
     };
 
     const triggerCapture = () => {
-        if (loading) return;
+        if (loading || reviewScan) return;
         const btn = cameraContainerRef.current?.querySelector('button[data-capture-btn="true"], button[class*="min-h-touch"], button:has(svg.lucide-camera)');
         if (btn) {
             btn.click();
@@ -199,7 +219,8 @@ export default function VisionAssistant() {
 
     const handleAskClick = () => {
         playBeep(440, 0.08);
-        if (!capturedImage) {
+        const targetImage = reviewScan ? reviewScan.image : capturedImage;
+        if (!targetImage) {
             speak("Please capture an image first before asking questions.", speechRate);
             return;
         }
@@ -285,7 +306,8 @@ export default function VisionAssistant() {
                                 {scanHistory.map((scan) => (
                                     <div
                                         key={scan.id}
-                                        className={`${getCardClasses()} flex items-center gap-4 transition-all`}
+                                        onClick={() => handleOpenReview(scan)}
+                                        className={`${getCardClasses()} flex items-center gap-4 transition-all cursor-pointer hover:border-primary/50`}
                                     >
                                         {scan.image && (
                                             <img
@@ -306,7 +328,8 @@ export default function VisionAssistant() {
                                             </p>
                                         </div>
                                         <button
-                                            onClick={() => {
+                                            onClick={(e) => {
+                                                e.stopPropagation();
                                                 playBeep(440, 0.08);
                                                 speak(stripMarkdown(scan.result), speechRate, null, setCurrentSubtitle);
                                             }}
@@ -328,8 +351,9 @@ export default function VisionAssistant() {
     return (
         <div className={getThemeClasses()} style={{ fontSize: `${fontScale}rem` }}>
             <ScreenHeader
-                title="Vision Assistant"
+                title={reviewScan ? "Reviewing Scan" : "Vision Assistant"}
                 showBack={true}
+                onBack={reviewScan ? handleExitReview : undefined}
                 rightAction={
                     <button
                         onClick={toggleSettings}
@@ -459,7 +483,7 @@ export default function VisionAssistant() {
                                         ? contrastMode === 'high-dark'
                                             ? 'border-yellow-400 bg-yellow-400/20 text-yellow-400'
                                             : contrastMode === 'high-light'
-                                            ? 'border-black bg-black/10 text-black'
+                                            ? 'border-black bg-white/10 text-black'
                                             : 'border-primary bg-primary/10 text-primary'
                                         : 'border-gray-200 dark:border-gray-800'
                                 }`}
@@ -473,12 +497,20 @@ export default function VisionAssistant() {
 
                 {/* --- CAMERA & CAPTION OVERLAY CONTAINER (EXPLICIT VIEWPORT HEIGHT) --- */}
                 <div ref={cameraContainerRef} className="relative h-[48dvh] min-h-[300px] w-full rounded-card overflow-hidden border-4 border-gray-800 dark:border-gray-900 shadow-lg bg-black">
-                    <CameraCapture
-                        onCapture={handleCapture}
-                        isProcessing={loading}
-                        speakFeedback={speakFeedback}
-                        playBeep={playBeep}
-                    />
+                    {reviewScan ? (
+                        <img
+                            src={reviewScan.image}
+                            alt={`Reviewing scan from ${reviewScan.timestamp}`}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <CameraCapture
+                            onCapture={handleCapture}
+                            isProcessing={loading}
+                            speakFeedback={speakFeedback}
+                            playBeep={playBeep}
+                        />
+                    )}
 
                     {/* YOUTUBE-STYLE LIVE SUBTITLE CAPTION STRIP */}
                     {(speaking || loading || currentSubtitle) && (
@@ -491,7 +523,7 @@ export default function VisionAssistant() {
                 </div>
 
                 {/* --- ASK AI OVERLAY BAR (SHRINK-0) --- */}
-                {showAskBar && capturedImage && (
+                {showAskBar && (capturedImage || reviewScan) && (
                     <div className="p-3 bg-surface dark:bg-surface-dark border-2 border-primary rounded-card shadow-lg shrink-0">
                         <AskAIBar
                             onSubmit={handleAskAI}
@@ -503,55 +535,92 @@ export default function VisionAssistant() {
                     </div>
                 )}
 
-                {/* --- FIXED 4-BUTTON ROW (Stop - Ask - Capture - Recents) (SHRINK-0) --- */}
-                <div className="flex items-center justify-between gap-2 pt-1 pb-1 shrink-0">
-                    {/* STOP BUTTON */}
-                    <button
-                        onClick={() => {
-                            playBeep(300, 0.1);
-                            handleStopSpeaking();
-                        }}
-                        aria-label="Stop audio output"
-                        className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
-                    >
-                        <Square size={18} />
-                        <span>Stop</span>
-                    </button>
+                {/* --- ACTION BUTTON ROW --- */}
+                {reviewScan ? (
+                    <div className="flex items-center justify-around gap-2 pt-1 pb-1 shrink-0">
+                        {/* BACK TO CAMERA BUTTON */}
+                        <button
+                            onClick={handleExitReview}
+                            aria-label="Return to live camera mode"
+                            className="w-16 h-16 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                        >
+                            <ArrowLeft size={22} />
+                            <span>Back</span>
+                        </button>
 
-                    {/* ASK BUTTON */}
-                    <button
-                        onClick={handleAskClick}
-                        aria-label="Ask AI question about photo"
-                        className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
-                    >
-                        <MessageSquare size={18} />
-                        <span>Ask</span>
-                    </button>
+                        {/* ASK BUTTON FOR THIS REVIEW IMAGE */}
+                        <button
+                            onClick={handleAskClick}
+                            aria-label="Ask AI question about this reviewed photo"
+                            className="w-16 h-16 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                        >
+                            <MessageSquare size={22} />
+                            <span>Ask</span>
+                        </button>
 
-                    {/* CAPTURE BUTTON (VISUALLY LARGEST & MOST PROMINENT) */}
-                    <button
-                        onClick={triggerCapture}
-                        disabled={loading}
-                        aria-label="Capture image and analyze"
-                        className="w-20 h-20 rounded-full bg-primary hover:bg-primary-dark disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-xl transition-all border-4 border-white dark:border-gray-800 focus:outline-none focus:ring-4 focus:ring-primary/50"
-                    >
-                        <Camera size={28} />
-                        <span>Capture</span>
-                    </button>
+                        {/* REPEAT RESULT BUTTON */}
+                        <button
+                            onClick={() => {
+                                playBeep(440, 0.08);
+                                speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, setCurrentSubtitle);
+                            }}
+                            aria-label="Replay audio description for this scan"
+                            className="w-16 h-16 rounded-full bg-primary hover:bg-primary-dark active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                        >
+                            <Volume2 size={22} />
+                            <span>Repeat</span>
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-between gap-2 pt-1 pb-1 shrink-0">
+                        {/* STOP BUTTON */}
+                        <button
+                            onClick={() => {
+                                playBeep(300, 0.1);
+                                handleStopSpeaking();
+                            }}
+                            aria-label="Stop audio output"
+                            className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                        >
+                            <Square size={18} />
+                            <span>Stop</span>
+                        </button>
 
-                    {/* RECENTS BUTTON */}
-                    <button
-                        onClick={() => {
-                            playBeep(440, 0.08);
-                            setShowHistory(true);
-                        }}
-                        aria-label="View recent scans history"
-                        className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
-                    >
-                        <History size={18} />
-                        <span>Recents</span>
-                    </button>
-                </div>
+                        {/* ASK BUTTON */}
+                        <button
+                            onClick={handleAskClick}
+                            aria-label="Ask AI question about photo"
+                            className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                        >
+                            <MessageSquare size={18} />
+                            <span>Ask</span>
+                        </button>
+
+                        {/* CAPTURE BUTTON (VISUALLY LARGEST & MOST PROMINENT) */}
+                        <button
+                            onClick={triggerCapture}
+                            disabled={loading}
+                            aria-label="Capture image and analyze"
+                            className="w-20 h-20 rounded-full bg-primary hover:bg-primary-dark disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-xl transition-all border-4 border-white dark:border-gray-800 focus:outline-none focus:ring-4 focus:ring-primary/50"
+                        >
+                            <Camera size={28} />
+                            <span>Capture</span>
+                        </button>
+
+                        {/* RECENTS BUTTON */}
+                        <button
+                            onClick={() => {
+                                playBeep(440, 0.08);
+                                setShowHistory(true);
+                            }}
+                            aria-label="View recent scans history"
+                            className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                        >
+                            <History size={18} />
+                            <span>Recents</span>
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
