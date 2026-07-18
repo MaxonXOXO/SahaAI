@@ -7,7 +7,7 @@ import { renderMarkdown } from '../../shared/lib/parseMarkdown';
  * ObjectDetectionPanel - Displays detected objects/obstacles/currency
  * Automatically speaks out the objects on render, with custom audio play/stop toggle.
  */
-export default function ObjectDetectionPanel({ result, isSpeaking, speakResult, stopSpeaking, playBeep }) {
+export default function ObjectDetectionPanel({ result, isSpeaking, speakResult, stopSpeaking, playBeep, resultRef }) {
     // Speak automatically when a new result arrives
     useEffect(() => {
         if (result) {
@@ -66,7 +66,13 @@ export default function ObjectDetectionPanel({ result, isSpeaking, speakResult, 
             </div>
 
             {/* List of Objects */}
-            <div className="flex flex-col gap-3">
+            <div
+                ref={resultRef}
+                tabIndex={-1}
+                aria-live="polite"
+                role="status"
+                className="flex flex-col gap-3 outline-none"
+            >
                 {items.map((item, idx) => {
                     // Strip markdown list prefix chars
                     const cleanText = item.replace(/^[-*•]\s*/, '').trim();

@@ -46,8 +46,16 @@ export default function VisionAssistant() {
     });
 
     // Custom Speech & AI Hooks
+    const resultRef = useRef(null);
     const { speak, stop, pause, resume, speaking, paused, playBeep } = useSpeak();
     const { analyzeImage, loading, stripMarkdown } = useVisionAI();
+
+    // Automatically shift screen reader focus to new results
+    useEffect(() => {
+        if (analysisResult && resultRef.current) {
+            resultRef.current.focus();
+        }
+    }, [analysisResult]);
 
     const speakFeedback = useCallback((text, onEnd = null) => {
         speak(text, speechRate, onEnd);
@@ -418,6 +426,7 @@ export default function VisionAssistant() {
                         speakResult={speakObjectResult}
                         stopSpeaking={stop}
                         playBeep={playBeep}
+                        resultRef={resultRef}
                     />
                 )}
 
@@ -431,6 +440,7 @@ export default function VisionAssistant() {
                         pauseSpeaking={pause}
                         resumeSpeaking={resume}
                         playBeep={playBeep}
+                        resultRef={resultRef}
                     />
                 )}
 
@@ -463,7 +473,13 @@ export default function VisionAssistant() {
                                 {speaking ? 'Stop Speech' : 'Describe Scene'}
                             </button>
                         </div>
-                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-card border border-gray-200 dark:border-gray-700">
+                        <div
+                            ref={resultRef}
+                            tabIndex={-1}
+                            aria-live="polite"
+                            role="status"
+                            className="bg-gray-50 dark:bg-gray-800 p-4 rounded-card border border-gray-200 dark:border-gray-700 outline-none"
+                        >
                             <p className="text-base-md font-bold text-gray-800 dark:text-gray-100 leading-relaxed">
                                 {renderMarkdown(analysisResult.replace(/\(Note: Simulator.*\)/g, '').trim())}
                             </p>
