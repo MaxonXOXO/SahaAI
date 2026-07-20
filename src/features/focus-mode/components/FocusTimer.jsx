@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, ShieldAlert, Coffee, Flame, Volume2, VolumeX } from 'lucide-react';
 import useFocusStore from '../useFocusStore';
 import useTone from '../lib/useTone';
+import RevealTimer from './RevealTimer';
 
 /**
- * FocusTimer - High contrast, low-distraction circular timer for ADHD Focus Sessions.
- * Features derived drift-proof countdown, ring fill progress, 2.5s celebration overlay,
+ * FocusTimer - High contrast, low-distraction circular or picture reveal timer for ADHD Focus Sessions.
+ * Features derived drift-proof countdown, ring fill progress, picture reveal mode, 2.5s celebration overlay,
  * ascending arpeggio tones, time-blindness cues, "Just 5 min" preset, and daily session counters.
  */
 export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) {
@@ -21,6 +22,10 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
     const lastSessionDate = useFocusStore((s) => s.lastSessionDate);
     const rawSessionsToday = useFocusStore((s) => s.sessionsToday);
 
+    // Timer Style & Reveal selectors
+    const timerStyle = useFocusStore((s) => s.timerStyle);
+    const revealSeed = useFocusStore((s) => s.revealSeed);
+
     const startTimer = useFocusStore((s) => s.startTimer);
     const pauseTimer = useFocusStore((s) => s.pauseTimer);
     const resumeTimer = useFocusStore((s) => s.resumeTimer);
@@ -28,6 +33,7 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
     const finishSession = useFocusStore((s) => s.finishSession);
     const recordSessionCompletion = useFocusStore((s) => s.recordSessionCompletion);
     const setMode = useFocusStore((s) => s.setMode);
+    const setTimerStyle = useFocusStore((s) => s.setTimerStyle);
     const logDistraction = useFocusStore((s) => s.logDistraction);
     const toggleSound = useFocusStore((s) => s.toggleSound);
 
@@ -179,9 +185,11 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
     const displayMins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
     const displaySecs = String(secondsLeft % 60).padStart(2, '0');
 
-    // Circle SVG Math (ring fills up from empty to full)
+    // Progress math
     const totalSeconds = durationMinutes * 60;
     const progressFraction = celebrationMsg ? 1 : (totalSeconds > 0 ? (totalSeconds - secondsLeft) / totalSeconds : 0);
+
+    // Circle SVG Math (ring fills up from empty to full)
     const radius = 90;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference * (1 - progressFraction);
@@ -191,7 +199,33 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
     const strokeColor = celebrationMsg ? '#10B981' : (isFocus ? '#EF4444' : '#10B981');
 
     return (
-        <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto">
+        <div className="flex flex-col items-center gap-5 w-full max-w-sm mx-auto">
+            {/* Timer View Switcher (Classic vs Picture Reveal) */}
+            <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-full max-w-xs text-xs font-bold">
+                <button
+                    type="button"
+                    onClick={() => setTimerStyle('classic')}
+                    className={`flex-1 py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                        timerStyle === 'classic'
+                            ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-xs border border-purple-200 dark:border-purple-800'
+                            : 'text-gray-500 hover:text-gray-800 dark:text-gray-400'
+                    }`}
+                >
+                    ⏱️ Classic
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setTimerStyle('reveal')}
+                    className={`flex-1 py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                        timerStyle === 'reveal'
+                            ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-xs border border-purple-200 dark:border-purple-800'
+                            : 'text-gray-500 hover:text-gray-800 dark:text-gray-400'
+                    }`}
+                >
+                    🖼️ Picture Reveal
+                </button>
+            </div>
+
             {/* Mode Selectors */}
             <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-full">
                 <button
@@ -234,53 +268,65 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
                 </div>
             )}
 
-            {/* Circular Timer Visual */}
-            <div className="relative w-64 h-64 flex items-center justify-center my-2">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
-                    {/* Background track circle */}
-                    <circle
-                        cx="100"
-                        cy="100"
-                        r={radius}
-                        className="stroke-gray-200 dark:stroke-gray-800"
-                        strokeWidth="12"
-                        fill="transparent"
-                    />
-                    {/* Active progress stroke */}
-                    <circle
-                        cx="100"
-                        cy="100"
-                        r={radius}
-                        stroke={strokeColor}
-                        strokeWidth="12"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
-                        strokeLinecap="round"
-                        fill="transparent"
-                        className="transition-all duration-500 ease-linear"
-                    />
-                </svg>
+            {/* Timer Visual: Reveal View (Focus Mode + Reveal Style) vs Classic View */}
+            {timerStyle === 'reveal' && isFocus ? (
+                <RevealTimer
+                    progressFraction={progressFraction}
+                    revealSeed={revealSeed}
+                    displayMins={displayMins}
+                    displaySecs={displaySecs}
+                    celebrationMsg={celebrationMsg}
+                    isRunning={isRunning}
+                />
+            ) : (
+                /* Circular Timer Visual (Classic) */
+                <div className="relative w-64 h-64 flex items-center justify-center my-2">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                        {/* Background track circle */}
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            className="stroke-gray-200 dark:stroke-gray-800"
+                            strokeWidth="12"
+                            fill="transparent"
+                        />
+                        {/* Active progress stroke */}
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            stroke={strokeColor}
+                            strokeWidth="12"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round"
+                            fill="transparent"
+                            className="transition-all duration-500 ease-linear"
+                        />
+                    </svg>
 
-                {/* Inner Content overlay */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                    {celebrationMsg ? (
-                        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 rounded-2xl border border-emerald-300 dark:border-emerald-700 shadow-md animate-pulse">
-                            <p className="text-xs font-black leading-snug">{celebrationMsg}</p>
-                        </div>
-                    ) : (
-                        <>
-                            <span className={`text-4xl font-black tracking-tight font-mono ${accentColorClass}`}>
-                                {displayMins}:{displaySecs}
-                            </span>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                {isRunning ? (isFocus ? '🔥 In Deep Focus' : '☕ Relaxing Break') : 'Paused'}
-                            </span>
-                        </>
-                    )}
+                    {/* Inner Content overlay */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                        {celebrationMsg ? (
+                            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 rounded-2xl border border-emerald-300 dark:border-emerald-700 shadow-md animate-pulse">
+                                <p className="text-xs font-black leading-snug">{celebrationMsg}</p>
+                            </div>
+                        ) : (
+                            <>
+                                <span className={`text-4xl font-black tracking-tight font-mono ${accentColorClass}`}>
+                                    {displayMins}:{displaySecs}
+                                </span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                    {isRunning ? (isFocus ? '🔥 In Deep Focus' : '☕ Relaxing Break') : 'Paused'}
+                                </span>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            {/* Active Step Badge directly below circular timer visual */}
+            {/* Active Step Badge directly below circular / reveal timer visual */}
             {isFocus && currentStepTitle && !celebrationMsg && (
                 <div className="w-full max-w-xs p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/50 text-center -mt-2 mb-1">
                     <span className="block text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">

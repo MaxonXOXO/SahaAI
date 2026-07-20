@@ -22,8 +22,8 @@ const getYesterdayStr = () => {
  * useFocusStore — Feature-local Zustand store for ADHD Focus Mode.
  *
  * Uses persist middleware (localStorage key: 'saha_focus_store') so timer state,
- * daily streak, session count, and task breakdown steps survive tab switches,
- * screen navigation, and browser refresh.
+ * daily streak, session count, timer view preference, picture reveal seed,
+ * and task breakdown steps survive tab switches, screen navigation, and browser refresh.
  *
  * CRITICAL DESIGN: The timer countdown is DERIVED from `endTime`, NOT stored or decremented.
  * `endTime` holds the target completion timestamp (in ms).
@@ -41,6 +41,10 @@ const useFocusStore = create(
             soundEnabled: true,
             currentStepTitle: null, // optional step title linked to active focus session
 
+            // Timer Style & Reveal Feature State (persisted)
+            timerStyle: 'classic', // 'classic' | 'reveal'
+            revealSeed: null, // number | null
+
             // Streak & Session Engagement State (persisted)
             lastSessionDate: '',
             streakDays: 0,
@@ -51,10 +55,17 @@ const useFocusStore = create(
             steps: [],
             completedStepIds: [],
 
+            setTimerStyle: (style) => set({ timerStyle: style }),
+
             startTimer: (newMode, minutes, stepTitle) => {
                 const targetMode = newMode || get().mode;
                 const targetMins = minutes || get().durationMinutes;
                 const now = Date.now();
+                const currentSeed = get().revealSeed;
+                const newSeed = targetMode === 'focus'
+                    ? (currentSeed && get().isRunning ? currentSeed : Math.floor(Math.random() * 1000000) + 1)
+                    : null;
+
                 set({
                     mode: targetMode,
                     durationMinutes: targetMins,
@@ -62,6 +73,7 @@ const useFocusStore = create(
                     pausedSecondsLeft: null,
                     isRunning: true,
                     currentStepTitle: stepTitle || null,
+                    revealSeed: newSeed,
                 });
             },
 
@@ -100,6 +112,7 @@ const useFocusStore = create(
                     pausedSecondsLeft: null,
                     distractionCount: 0,
                     currentStepTitle: null,
+                    revealSeed: null,
                 });
             },
 
@@ -150,6 +163,7 @@ const useFocusStore = create(
                     endTime: null,
                     pausedSecondsLeft: null,
                     currentStepTitle: null,
+                    revealSeed: null,
                 });
             },
 
