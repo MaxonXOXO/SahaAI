@@ -20,6 +20,14 @@ export default function AddPlaylistModal({ onClose, onSuccess }) {
         setError(null);
 
         try {
+            // Get live authenticated user ID from Supabase Auth session first
+            const { data: { user } } = await supabase.auth.getUser();
+            const activeUserId = user?.id || userId;
+
+            if (!activeUserId) {
+                throw new Error('User authentication session not found. Please ensure you are logged in.');
+            }
+
             const parsed = parseYoutubeUrl(url);
             if (!parsed) {
                 throw new Error('Please enter a valid YouTube video or playlist URL.');
@@ -27,17 +35,21 @@ export default function AddPlaylistModal({ onClose, onSuccess }) {
 
             const metadata = await fetchYoutubeMetadata(parsed);
 
+            const payload = {
+                user_id: activeUserId,
+                url: url.trim(),
+                video_id: parsed.videoId,
+                playlist_id: parsed.playlistId,
+                title: metadata.title,
+                thumbnail_url: metadata.thumbnailUrl
+            };
+
+            console.log('[AddPlaylistModal] Payload being sent to math_helper_playlists:', payload);
+
             // Insert into Supabase table
             const { error: dbError } = await supabase
                 .from('math_helper_playlists')
-                .insert({
-                    user_id: userId,
-                    url: url.trim(),
-                    video_id: parsed.videoId,
-                    playlist_id: parsed.playlistId,
-                    title: metadata.title,
-                    thumbnail_url: metadata.thumbnailUrl
-                });
+                .insert(payload);
 
             if (dbError) {
                 throw dbError;

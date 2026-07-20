@@ -113,7 +113,7 @@ export default function MathHelperScreen() {
                 {activeTopic === 'basic-math' ? (
                     <>
                         {gameStep === 'entry' && (
-                            <BasicMathEntry 
+                            <BasicMathEntry
                                 onSelectOperation={(op) => {
                                     setActiveOp(op);
                                     setCustomOperandA(undefined);
@@ -127,7 +127,7 @@ export default function MathHelperScreen() {
                             />
                         )}
                         {gameStep === 'custom-input' && (
-                            <EnterMathInput 
+                            <EnterMathInput
                                 onSubmit={({ operandA, operandB, operation }) => {
                                     setActiveOp(operation);
                                     setCustomOperandA(operandA);
@@ -138,7 +138,7 @@ export default function MathHelperScreen() {
                             />
                         )}
                         {gameStep === 'playing' && (
-                            <BasicMathGame 
+                            <BasicMathGame
                                 operation={activeOp}
                                 operandA={customOperandA}
                                 operandB={customOperandB}
