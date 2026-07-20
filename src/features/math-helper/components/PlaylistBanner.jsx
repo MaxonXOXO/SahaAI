@@ -10,12 +10,14 @@ export default function PlaylistBanner() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const fetchPlaylists = useCallback(async () => {
-        if (!userId) return;
+        const { data: { user } } = await supabase.auth.getUser();
+        const activeUserId = user?.id || userId;
+        if (!activeUserId) return;
         try {
             const { data, error } = await supabase
                 .from('math_helper_playlists')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('user_id', activeUserId)
                 .order('created_at', { ascending: true });
 
             if (!error && data) {

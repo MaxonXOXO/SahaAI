@@ -89,7 +89,7 @@ const useProfileStore = create((set, get) => ({
     checkSession: async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-            set({ isAuthenticated: true });
+            set({ id: session.user.id, isAuthenticated: true });
             await get().fetchProfile();
         } else {
             useSettingsStore.getState().loadSettings(null);
@@ -105,6 +105,7 @@ const useProfileStore = create((set, get) => ({
             set({ loading: false });
             return;
         }
+        set({ id: user.id });
 
         const { data, error } = await supabase
             .from('profiles')
