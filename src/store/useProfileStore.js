@@ -154,9 +154,24 @@ const useProfileStore = create((set, get) => ({
     },
 
     toggleNeed: async (needKey) => {
-        set((state) => ({
-            needs: { ...state.needs, [needKey]: !state.needs[needKey] },
-        }));
+        set((state) => {
+            const newNeeds = { ...state.needs, [needKey]: !state.needs[needKey] };
+            const activeNeeds = Object.keys(newNeeds).filter(k => newNeeds[k]);
+            let newPrimaryMode = state.primaryMode;
+            
+            if (activeNeeds.length === 0) {
+                newPrimaryMode = null;
+            } else if (activeNeeds.length === 1) {
+                newPrimaryMode = activeNeeds[0];
+            } else if (!activeNeeds.includes(newPrimaryMode)) {
+                newPrimaryMode = activeNeeds[0];
+            }
+            
+            return {
+                needs: newNeeds,
+                primaryMode: newPrimaryMode
+            };
+        });
         await get().syncProfile();
     },
 

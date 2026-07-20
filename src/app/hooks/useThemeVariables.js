@@ -11,11 +11,12 @@ import { buildTheme }     from '../config/themes';
 
 export function useThemeVariables() {
     const needs        = useProfileStore((s) => s.needs) || {};
+    const primaryMode  = useProfileStore((s) => s.primaryMode);
     const contrastMode = useSettingsStore((s) => s.contrastMode);
 
     const theme = useMemo(
-        () => buildTheme({ needs, contrastMode }),
-        [needs, contrastMode]
+        () => buildTheme({ needs, primaryMode, contrastMode }),
+        [needs, primaryMode, contrastMode]
     );
 
     // CSS class list encoding which disability modes are active

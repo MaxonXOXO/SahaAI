@@ -665,14 +665,50 @@ export async function generateLearnExplainer(profile, topic) {
     return { topic: parsed.topic?.trim() || topic, explanation: parsed.explanation.trim(), diagramSteps: Array.isArray(parsed.diagramSteps) ? parsed.diagramSteps.filter(Boolean).slice(0, 8) : [], videoQuery: parsed.videoQuery?.trim() || `${topic} explained` };
 }
 
-/** Create a lightweight visual for explainer cards only. Returns a data URL suitable for learn_cards.image_url. */
+/** Create a lightweight visual for explainer cards using Cloudflare Workers AI.
+ *  Uses the SDXL-Lightning model for blazing fast image generation.
+ *  Routes through /cf-ai Vite proxy so the key is injected server-side.
+ */
 export async function generateLearnImage(topic) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return null;
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify({ model: 'gemini-3.1-flash-lite-image', input: `Create a simple, calm, accessible educational illustration about ${topic}. Use clear shapes, high contrast, minimal text, and no logos.`, response_format: { type: 'image', mime_type: 'image/jpeg', aspect_ratio: '16:9', image_size: '1K' } }) });
-    if (!response.ok) throw new Error(`Gemini image generation error ${response.status}`);
-    const image = (await response.json())?.output_image;
-    return image?.data ? `data:${image.mime_type || 'image/jpeg'};base64,${image.data}` : null;
+    const accountId = import.meta.env.VITE_CF_ACCOUNT_ID;
+    if (!accountId) {
+        console.warn('VITE_CF_ACCOUNT_ID is missing. Image generation skipped.');
+        return null;
+    }
+    const prompt = `A highly detailed, true to life photorealistic photograph depicting: ${topic}. Cinematic lighting, 8k resolution, shot on 35mm lens, realistic textures, natural colors, highly detailed, no text, professional photography.`;
+    try {
+        // We MUST use a native Cloudflare model for the REST API. 
+        // Third-party models (like Google/nano-banana) are ONLY available from inside a Worker.
+        const model = '@cf/bytedance/stable-diffusion-xl-lightning';
+        const url = `/cf-ai/client/v4/accounts/${accountId}/ai/run/${model}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, num_steps: 4 })
+        });
+        
+        if (!response.ok) {
+            const err = await response.text();
+            console.warn(`Cloudflare AI image gen error ${response.status}:`, err);
+            return null;
+        }
+
+        // Native Cloudflare Workers AI returns raw binary image data (PNG or JPEG)
+        const blob = await response.blob();
+        if (!blob || blob.size === 0) return null;
+
+        // Convert blob to base64 Data URL for easy embedding
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch (err) {
+        console.warn('generateLearnImage failed:', err.message);
+        return null;
+    }
 }
 
 /** Find a single safe, embeddable YouTube video. No request is made when no key is configured. */

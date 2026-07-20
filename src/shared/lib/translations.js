@@ -102,6 +102,23 @@ export const TRANSLATIONS = {
         tile_colorInverter: 'Color Inverter',
         tile_colorInverter_desc: 'Toggle inverted color mapping to reduce glare.',
 
+        // Home Screen
+        homeGreetingMorning: 'Good morning',
+        homeGreetingAfternoon: 'Good afternoon',
+        homeGreetingEvening: 'Good evening',
+        continueLabel: 'Continue',
+        continueReading: 'Continue reading',
+        continueLearning: 'Continue learning',
+        continueActivity: 'Continue where you left off',
+        yourTools: 'Your Tools',
+        searchBarPlaceholder: 'Ask AI anything or search topics...',
+        searchHelperLine1: 'Type or speak to ask AI or discover topics',
+        searchHelperLine2: 'We\'ll route you to Chat or Learn automatically',
+        allToolsTitle: 'All Tools',
+        allToolsDesc: 'Every feature in one place — always accessible.',
+        learnFeed: 'Learning Feed',
+        learnFeed_desc: 'Explore curated topics and lessons tailored for you.',
+
         // Tools Screen
         toolsTitle: 'Tools Directory',
         toolsDesc: 'Explore all specialized tools across all learning modes.',
@@ -293,6 +310,23 @@ export const TRANSLATIONS = {
         tile_largeKeyboard_desc: 'എളുപ്പത്തിൽ എഴുതാൻ വലിയ കീബോർഡ് ക്രമീകരണങ്ങൾ.',
         tile_colorInverter: 'കളർ ഇൻവെർട്ടർ',
         tile_colorInverter_desc: 'കണ്ണുകൾക്ക് ആയാസം കുറയ്ക്കാൻ നിറങ്ങൾ തിരിച്ചുനൽകുക.',
+
+        // Home Screen
+        homeGreetingMorning: 'സുപ്രഭാതം',
+        homeGreetingAfternoon: 'ശുഭ ഉച്ചതിരിഞ്ഞ്',
+        homeGreetingEvening: 'ശുഭ സായാഹ്നം',
+        continueLabel: 'തുടരുക',
+        continueReading: 'വായന തുടരുക',
+        continueLearning: 'പഠനം തുടരുക',
+        continueActivity: 'നിങ്ങൾ നിർത്തിയിടത്ത് നിന്ന് തുടരുക',
+        yourTools: 'നിങ്ങളുടെ ടൂളുകൾ',
+        searchBarPlaceholder: 'എഐയോട് എന്തും ചോദിക്കുക അല്ലെങ്കിൽ വിഷയങ്ങൾ തിരയുക...',
+        searchHelperLine1: 'എഐയോട് ചോദിക്കാൻ ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ സംസാരിക്കുക',
+        searchHelperLine2: 'ഞങ്ങൾ നിങ്ങളെ ചാറ്റിലേക്കോ പഠനത്തിലേക്കോ സ്വയമേവ നയിക്കും',
+        allToolsTitle: 'എല്ലാ ടൂളുകളും',
+        allToolsDesc: 'എല്ലാ ഫീച്ചറുകളും ഒരിടത്ത് — എപ്പോഴും ലഭ്യമാണ്.',
+        learnFeed: 'പഠന ഫീഡ്',
+        learnFeed_desc: 'നിങ്ങൾക്കായി ക്യൂറേറ്റ് ചെയ്ത വിഷയങ്ങളും പാഠങ്ങളും പര്യവേക്ഷണം ചെയ്യുക.',
 
         // Tools Screen
         toolsTitle: 'ഉപകരണങ്ങളുടെ ഡയറക്ടറി',

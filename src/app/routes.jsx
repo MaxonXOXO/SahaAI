@@ -6,6 +6,7 @@ import LanguageSelectionScreen from '../features/language-selection/Languagesele
 import SplashScreen from '../features/splash/SplashScreen';
 import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
 import DashboardScreen from '../features/dashboard/DashboardScreen';
+import HomeScreen from '../features/home/HomeScreen';
 import ChatListScreen from '../features/ai-chat/ChatListScreen';
 import ChatScreen from '../features/ai-chat/ChatScreen';
 import ProfileScreen from '../features/profile/ProfileScreen';
@@ -56,7 +57,8 @@ export default function AppRoutes() {
                     <Route path="/profile-setup" element={<ProfileSetupScreen />} />
 
                     {/* Main tabs */}
-                    <Route path="/dashboard" element={<DashboardScreen />} />
+                    <Route path="/home" element={<HomeScreen />} />
+                    <Route path="/dashboard" element={<Navigate to="/home" replace />} />
                     <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
                     <Route path="/learn" element={<LearnScreen />} />

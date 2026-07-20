@@ -55,9 +55,6 @@ export default function LearnScreen() {
     const handleSubmit = async (question) => {
         if (processing) return;
         setProcessing(true);
-        const createdAt = new Date().toISOString();
-        const userItem = { id: crypto.randomUUID(), kind: 'chat', role: 'user', content: question, created_at: createdAt };
-        setChatItems((current) => [...current, userItem]);
         try {
             const intent = await classify(question);
             if (intent === 'explain') {
@@ -67,12 +64,22 @@ export default function LearnScreen() {
                     navigate(`/learn/${newCard.id}`);
                 }
             } else {
+                const createdAt = new Date().toISOString();
+                const userItem = { id: crypto.randomUUID(), kind: 'chat', role: 'user', content: question, created_at: createdAt };
+                setChatItems((current) => [...current, userItem]);
+
                 const reply = await sendMessage(buildSystemPrompt(profile), [{ role: 'user', content: question }]);
                 setChatItems((current) => [...current, { id: crypto.randomUUID(), kind: 'chat', role: 'assistant', content: reply, created_at: new Date().toISOString() }]);
             }
         } catch (requestError) {
             console.error('Learn request failed:', requestError);
-            setChatItems((current) => [...current, { id: crypto.randomUUID(), kind: 'chat', role: 'assistant', content: 'Sorry, I had trouble with that. Please try again.', created_at: new Date().toISOString() }]);
+            const createdAt = new Date().toISOString();
+            const userItem = { id: crypto.randomUUID(), kind: 'chat', role: 'user', content: question, created_at: createdAt };
+            setChatItems((current) => [
+                ...current, 
+                userItem,
+                { id: crypto.randomUUID(), kind: 'chat', role: 'assistant', content: 'Sorry, I had trouble with that. Please try again.', created_at: new Date().toISOString() }
+            ]);
         } finally {
             setProcessing(false);
         }
@@ -86,7 +93,7 @@ export default function LearnScreen() {
         </div>
         <main ref={feedRef} className="flex-1 overflow-y-auto px-4 py-4">
             {error && <p role="status" className="mb-3 rounded-card border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">{error}</p>}
-            {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div> : items.length === 0 ? <div className="flex flex-col items-center px-8 py-12 text-center"><div className="mb-4 rounded-full bg-primary/10 p-4"><Bot className="text-primary" /></div><h1 className="font-bold text-gray-800 dark:text-gray-100">Your learning feed starts here</h1><p className="mt-2 text-base-sm text-gray-500">Ask how something works, or simply tell me what is on your mind.</p></div> : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{items.map((item) => item.kind === 'card' ? <div key={item.id} className="flex h-full flex-col"><FeedCard card={item} onListen={listen} isPlaying={playingId === item.id} onExpand={() => navigate(`/learn/${item.id}`)} /></div> : <div key={item.id} className="col-span-full"><ChatBubble item={item} onListen={listen} isPlaying={playingId === item.id} isLoading={loadingSpeechId === item.id} /></div>)}</div>}
+            {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div> : items.length === 0 ? <div className="flex flex-col items-center px-8 py-12 text-center"><div className="mb-4 rounded-full bg-primary/10 p-4"><Bot className="text-primary" /></div><h1 className="font-bold text-gray-800 dark:text-gray-100">Your learning feed starts here</h1><p className="mt-2 text-base-sm text-gray-500">Ask how something works, or simply tell me what is on your mind.</p></div> : <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>{items.map((item) => item.kind === 'card' ? <div key={item.id} className="flex h-full flex-col"><FeedCard card={item} onListen={listen} isPlaying={playingId === item.id} isGridItem={true} onExpand={() => navigate(`/learn/${item.id}`)} /></div> : <div key={item.id} className="col-span-full"><ChatBubble item={item} onListen={listen} isPlaying={playingId === item.id} isLoading={loadingSpeechId === item.id} /></div>)}</div>}
             {processing && <div className="mt-4 flex items-center gap-2 text-base-sm text-gray-500"><Loader2 size={16} className="animate-spin text-primary" /> Thinking…</div>}
         </main>
         <InputBar onSubmit={handleSubmit} isProcessing={processing} />

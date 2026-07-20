@@ -24,6 +24,7 @@ export const ROUTE_META = [
     { path: '/edit-profile', onboarding: false, hideNav: true },
 
     // ── Main tab routes ────────────────────────────────────────────────────
+    { path: '/home', onboarding: false, hideNav: false },
     { path: '/dashboard', onboarding: false, hideNav: false },
     { path: '/ai-chat', onboarding: false, hideNav: false },
     { path: '/learn', onboarding: false, hideNav: false },

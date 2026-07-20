@@ -24,7 +24,7 @@ export const EVENT_REGISTRY = {
   // Autism
   social_story_completed: { path: '/social-story', tab: null, label: 'Social Story' },
   conversation_practice_session: { path: '/conversation-practice', tab: null, label: 'Conversation Practice' },
-  emotion_checkin_logged: { path: '/dashboard', tab: null, label: 'Emotion Check-in' },
+  emotion_checkin_logged: { path: '/home', tab: null, label: 'Emotion Check-in' },
 
   // Dyscalculia
   math_problem_solved: { path: '/math-helper', tab: 'solve', label: 'Math Solver' },

@@ -76,7 +76,7 @@ export default function ProfileSetupScreen() {
             if (error) console.error('Profile setup save error:', error.message);
         }
 
-        navigate('/dashboard');
+        navigate('/home');
     };
 
     if (step === 'primaryMode') {

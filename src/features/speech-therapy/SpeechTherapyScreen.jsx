@@ -6,6 +6,7 @@ import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
 import { translate } from '../../shared/lib/translations';
 import { supabase } from '../../shared/lib/supabaseClient';
+import Strands from '../../shared/components/Strands';
 
 const THERAPY_GOALS = [
     { id: 'articulation', label: 'Slow & Clear', desc: 'Focus on slow pacing, clean articulation, and clear pronunciation of words.', system: 'You are a warm, extremely patient speech-language therapist. The user wants to practice speaking slowly and clearly. Listen to them speak, and encourage them to articulate each syllable. Speak slowly yourself, use short sentences, and provide gentle, positive feedback.' },
@@ -80,6 +81,7 @@ export default function SpeechTherapyScreen() {
     const geminiPlaybackTimeRef = useRef(0);
     const timerIntervalRef = useRef(null);
     const visualizerCanvasRef = useRef(null);
+    const visualizerIntensityRef = useRef(0);
     const animationFrameRef = useRef(null);
     const analyserRef = useRef(null);
 
@@ -143,9 +145,9 @@ export default function SpeechTherapyScreen() {
     // Handle Visualizer lifecycle automatically
     useEffect(() => {
         if (isActive || isConnecting) {
-            // Wait 50ms to ensure the DOM has updated and canvas is mounted
+            // Wait 50ms to ensure the DOM has updated
             const timerId = setTimeout(() => {
-                runVisualizer();
+                runAcousticTracker();
             }, 50);
             return () => {
                 clearTimeout(timerId);
@@ -156,30 +158,19 @@ export default function SpeechTherapyScreen() {
         }
     }, [isActive, isConnecting]);
 
-    // Animate Visualizer (Oscilloscope or Circular Orb)
-    const runVisualizer = () => {
-        const canvas = visualizerCanvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
+    // Headless acoustic tracker for Hybrid Emotion Score
+    const runAcousticTracker = () => {
         const analyser = analyserRef.current;
-        if (!ctx) return;
+        if (!analyser) return;
 
-        const bufferLength = analyser ? analyser.frequencyBinCount : 256;
+        const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
-        const draw = () => {
+        const analyze = () => {
             if (!isActive && !isConnecting) return;
-            animationFrameRef.current = requestAnimationFrame(draw);
+            animationFrameRef.current = requestAnimationFrame(analyze);
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw circular glowing visualizer orb
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            let average = 0;
-
-            if (isActive && analyser) {
+            if (isActive) {
                 analyser.getByteTimeDomainData(dataArray);
                 let sum = 0;
                 let zeroCrossings = 0;
@@ -193,7 +184,10 @@ export default function SpeechTherapyScreen() {
                         }
                     }
                 }
-                average = sum / bufferLength;
+                const average = sum / bufferLength;
+                
+                // Expose raw amplitude to WebGL Strands visualizer (scaled down a bit)
+                visualizerIntensityRef.current = average * 0.5;
 
                 // Track heuristic acoustic signals for Hybrid Emotion Score
                 if (average > 1.5 && !isMutedRef.current) {
@@ -209,53 +203,12 @@ export default function SpeechTherapyScreen() {
                 } else {
                     audioStatsRef.current.isSpeaking = false;
                 }
-            } else {
+            } else if (isConnecting) {
                 // Heartbeat breathing animation while connecting
-                average = Math.sin(Date.now() / 200) * 3.5 + 3.5;
+                visualizerIntensityRef.current = (Math.sin(Date.now() / 200) * 0.5 + 0.5) * 1.5;
             }
-
-            const baseRadius = Math.min(canvas.width, canvas.height) * 0.25;
-            const radius = baseRadius + average * 2.5;
-
-            // Draw glowing background gradient
-            const grad = ctx.createRadialGradient(centerX, centerY, radius * 0.5, centerX, centerY, radius * 1.5);
-            grad.addColorStop(0, 'rgba(99, 102, 241, 0.45)');  // Indigo
-            grad.addColorStop(0.5, 'rgba(168, 85, 247, 0.2)'); // Purple
-            grad.addColorStop(1, 'rgba(99, 102, 241, 0)');
-
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius * 1.5, 0, 2 * Math.PI);
-            ctx.fill();
-
-            // Draw pulsating circle outline
-            ctx.strokeStyle = '#818cf8'; // Light indigo
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.stroke();
-
-            // Draw particle waves
-            ctx.strokeStyle = 'rgba(168, 85, 247, 0.5)';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            for (let i = 0; i < bufferLength; i += 8) {
-                const angle = (i / bufferLength) * 2 * Math.PI;
-                const value = (isActive && dataArray) ? (dataArray[i] - 128) / 128 : 0;
-                const r = radius + value * 45;
-                const x = centerX + r * Math.cos(angle);
-                const y = centerY + r * Math.sin(angle);
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.closePath();
-            ctx.stroke();
         };
-
-        draw();
+        analyze();
     };
 
     // Format Session Duration Time
@@ -770,7 +723,7 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-950 text-gray-100 min-h-0 relative">
+        <div className="flex-1 flex flex-col min-h-0 relative">
             <audio ref={remoteAudioRef} autoPlay className="hidden" />
             <ScreenHeader
                 title="Speech Therapy"
@@ -779,7 +732,6 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                     stopSession();
                     navigate('/tools');
                 }}
-                className="bg-gray-900 border-gray-800"
             />
 
             {!isActive && !isConnecting && !showSummary ? (
@@ -787,11 +739,11 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                 <div className="flex-1 flex flex-col p-5 overflow-y-auto pb-20 justify-between">
                     <div className="flex flex-col gap-6">
                         {/* Info banner */}
-                        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex gap-3">
-                            <Info className="text-indigo-400 shrink-0 mt-0.5" size={20} />
+                        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
+                            <Info className="text-primary shrink-0 mt-0.5" size={20} />
                             <div>
-                                <h3 className="text-base-sm font-bold text-indigo-300">Live AI Speech Therapy</h3>
-                                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                                <h3 className="text-base-sm font-bold text-primary">Live AI Speech Therapy</h3>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
                                     Have a natural, real-time spoken conversation with our AI therapist. The model listens directly to your pronunciation, rate, and voice pitch to give natural audio feedback.
                                 </p>
                             </div>
@@ -799,14 +751,14 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
 
                         {/* Provider Selector */}
                         <div>
-                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Select AI Engine</label>
-                            <div className="grid grid-cols-2 gap-2 mt-2 bg-gray-900 border border-gray-800 rounded-xl p-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Select AI Engine</label>
+                            <div className="grid grid-cols-2 gap-2 mt-2 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1">
                                 <button
                                     onClick={() => setProvider('openai')}
                                     className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
                                         provider === 'openai' 
-                                            ? 'bg-indigo-600 text-white shadow-md' 
-                                            : 'text-gray-400 hover:text-gray-200'
+                                            ? 'bg-primary text-white shadow-md' 
+                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                     }`}
                                 >
                                     OpenAI Realtime (WebRTC)
@@ -815,8 +767,8 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                                     onClick={() => setProvider('gemini')}
                                     className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
                                         provider === 'gemini' 
-                                            ? 'bg-indigo-600 text-white shadow-md' 
-                                            : 'text-gray-400 hover:text-gray-200'
+                                            ? 'bg-primary text-white shadow-md' 
+                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                     }`}
                                 >
                                     Gemini Live (WebSocket)
@@ -826,24 +778,24 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
 
                         {/* Goal Selector */}
                         <div>
-                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Select Therapy Target</label>
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Select Therapy Target</label>
                             <div className="grid grid-cols-1 gap-3 mt-3">
                                 {THERAPY_GOALS.map((goal) => (
                                     <button
                                         key={goal.id}
                                         onClick={() => setSelectedGoal(goal)}
                                         className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-start gap-3.5 hover:scale-[1.01] active:scale-[0.99] ${selectedGoal.id === goal.id
-                                                ? 'border-indigo-500 bg-indigo-500/5'
-                                                : 'border-gray-800 bg-gray-900'
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900'
                                             }`}
                                     >
-                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${selectedGoal.id === goal.id ? 'bg-indigo-500 text-white' : 'bg-gray-800 text-gray-400'
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${selectedGoal.id === goal.id ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
                                             }`}>
                                             <Volume2 size={18} />
                                         </div>
                                         <div className="min-w-0">
-                                            <h4 className="text-base-sm font-bold text-gray-200">{goal.label}</h4>
-                                            <p className="text-xs text-gray-400 mt-1 leading-relaxed">{goal.desc}</p>
+                                            <h4 className="text-base-sm font-bold">{goal.label}</h4>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{goal.desc}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -853,11 +805,11 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                         {/* Voice Configuration */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Voice Selector</label>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Voice Selector</label>
                                 <select
                                     value={selectedVoice}
                                     onChange={(e) => setSelectedVoice(e.target.value)}
-                                    className="w-full mt-2.5 p-3.5 rounded-xl border border-gray-800 bg-gray-900 text-gray-200 focus:outline-none focus:border-indigo-500 text-base-sm"
+                                    className="w-full mt-2.5 p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 focus:outline-none focus:border-primary text-base-sm"
                                 >
                                     {(provider === 'openai' ? OPENAI_VOICES : GEMINI_VOICES).map((voice) => (
                                         <option key={voice.id} value={voice.id}>{voice.label}</option>
@@ -871,7 +823,7 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                     <div className="pt-6">
                         <button
                             onClick={provider === 'openai' ? startSession : startGeminiSession}
-                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-indigo-500/20"
+                            className="w-full bg-primary hover:bg-primary-light text-white font-bold p-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/20"
                         >
                             <Play size={20} fill="currentColor" />
                             Start Therapy Session
@@ -882,49 +834,66 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                 /* Live Waveform Conversation Screen */
                 <div className="flex-1 flex flex-col p-5 justify-between min-h-0">
                     {/* Header bar with timer */}
-                    <div className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-2xl px-4 py-3">
+                    <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl px-4 py-3">
                         <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${isConnecting ? 'bg-amber-500 animate-ping' : 'bg-green-500 animate-pulse'}`} />
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {isConnecting ? 'Connecting to therapist…' : `Therapist: ${selectedVoice}`}
                             </span>
                         </div>
-                        <span className="text-sm font-bold text-indigo-400">
+                        <span className="text-sm font-bold text-primary">
                             {isConnecting ? '00:00' : formatTime(timer)}
                         </span>
                     </div>
 
-                    {/* Circular visualizer wave */}
-                    <div className="flex-1 flex flex-col items-center justify-center py-4 relative">
-                        <canvas
-                            ref={visualizerCanvasRef}
-                            width={320}
-                            height={320}
-                            className="max-w-full aspect-square"
-                        />
+                    {/* Strands visualizer wave */}
+                    <div className="flex-1 flex flex-col items-center justify-center py-4 relative w-full h-full min-h-[300px]">
+                        <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, opacity: isActive || isConnecting ? 1 : 0, transition: 'opacity 0.5s' }}>
+                            <Strands
+                                intensityRef={visualizerIntensityRef}
+                                colors={["#F97316","#7C3AED","#06B6D4"]}
+                                count={3}
+                                speed={0.3}
+                                amplitude={1}
+                                waviness={1}
+                                thickness={0.7}
+                                glow={2.6}
+                                taper={3}
+                                spread={1}
+                                intensity={0.6}
+                                saturation={2}
+                                opacity={1}
+                                scale={1.5}
+                                glass={false}
+                                refraction={1}
+                                dispersion={1}
+                                glassSize={1}
+                                hueShift={0}
+                            />
+                        </div>
                         <div className="absolute flex flex-col items-center text-center px-4">
-                            <Volume2 size={40} className={`text-indigo-400 ${isConnecting ? 'animate-bounce' : 'animate-pulse'}`} />
-                            <span className="text-xs text-indigo-300 font-bold mt-2.5">
+                            <Volume2 size={40} className={`text-primary ${isConnecting ? 'animate-bounce' : 'animate-pulse'}`} />
+                            <span className="text-xs text-primary font-bold mt-2.5">
                                 {isConnecting ? 'Connecting…' : 'Listening…'}
                             </span>
-                            <span className="text-[10px] text-gray-500 mt-1 max-w-[200px] font-medium leading-tight">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 max-w-[200px] font-medium leading-tight">
                                 {statusText}
                             </span>
                         </div>
                     </div>
 
                     {/* Interactive running transcript */}
-                    <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 h-36 overflow-y-auto mb-6 flex flex-col gap-3">
+                    <div className="bg-white/50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 h-36 overflow-y-auto mb-6 flex flex-col gap-3">
                         {chatHistory.length === 0 ? (
-                            <p className="text-xs text-gray-500 italic text-center py-8">Start speaking. Your words and the AI responses will transcribe here.</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 italic text-center py-8">Start speaking. Your words and the AI responses will transcribe here.</p>
                         ) : (
                             chatHistory.map((msg, index) => (
                                 <div key={index} className="flex gap-2">
                                     <div className="shrink-0 mt-0.5">
-                                        <MessageCircle size={14} className={msg.role === 'user' ? 'text-green-400' : 'text-indigo-400'} />
+                                        <MessageCircle size={14} className={msg.role === 'user' ? 'text-green-500 dark:text-green-400' : 'text-primary'} />
                                     </div>
-                                    <p className="text-xs text-gray-300 leading-relaxed font-semibold">
-                                        <span className={msg.role === 'user' ? 'text-green-400 font-bold' : 'text-indigo-400 font-bold'}>
+                                    <p className="text-xs text-gray-800 dark:text-gray-300 leading-relaxed font-semibold">
+                                        <span className={msg.role === 'user' ? 'text-green-600 dark:text-green-400 font-bold' : 'text-primary font-bold'}>
                                             {msg.role === 'user' ? 'You: ' : 'Therapist: '}
                                         </span>
                                         {msg.text.replace(/{"userTone":\s*"[^"]+"}/g, '')}
@@ -939,8 +908,8 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                         <button
                             onClick={toggleMute}
                             className={`flex-1 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 border-2 transition-all ${isMuted
-                                    ? 'bg-red-500/10 border-red-500 text-red-400'
-                                    : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800'
+                                    ? 'bg-red-500/10 border-red-500 text-red-500 dark:text-red-400'
+                                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                                 }`}
                         >
                             {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
@@ -959,55 +928,55 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                 /* Session Completed Summary Screen */
                 <div className="flex-1 flex flex-col p-5 overflow-y-auto justify-between pb-20">
                     <div className="flex flex-col items-center text-center py-6">
-                        <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary mb-4">
                             <Award size={32} />
                         </div>
-                        <h2 className="text-base-lg font-bold text-gray-100">Session Completed!</h2>
-                        <p className="text-xs text-gray-400 mt-1">Excellent work on your speech practice today.</p>
+                        <h2 className="text-base-lg font-bold">Session Completed!</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Excellent work on your speech practice today.</p>
 
                         {/* Session Metrics grid */}
                         <div className="grid grid-cols-2 gap-4 w-full mt-8">
-                            <div className="bg-gray-900 border border-gray-850 p-4 rounded-2xl flex flex-col items-center">
-                                <span className="text-xs text-gray-400 font-medium">Practice Goal</span>
-                                <span className="text-sm font-bold text-gray-200 mt-2">{selectedGoal.label}</span>
+                            <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl flex flex-col items-center">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Practice Goal</span>
+                                <span className="text-sm font-bold mt-2">{selectedGoal.label}</span>
                             </div>
-                            <div className="bg-gray-900 border border-gray-850 p-4 rounded-2xl flex flex-col items-center">
-                                <span className="text-xs text-gray-400 font-medium">Session Length</span>
-                                <span className="text-sm font-bold text-indigo-400 mt-2">{formatTime(timer)}</span>
+                            <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl flex flex-col items-center">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Session Length</span>
+                                <span className="text-sm font-bold text-primary mt-2">{formatTime(timer)}</span>
                             </div>
                         </div>
 
                         {/* Hybrid Heuristic Score Breakdown */}
                         {hybridScore && (
-                            <div className="w-full mt-6 bg-gray-900 border border-gray-800 p-4 rounded-2xl text-left">
-                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Hybrid Heuristic Score</h4>
-                                <p className="text-sm text-indigo-400 font-bold mb-4">{hybridScore.overallLabel}</p>
+                            <div className="w-full mt-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl text-left">
+                                <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Hybrid Heuristic Score</h4>
+                                <p className="text-sm text-primary font-bold mb-4">{hybridScore.overallLabel}</p>
                                 <div className="grid grid-cols-3 gap-3">
-                                    <div className="bg-gray-800/50 p-3 rounded-xl border border-gray-800 flex flex-col">
-                                        <span className="text-[10px] text-gray-500 font-bold">Text Sentiment</span>
-                                        <span className="text-xs text-gray-200 mt-1 capitalize">{hybridScore.textSignal}</span>
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 flex flex-col">
+                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">Text Sentiment</span>
+                                        <span className="text-xs mt-1 capitalize">{hybridScore.textSignal}</span>
                                     </div>
-                                    <div className="bg-gray-800/50 p-3 rounded-xl border border-gray-800 flex flex-col">
-                                        <span className="text-[10px] text-gray-500 font-bold">Pace (WPM)</span>
-                                        <span className="text-xs text-gray-200 mt-1 capitalize">{hybridScore.paceSignal} ({Math.round(hybridScore.wpm || 0)})</span>
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 flex flex-col">
+                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">Pace (WPM)</span>
+                                        <span className="text-xs mt-1 capitalize">{hybridScore.paceSignal} ({Math.round(hybridScore.wpm || 0)})</span>
                                     </div>
-                                    <div className="bg-gray-800/50 p-3 rounded-xl border border-gray-800 flex flex-col">
-                                        <span className="text-[10px] text-gray-500 font-bold">Pitch Tone</span>
-                                        <span className="text-xs text-gray-200 mt-1 capitalize">{hybridScore.toneSignal}</span>
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 flex flex-col">
+                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">Pitch Tone</span>
+                                        <span className="text-xs mt-1 capitalize">{hybridScore.toneSignal}</span>
                                     </div>
                                 </div>
-                                <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-3 leading-relaxed">
                                     Note: This is a transparent, heuristic breakdown combining text tone, speaking pace, and acoustic variance. It is not an ML-based emotion detector.
                                 </p>
                             </div>
                         )}
 
                         {/* Encouraging Feedback Cards */}
-                        <div className="w-full mt-6 bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl text-left flex gap-3.5">
-                            <Heart className="text-indigo-400 shrink-0 mt-0.5" size={20} />
+                        <div className="w-full mt-6 bg-primary/5 border border-primary/20 p-4 rounded-2xl text-left flex gap-3.5">
+                            <Heart className="text-primary shrink-0 mt-0.5" size={20} />
                             <div>
-                                <h4 className="text-xs font-bold text-indigo-300">Speech therapist insights</h4>
-                                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                                <h4 className="text-xs font-bold text-primary">Speech therapist insights</h4>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed">
                                     You successfully conversed with focus on your target sound and rhythm. Speech exercises like this build confidence, retrain muscle memory, and encourage pacing. Keep up the amazing work!
                                 </p>
                             </div>
@@ -1015,13 +984,13 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
 
                         {/* Checklist Achievements */}
                         <div className="w-full mt-6 flex flex-col gap-3">
-                            <div className="flex items-center gap-3 bg-gray-900/50 p-3.5 rounded-xl border border-gray-900">
-                                <CheckCircle2 className="text-indigo-400 shrink-0" size={16} />
-                                <span className="text-xs text-gray-300 font-medium">Completed target: {selectedGoal.label}</span>
+                            <div className="flex items-center gap-3 bg-white dark:bg-gray-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-gray-900">
+                                <CheckCircle2 className="text-primary shrink-0" size={16} />
+                                <span className="text-xs font-medium">Completed target: {selectedGoal.label}</span>
                             </div>
-                            <div className="flex items-center gap-3 bg-gray-900/50 p-3.5 rounded-xl border border-gray-900">
-                                <CheckCircle2 className="text-indigo-400 shrink-0" size={16} />
-                                <span className="text-xs text-gray-300 font-medium">Engaged in real-time conversational exchange</span>
+                            <div className="flex items-center gap-3 bg-white dark:bg-gray-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-gray-900">
+                                <CheckCircle2 className="text-primary shrink-0" size={16} />
+                                <span className="text-xs font-medium">Engaged in real-time conversational exchange</span>
                             </div>
                         </div>
                     </div>
@@ -1030,7 +999,7 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                     <div>
                         <button
                             onClick={() => setShowSummary(false)}
-                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+                            className="w-full bg-primary hover:bg-primary-light text-white font-bold p-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg"
                         >
                             Return to Tools
                         </button>

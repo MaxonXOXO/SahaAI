@@ -75,6 +75,7 @@ export default function EditProfileScreen() {
     const navigate = useNavigate();
     const profile = useProfileStore();
     const updateProfile = useProfileStore((s) => s.updateProfile);
+    const { displayLanguage } = useSettingsStore();
 
     // Local form state (so we don't mutate store until save)
     const [form, setForm] = useState({
@@ -207,7 +208,6 @@ export default function EditProfileScreen() {
         );
     }
 
-    const { displayLanguage } = useSettingsStore();
 
     // ─── Main form ───────────────────────────────────────────────────────────
     return (

@@ -6,13 +6,14 @@ import { translate } from '../../shared/lib/translations';
 
 /**
  * BottomNav — persistent bottom tab bar.
+ * 4 items: Home | Learn | Tools | Progress
+ * Profile is accessed via the avatar button on the Home screen.
  */
 const TABS = [
-    { key: 'home', labelKey: 'home', icon: Home, path: '/dashboard' },
+    { key: 'home', labelKey: 'home', icon: Home, path: '/home' },
     { key: 'learn', labelKey: 'learn', icon: Sparkles, path: '/learn' },
     { key: 'tools', labelKey: 'tools', icon: LayoutGrid, path: '/tools' },
     { key: 'progress', labelKey: 'progress', icon: TrendingUp, path: '/progress' },
-    { key: 'profile', labelKey: 'profile', icon: User, path: '/profile' },
 ];
 
 export default function BottomNav() {
@@ -26,11 +27,12 @@ export default function BottomNav() {
 
     return (
         <nav
-            className="absolute bottom-0 left-0 right-0 border-t z-20 flex items-center justify-around"
+            className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-around"
             style={{
                 background: 'var(--a11y-surface)',
                 borderColor: isLowVision ? '#FACC15' : 'rgba(0,0,0,0.08)',
-                borderWidth: isLowVision ? '3px' : '1px',
+                borderWidth: isLowVision ? '3px' : '0px',
+                borderTopWidth: '0px',
                 paddingTop: isLowVision ? '0.625rem' : '0.375rem',
                 paddingBottom: isLowVision ? '0.875rem' : '0.5rem',
                 minHeight: 'var(--a11y-min-touch)',
