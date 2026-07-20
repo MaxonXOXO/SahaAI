@@ -49,31 +49,39 @@ export default function BottomNav() {
                         onClick={() => navigate(path)}
                         aria-label={label}
                         aria-current={isActive ? 'page' : undefined}
-                        className="flex flex-col items-center justify-center gap-0.5 flex-1"
+                        className="flex flex-col items-center justify-center flex-1"
                         style={{
                             minHeight: 'var(--a11y-min-touch)',
                             transition: 'var(--a11y-transition)',
                         }}
                     >
-                        <Icon
+                        <div 
+                            className={`flex flex-col items-center justify-center gap-1 rounded-2xl transition-colors ${isActive ? 'bg-primary/10 dark:bg-primary/20' : ''}`}
                             style={{
-                                width: isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
-                                height: isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
-                                color: isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
-                                strokeWidth: isActive ? 2.5 : 1.8,
-                            }}
-                        />
-                        <span
-                            style={{
-                                fontFamily: 'var(--a11y-font-body)',
-                                fontSize: isLowVision ? '0.8125rem' : '0.6875rem',
-                                fontWeight: isActive ? 700 : 400,
-                                color: isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
-                                letterSpacing: 'var(--a11y-letter-spacing)',
+                                width: isLowVision ? '5rem' : '4rem',
+                                height: isLowVision ? '4.5rem' : '3.5rem'
                             }}
                         >
-                            {label}
-                        </span>
+                            <Icon
+                                style={{
+                                    width: isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
+                                    height: isLowVision ? '1.75rem' : isAdhd ? '1.5rem' : 'var(--a11y-icon-size)',
+                                    color: isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
+                                    strokeWidth: isActive ? 2.5 : 1.8,
+                                }}
+                            />
+                            <span
+                                style={{
+                                    fontFamily: 'var(--a11y-font-body)',
+                                    fontSize: isLowVision ? '0.8125rem' : '0.6875rem',
+                                    fontWeight: isActive ? 700 : 400,
+                                    color: isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
+                                    letterSpacing: 'var(--a11y-letter-spacing)',
+                                }}
+                            >
+                                {label}
+                            </span>
+                        </div>
                     </button>
                 );
             })}

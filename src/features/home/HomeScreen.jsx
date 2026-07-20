@@ -59,6 +59,7 @@ export default function HomeScreen() {
     const navigate = useNavigate();
     const name = useProfileStore((s) => s.name);
     const username = useProfileStore((s) => s.username);
+    const avatar_base64 = useProfileStore((s) => s.avatar_base64);
     const primaryMode = useProfileStore((s) => s.primaryMode);
     const displayLanguage = useSettingsStore((s) => s.displayLanguage);
     const { recentItems, loading: recentLoading } = useRecentActivity(1);
@@ -162,14 +163,14 @@ export default function HomeScreen() {
                     <button
                         onClick={() => navigate('/ai-chat')}
                         aria-label="Recent AI Chats"
-                        className="shrink-0 flex items-center justify-center rounded-full bg-white/80 dark:bg-gray-800/80 shadow-sm border-2 transition-colors hover:bg-white"
+                        className="shrink-0 flex items-center justify-center rounded-full bg-white/80 dark:bg-gray-800/80 shadow-md border-2 transition-transform hover:scale-105 active:scale-95"
                         style={{
-                            width: isLowVision ? '44px' : '36px',
-                            height: isLowVision ? '44px' : '36px',
+                            width: isLowVision ? '56px' : '48px',
+                            height: isLowVision ? '56px' : '48px',
                             borderColor: 'var(--a11y-primary)',
                         }}
                     >
-                        <MessageSquare size={isLowVision ? 20 : 16} style={{ color: 'var(--a11y-primary)' }} />
+                        <MessageSquare size={isLowVision ? 26 : 22} style={{ color: 'var(--a11y-primary)' }} />
                     </button>
                 </div>
                 
@@ -186,18 +187,22 @@ export default function HomeScreen() {
                     <button
                         onClick={() => navigate('/profile')}
                         aria-label={translate('profile', displayLanguage)}
-                        className="shrink-0 flex items-center justify-center overflow-hidden rounded-full shadow-sm border-2"
+                        className="shrink-0 flex items-center justify-center overflow-hidden rounded-full shadow-md border-2 transition-transform hover:scale-105 active:scale-95"
                         style={{
-                            width: isLowVision ? '44px' : '36px',
-                            height: isLowVision ? '44px' : '36px',
+                            width: isLowVision ? '56px' : '48px',
+                            height: isLowVision ? '56px' : '48px',
                             borderColor: 'var(--a11y-primary)',
                             background: 'var(--a11y-primary)',
                             transition: 'var(--a11y-transition)',
                         }}
                     >
-                        <span className="font-bold text-white text-sm">
-                            {(name || username || '?').charAt(0).toUpperCase()}
-                        </span>
+                        {avatar_base64 ? (
+                            <img src={avatar_base64} alt="Profile Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="font-bold text-white text-base">
+                                {(name || username || '?').charAt(0).toUpperCase()}
+                            </span>
+                        )}
                     </button>
                 </div>
             </div>

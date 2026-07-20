@@ -15,6 +15,8 @@ export const ROUTE_META = [
     // ── Onboarding / Auth ──────────────────────────────────────────────────
     { path: '/', onboarding: true, hideNav: true },
     { path: '/language', onboarding: true, hideNav: true },
+    { path: '/age-range', onboarding: true, hideNav: true },
+    { path: '/region', onboarding: true, hideNav: true },
     { path: '/signup', onboarding: true, hideNav: true },
     { path: '/login', onboarding: true, hideNav: true },
     { path: '/profile-setup', onboarding: true, hideNav: true },

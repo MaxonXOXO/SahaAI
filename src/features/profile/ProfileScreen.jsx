@@ -81,6 +81,9 @@ export default function ProfileScreen() {
                         {profile.pronouns ? (
                             <p className="text-xs text-primary font-medium mt-0.5">{profile.pronouns}</p>
                         ) : null}
+                        {profile.region ? (
+                            <p className="text-[11px] text-gray-400 font-medium mt-0.5">📍 {profile.region}</p>
+                        ) : null}
                     </div>
                 </div>
                 <button

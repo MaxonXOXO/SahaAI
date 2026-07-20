@@ -1,25 +1,125 @@
 import { useNavigate } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
+import {
+    Eye,
+    FileText,
+    MessageSquare,
+    Calculator,
+    Sparkles,
+    ListChecks,
+    Volume2,
+    BookOpen,
+    ChevronRight
+} from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
-import { TILE_REGISTRY } from '../dashboard/dashboardModes';
 import { translate } from '../../shared/lib/translations';
 
+// Image imports from assets/Tools
+import visionAssistantImg from '../../assets/Tools/vision-assistant.png';
+import readTextImg from '../../assets/Tools/read-text.png';
+import socialStoryImg from '../../assets/Tools/social-story.png';
+import mathHelperImg from '../../assets/Tools/math-helper.png';
+import aacBoardImg from '../../assets/Tools/aac-board.png';
+import focusModeImg from '../../assets/Tools/focus-mode.png';
+import routineBuilderImg from '../../assets/Tools/routine-builder.png';
+import speechAssistantImg from '../../assets/Tools/speech-assistant.png';
+import learnImg from '../../assets/Tools/learn.png';
+
 /**
- * ALL_TOOLS — The 9 core features, always shown, never filtered by profile.
- * This is the "everything, always" screen. Profile only affects theming.
+ * ToolsScreen — Rich 2-column feature directory matching the modern SahaAI tools UI.
  */
-const ALL_TOOLS = [
-    { key: 'vision',        tileKey: 'vision' },
-    { key: 'read',          tileKey: 'read' },
-    { key: 'aacBoard',      tileKey: 'aacBoard' },
-    { key: 'social',        tileKey: 'social' },
-    { key: 'math',          tileKey: 'math' },
-    { key: 'focus',         tileKey: 'focus' },
-    { key: 'routine',       tileKey: 'routine' },
-    { key: 'speechTherapy', tileKey: 'speechTherapy' },
-    { key: 'learnFeed',     tileKey: null, path: '/learn' },  // Special: Learning Feed
+const TOOLS_LIST = [
+    {
+        key: 'vision',
+        title: 'Vision Assistant',
+        description: 'Describe surroundings and read visual information.',
+        icon: Eye,
+        path: '/vision-assistant',
+        image: visionAssistantImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'read',
+        title: 'Read Text',
+        description: 'Scan any text and listen or view it in your preferred way.',
+        icon: FileText,
+        path: '/reading-mode',
+        image: readTextImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'social',
+        title: 'Social Stories',
+        description: 'Read stories that help understand situations better.',
+        icon: MessageSquare,
+        path: '/social-story',
+        image: socialStoryImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'math',
+        title: 'Math Helper',
+        description: 'Solve problems step-by-step with visual support.',
+        icon: Calculator,
+        path: '/math-helper',
+        image: mathHelperImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'aacBoard',
+        title: 'AAC Board',
+        description: 'Express easily using pictures, symbols and voice.',
+        icon: MessageSquare,
+        path: '/aac-board',
+        image: aacBoardImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'focus',
+        title: 'Focus Mode',
+        description: 'Stay focused with calming sounds and timers.',
+        icon: Sparkles,
+        path: '/focus-mode',
+        image: focusModeImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'routine',
+        title: 'Routine Builder',
+        description: 'Plan and manage daily routines visually.',
+        icon: ListChecks,
+        path: '/routine-builder',
+        image: routineBuilderImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'speechTherapy',
+        title: 'Speech Therapy',
+        description: 'Practice speech with exercises and voice feedback.',
+        icon: Volume2,
+        path: '/speech-therapy',
+        image: speechAssistantImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'learnFeed',
+        title: 'Learning Feed',
+        description: 'Personalized learning content just for you.',
+        icon: BookOpen,
+        path: '/learn',
+        image: learnImg,
+        bgTint: 'bg-[#E8F8F0] dark:bg-emerald-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
 ];
 
 export default function ToolsScreen() {
@@ -31,7 +131,7 @@ export default function ToolsScreen() {
 
     return (
         <div
-            className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24"
+            className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-28"
             style={{
                 background: 'var(--a11y-bg)',
                 color: 'var(--a11y-text)',
@@ -43,115 +143,43 @@ export default function ToolsScreen() {
                 showBack={false}
             />
 
-            {/* Subtitle */}
-            <div className="px-5 pt-2 pb-4">
-                <p
-                    className="text-sm"
-                    style={{
-                        fontFamily: 'var(--a11y-font-body)',
-                        color: 'var(--a11y-text-muted)',
-                    }}
-                >
-                    {translate('allToolsDesc', displayLanguage)}
-                </p>
-            </div>
+            {/* Grid Container */}
+            <div className="px-4 sm:px-6 pt-2 pb-6 max-w-6xl mx-auto w-full">
+                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3.5 sm:gap-4">
+                    {TOOLS_LIST.map((tool) => {
+                        const Icon = tool.icon;
 
-            {/* ── Flat 2-Column Grid ──────────────────────────────────────── */}
-            <div
-                className="grid grid-cols-2 gap-4 px-5"
-            >
-                {ALL_TOOLS.map((item) => {
-                    // Special handling for Learning Feed (not in TILE_REGISTRY)
-                    if (item.key === 'learnFeed') {
                         return (
                             <button
-                                key={item.key}
-                                onClick={() => navigate('/learn')}
-                                className="flex flex-row items-center text-left hover:scale-[1.02] transition-transform duration-250 active:scale-[0.98]"
-                                style={{
-                                    background: 'var(--a11y-surface)',
-                                    borderRadius: 'var(--a11y-border-radius)',
-                                    border: `var(--a11y-border-width) solid rgba(0,0,0,0.07)`,
-                                    padding: isLowVision ? '24px 20px' : '20px',
-                                    minHeight: isLowVision ? '120px' : '100px',
-                                    boxShadow: 'var(--a11y-shadow)',
-                                    transition: 'var(--a11y-transition)',
-                                    gap: '16px',
-                                }}
+                                key={tool.key}
+                                onClick={() => navigate(tool.path)}
+                                className="group relative flex flex-row items-stretch rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-2 sm:p-2.5 active:scale-[0.99] h-36 sm:h-40"
                             >
-                                <div
-                                    className="flex items-center justify-center shrink-0 rounded-[1.25rem]"
-                                    style={{
-                                        width: isLowVision ? '64px' : '56px',
-                                        height: isLowVision ? '64px' : '56px',
-                                        background: 'var(--a11y-primary)',
-                                    }}
-                                >
-                                    <BookOpen
-                                        size={isLowVision ? 30 : 26}
-                                        className="text-white"
+                                {/* Left Section: Image with Soft Tinted Background */}
+                                <div className={`w-[44%] sm:w-[46%] shrink-0 rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
+                                    <img
+                                        src={tool.image}
+                                        alt={tool.title}
+                                        className="w-full h-full object-contain scale-125 sm:scale-130 transition-transform duration-300 group-hover:scale-135 drop-shadow-xs"
                                     />
                                 </div>
-                                <span
-                                    className="font-bold leading-tight"
-                                    style={{
-                                        fontFamily: 'var(--a11y-font-body)',
-                                        fontSize: isLowVision ? '1.2rem' : '1.05rem',
-                                        color: 'var(--a11y-text)',
-                                    }}
-                                >
-                                    {translate('learnFeed', displayLanguage)}
-                                </span>
+
+                                {/* Right Section: Badge Icon & Larger Text Title */}
+                                <div className="flex-1 flex flex-col justify-center gap-2 pl-3 pr-2 py-2 min-w-0">
+                                    {/* Icon Badge */}
+                                    <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${tool.badgeBg} text-white flex items-center justify-center shadow-xs shrink-0`}>
+                                        <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
+                                    </div>
+
+                                    {/* Title */}
+                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg leading-tight tracking-tight group-hover:text-[#7C3AED] transition-colors">
+                                        {tool.title}
+                                    </h3>
+                                </div>
                             </button>
                         );
-                    }
-
-                    const tile = TILE_REGISTRY[item.tileKey];
-                    if (!tile) return null;
-                    const Icon = tile.icon;
-
-                    return (
-                        <button
-                            key={item.key}
-                            onClick={() => navigate(tile.path)}
-                            className="flex flex-row items-center text-left hover:scale-[1.02] transition-transform duration-250 active:scale-[0.98]"
-                            style={{
-                                background: 'var(--a11y-surface)',
-                                borderRadius: 'var(--a11y-border-radius)',
-                                border: `var(--a11y-border-width) solid rgba(0,0,0,0.07)`,
-                                padding: isLowVision ? '24px 20px' : '20px',
-                                minHeight: isLowVision ? '120px' : '100px',
-                                boxShadow: 'var(--a11y-shadow)',
-                                transition: 'var(--a11y-transition)',
-                                gap: '16px',
-                            }}
-                        >
-                            <div
-                                className="flex items-center justify-center shrink-0 rounded-[1.25rem]"
-                                style={{
-                                    width: isLowVision ? '64px' : '56px',
-                                    height: isLowVision ? '64px' : '56px',
-                                    background: 'var(--a11y-primary)',
-                                }}
-                            >
-                                <Icon
-                                    size={isLowVision ? 30 : 26}
-                                    className="text-white"
-                                />
-                            </div>
-                            <span
-                                className="font-bold leading-tight"
-                                style={{
-                                    fontFamily: 'var(--a11y-font-body)',
-                                    fontSize: isLowVision ? '1.2rem' : '1.05rem',
-                                    color: 'var(--a11y-text)',
-                                }}
-                            >
-                                {translate('tile_' + item.tileKey, displayLanguage)}
-                            </span>
-                        </button>
-                    );
-                })}
+                    })}
+                </div>
             </div>
         </div>
     );

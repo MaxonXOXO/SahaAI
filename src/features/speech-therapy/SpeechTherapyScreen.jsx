@@ -7,6 +7,8 @@ import useSettingsStore from '../../store/useSettingsStore';
 import { translate } from '../../shared/lib/translations';
 import { supabase } from '../../shared/lib/supabaseClient';
 import Strands from '../../shared/components/Strands';
+import { generateSessionSummary } from '../../shared/lib/aiClient';
+import { logActivity } from '../../shared/lib/logActivity';
 
 const THERAPY_GOALS = [
     { id: 'articulation', label: 'Slow & Clear', desc: 'Focus on slow pacing, clean articulation, and clear pronunciation of words.', system: 'You are a warm, extremely patient speech-language therapist. The user wants to practice speaking slowly and clearly. Listen to them speak, and encourage them to articulate each syllable. Speak slowly yourself, use short sentences, and provide gentle, positive feedback.' },
@@ -58,6 +60,7 @@ export default function SpeechTherapyScreen() {
     const [isMuted, setIsMuted] = useState(false);
     const [statusText, setStatusText] = useState('Ready to start session');
     const [chatHistory, setChatHistory] = useState([]);
+    const chatHistoryRef = useRef([]);
     const [timer, setTimer] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
     const isMutedRef = useRef(false);
@@ -85,7 +88,7 @@ export default function SpeechTherapyScreen() {
     const animationFrameRef = useRef(null);
     const analyserRef = useRef(null);
 
-    const stopSession = (status = 'Session ended') => {
+    const stopSession = async (status = 'Session ended') => {
         setIsActive(false);
         setIsConnecting(false);
         setStatusText(status);
@@ -121,6 +124,30 @@ export default function SpeechTherapyScreen() {
             audioContextRef.current = null;
         }
         if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+
+        // Generate and save therapy summary for memory
+        const history = chatHistoryRef.current;
+        if (history.length > 2 && profile?.id) {
+            try {
+                const transcript = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
+                const result = await generateSessionSummary(transcript, selectedGoal.label);
+                
+                if (result?.summary) {
+                    await supabase.from('therapy_session_summaries').insert({
+                        user_id: profile.id,
+                        session_target: selectedGoal.id,
+                        summary: result.summary,
+                        flagged: result.flagged || false,
+                        flag_reason: result.flag_reason || null,
+                        key_points: result.key_points || null
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to generate and save therapy summary:", err);
+            }
+        }
+        
+        chatHistoryRef.current = [];
     };
 
     // Cleanup on unmount
@@ -416,9 +443,13 @@ export default function SpeechTherapyScreen() {
                 }
                 
                 if (last?.role === 'ai') {
-                    return [...previous.slice(0, -1), { role: 'ai', text: combined }];
+                    const newHistory = [...previous.slice(0, -1), { role: 'ai', text: combined }];
+                    chatHistoryRef.current = newHistory;
+                    return newHistory;
                 }
-                return [...previous, { role, text }];
+                const newHistory = [...previous, { role, text }];
+                chatHistoryRef.current = newHistory;
+                return newHistory;
             }
             
             if (role === 'user') {
@@ -452,17 +483,22 @@ export default function SpeechTherapyScreen() {
                     const textSignal = prev?.textSignal || 'neutral';
                     const overallLabel = `You sounded ${textSignal} and ${paceSignal} today.`;
                     
-                    // Log metrics (fire and forget background task)
-                    supabase.from('activity_log').insert([{ 
-                        action: 'speech_therapy_session_completed', 
-                        metadata: { textTone: textSignal, avgWordsPerMinute: wpm, pitchVarianceLevel: toneSignal, rawVariance: variance }
-                    }]).then().catch(()=>null);
+                    // Log metrics to general activity (with logActivity util)
+                    logActivity(profile.id, 'speech_therapy_session_completed', { 
+                        textTone: textSignal, 
+                        avgWordsPerMinute: wpm, 
+                        pitchVarianceLevel: toneSignal, 
+                        rawVariance: variance 
+                    });
                     
                     return { textSignal, paceSignal, toneSignal, overallLabel, wpm, variance };
                 });
                 
                 audioStatsRef.current = { isSpeaking: false, speechStartTime: 0, pitchSamples: [] };
-                return [...previous, { role, text }];
+                
+                const newHistory = [...previous, { role, text }];
+                chatHistoryRef.current = newHistory;
+                return newHistory;
             }
         });
     };
@@ -493,16 +529,33 @@ export default function SpeechTherapyScreen() {
 
     // Gemini Live uses a stateful WebSocket and PCM audio rather than WebRTC tracks.
     const startGeminiSession = async () => {
-        const systemPromptWithPiggyback = `${selectedGoal.system}
-IMPORTANT: The user has selected their language preference as ${languageName}. You MUST speak and respond ONLY in ${languageName} for the entirety of this session.
-IMPORTANT: Also classify the emotional tone of what the user just said. Respond with a JSON field: "userTone": one of ["calm", "anxious", "frustrated", "confident", "sad", "neutral", "excited"]. Put this exact JSON substring anywhere in your text response, e.g. {"userTone": "calm"}. Do NOT speak this JSON out loud. Only output it in your text transcript.`;
-
         try {
             setIsConnecting(true);
             setStatusText('Getting secure Gemini Live access…');
             setTimer(0);
             setChatHistory([]);
+            chatHistoryRef.current = [];
             setShowSummary(false);
+
+            // Fetch recent summaries for context
+            let memoryContext = '';
+            if (profile?.id) {
+                const { data: recentSummaries } = await supabase
+                    .from('therapy_session_summaries')
+                    .select('summary, session_target, created_at')
+                    .eq('user_id', profile.id)
+                    .order('created_at', { ascending: false })
+                    .limit(3);
+
+                if (recentSummaries?.length) {
+                    memoryContext = `\n\nRecent session history (for your context only, don't recite this back verbatim):\n` +
+                        recentSummaries.map(s => `- ${new Date(s.created_at).toLocaleDateString()}: ${s.summary}`).join('\n');
+                }
+            }
+
+            const systemPromptWithPiggyback = `${selectedGoal.system}${memoryContext}
+IMPORTANT: The user has selected their language preference as ${languageName}. You MUST speak and respond ONLY in ${languageName} for the entirety of this session.
+IMPORTANT: Also classify the emotional tone of what the user just said. Respond with a JSON field: "userTone": one of ["calm", "anxious", "frustrated", "confident", "sad", "neutral", "excited"]. Put this exact JSON substring anywhere in your text response, e.g. {"userTone": "calm"}. Do NOT speak this JSON out loud. Only output it in your text transcript.`;
 
             const { data, error } = await supabase.functions.invoke('gemini-live-token');
             if (error) {

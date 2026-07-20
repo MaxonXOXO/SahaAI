@@ -245,6 +245,50 @@ export async function sendMessage(systemPrompt, messages, options = {}) {
 }
 
 /**
+ * Generate a short summary of a speech therapy session and flag sensitive content.
+ * @param {string} transcript - The raw text of the conversation.
+ * @param {string} sessionTarget - The focus area of the session (e.g. 'slow_clear').
+ * @returns {Promise<Object>} - { summary, flagged, flag_reason }
+ */
+export async function generateSessionSummary(transcript, sessionTarget) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) throw new Error('Missing VITE_GEMINI_API_KEY in .env');
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const prompt = `Summarize this speech therapy session in 2-3 sentences, factual and neutral. Focus on: what was practiced, any patterns noticed (pronunciation difficulty, topics discussed, confidence level). Do NOT include verbatim quotes. Session mode: ${sessionTarget}.
+Also return whether this session mentioned self-harm, abuse, severe distress, or anything requiring adult attention.
+You MUST respond in strict JSON format:
+{
+  "summary": "...",
+  "flagged": true/false,
+  "flag_reason": "..." or null
+}
+
+Transcript:
+${transcript}`;
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Gemini summary API error ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    return safeParseJSON(reply);
+}
+
+/**
  * Helper to convert a File/Blob object to a Base64 Data URL.
  */
 function toBase64(fileOrBlob) {

@@ -205,7 +205,17 @@ export const TRANSLATIONS = {
         langDisplay: 'Display Language (UI)',
         langTts: 'Text-to-Speech Voice',
         langAi: 'AI Assistant Language',
-        langSpeech: 'Speech Practice Recognition'
+        langSpeech: 'Speech Practice Recognition',
+
+        // Onboarding New Screens
+        ageRangeTitle: 'How old are you?',
+        ageRangeDesc: 'Choose your age range to personalize your learning experience.',
+        ageUnder13: 'Under 13',
+        age13to17: '13–17',
+        age18plus: '18+',
+        regionTitle: 'Where are you located?',
+        regionDesc: 'Select your state or region.',
+        searchRegionPlaceholder: 'Search state or region...',
     },
     ml: {
         // BottomNav
@@ -414,7 +424,17 @@ export const TRANSLATIONS = {
         langDisplay: 'ഡിസ്പ്ലേ ഭാഷ (UI)',
         langTts: 'ടെക്സ്റ്റ്-ടു-സ്പീച്ച് ശബ്ദം',
         langAi: 'എഐ അസിസ്റ്റന്റ് ഭാഷ',
-        langSpeech: 'സ്പീച്ച് പ്രാക്ടീസ് തിരിച്ചറിയൽ'
+        langSpeech: 'സ്പീച്ച് പ്രാക്ടീസ് തിരിച്ചറിയൽ',
+
+        // Onboarding New Screens
+        ageRangeTitle: 'നിങ്ങൾക്ക് എത്ര വയസ്സായി?',
+        ageRangeDesc: 'നിങ്ങളുടെ പഠന അനുഭവം വ്യക്തിഗതമാക്കാൻ വയസ്സ് തിരഞ്ഞെടുക്കുക.',
+        ageUnder13: '13 വയസ്സിൽ താഴെ',
+        age13to17: '13–17 വയസ്സ്',
+        age18plus: '18 വയസ്സും അതിൽ കൂടുതലും',
+        regionTitle: 'നിങ്ങൾ എവിടെയാണ് സ്ഥിതിചെയ്യുന്നത്?',
+        regionDesc: 'നിങ്ങളുടെ സംസ്ഥാനം അല്ലെങ്കിൽ പ്രദേശം തിരഞ്ഞെടുക്കുക.',
+        searchRegionPlaceholder: 'സംസ്ഥാനം തിരയുക...',
     }
 };
 

@@ -1,7 +1,10 @@
-import { useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ExternalLink, ListOrdered, Play, Pause, Square, Volume2, VolumeX, Loader2, Sparkles } from 'lucide-react';
+import { useRef, useState, lazy, Suspense } from 'react';
+import { ChevronDown, ChevronUp, ExternalLink, ListOrdered, Play, Pause, Square, Volume2, VolumeX, Loader2, Sparkles, BookOpen } from 'lucide-react';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 import { generateLearnImage } from '../../shared/lib/aiClient';
+import useProfileStore from '../../store/useProfileStore';
+
+const InlineDyslexiaReader = lazy(() => import('./InlineDyslexiaReader'));
 
 function StepItem({ step, index, topic }) {
     const [image, setImage] = useState(null);
@@ -57,6 +60,10 @@ function StepItem({ step, index, topic }) {
 }
 
 export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridItem }) {
+    const primaryMode = useProfileStore((s) => s.primaryMode);
+    const isDyslexicOrLowVision = primaryMode === 'dyslexia' || primaryMode === 'lowVision';
+    const [showDyslexiaReader, setShowDyslexiaReader] = useState(false);
+    
     const [showSteps, setShowSteps] = useState(false);
     const [videoStarted, setVideoStarted] = useState(false);
     const [isExpanding, setIsExpanding] = useState(false);
@@ -112,27 +119,64 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
             
             {shouldRenderAsStub ? (
                 <div className="mt-2">
-                    <div className="text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(displaySummary)}</div>
-                    <button 
-                        onClick={handleExpand} 
-                        disabled={isExpanding}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-card bg-primary px-4 py-3 text-sm font-bold text-white shadow-md disabled:opacity-70"
-                    >
-                        {isExpanding ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                        {isExpanding ? 'Loading...' : 'Learn More & Watch Video'}
-                    </button>
+                    {showDyslexiaReader ? (
+                        <Suspense fallback={<div className="flex items-center justify-center p-6 text-sm text-gray-500 animate-pulse">Loading Reading Assistant...</div>}>
+                            <InlineDyslexiaReader text={displaySummary} onClose={() => setShowDyslexiaReader(false)} />
+                        </Suspense>
+                    ) : (
+                        <div className="text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(displaySummary)}</div>
+                    )}
+                    
+                    {!showDyslexiaReader && (
+                        <div className="mt-4 flex w-full flex-wrap gap-2 sm:flex-nowrap">
+                            {isDyslexicOrLowVision && (
+                                <button 
+                                    onClick={() => setShowDyslexiaReader(true)}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-card bg-green-100 dark:bg-green-900/40 px-3 py-3 text-sm font-bold text-green-700 dark:text-green-400 shadow-sm transition-transform active:scale-95"
+                                    aria-label="Reading Assistant"
+                                >
+                                    <BookOpen size={18} /> Read
+                                </button>
+                            )}
+                            
+                            <button 
+                                onClick={handleExpand} 
+                                disabled={isExpanding}
+                                className="flex-1 flex w-full items-center justify-center gap-2 rounded-card bg-primary px-4 py-3 text-sm font-bold text-white shadow-md disabled:opacity-70 transition-transform active:scale-95"
+                            >
+                                {isExpanding ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                                {isExpanding ? 'Loading...' : 'Learn More & Watch Video'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <>
-                    <div className="mt-2 text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(fullExplanation)}</div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <button onClick={() => onListen(card.id, `${card.topic}. ${fullExplanation}`)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card bg-primary/10 px-3 text-xs font-semibold text-primary">
-                            {isPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />}{isPlaying ? 'Stop' : 'Listen'}
-                        </button>
-                        {steps.length > 0 && <button onClick={() => setShowSteps((value) => !value)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card border border-gray-200 px-3 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">
+                    {showDyslexiaReader ? (
+                        <Suspense fallback={<div className="flex items-center justify-center p-6 text-sm text-gray-500 animate-pulse">Loading Reading Assistant...</div>}>
+                            <InlineDyslexiaReader text={fullExplanation} onClose={() => setShowDyslexiaReader(false)} />
+                        </Suspense>
+                    ) : (
+                        <div className="mt-2 text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(fullExplanation)}</div>
+                    )}
+                    
+                    {!showDyslexiaReader && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {!isDyslexicOrLowVision ? (
+                                <button onClick={() => onListen(card.id, `${card.topic}. ${fullExplanation}`)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card bg-primary/10 px-3 text-xs font-semibold text-primary">
+                                    {isPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />}{isPlaying ? 'Stop' : 'Listen'}
+                                </button>
+                            ) : (
+                                <button onClick={() => setShowDyslexiaReader(true)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card bg-green-100 dark:bg-green-900/40 px-3 text-xs font-semibold text-green-700 dark:text-green-400">
+                                    <BookOpen size={15} /> Reading Assistant
+                                </button>
+                            )}
+                            
+                            {steps.length > 0 && <button onClick={() => setShowSteps((value) => !value)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card border border-gray-200 px-3 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">
                             <ListOrdered size={15} /> Steps {showSteps ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>}
                     </div>
+                    )}
                     {showSteps && <ol className="mt-4 space-y-4">
                         {steps.map((step, index) => <StepItem key={`${card.id}-${index}`} step={step} index={index} topic={card.topic} />)}
                     </ol>}

@@ -25,9 +25,10 @@ export function renderMarkdown(text) {
             parsedLine = headerMatch[2];
         }
 
-        // 2. Handle stray single asterisks at the end of words (like "Smile* at someone")
+        // 2. Handle stray single asterisks at the end of words (like "Smile* " or "Tip:* ")
         // Sometimes LLMs generate weird single asterisks for lists
-        parsedLine = parsedLine.replace(/([a-zA-Z])\*\s/g, '$1 ');
+        parsedLine = parsedLine.replace(/([a-zA-Z0-9])\*\s/g, '$1 ');
+        parsedLine = parsedLine.replace(/([a-zA-Z0-9]):\*\s/g, '$1: ');
 
         const parts = [];
 

@@ -85,6 +85,8 @@ export default function EditProfileScreen() {
         pronouns: profile.pronouns || '',
         gender: profile.gender || '',
         primaryMode: profile.primaryMode || '',
+        age_range: profile.age_range || '13_17',
+        region: profile.region || 'Kerala',
     });
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -129,6 +131,7 @@ export default function EditProfileScreen() {
         setSaving(true);
 
         // Collect final values
+        const isMinor = form.age_range === 'under_13' || form.age_range === '13_17';
         const updates = {
             name: form.name,
             username: form.username,
@@ -137,6 +140,8 @@ export default function EditProfileScreen() {
             gender: form.gender,
             avatar_base64: preview || profile.avatar_base64 || '',
             primary_mode: form.primaryMode || null,
+            age_range: form.age_range,
+            region: form.region,
         };
 
         // Direct Supabase update to make sure it lands
@@ -156,6 +161,9 @@ export default function EditProfileScreen() {
             gender: form.gender,
             avatar_base64: preview || profile.avatar_base64 || '',
             primaryMode: form.primaryMode || null,
+            age_range: form.age_range,
+            is_minor: isMinor,
+            region: form.region,
         });
 
         setSaving(false);
@@ -334,6 +342,43 @@ export default function EditProfileScreen() {
                                 </button>
                             ))}
                         </div>
+                    </Field>
+                </div>
+
+                {/* ── Section: Age & Region ── */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-4">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        {displayLanguage === 'ml' ? 'വയസ്സും പ്രദേശവും' : 'Age & Region'}
+                    </p>
+
+                    <Field label={displayLanguage === 'ml' ? 'വയസ്സ് (Age Range)' : 'Age Range'}>
+                        <div className="flex gap-2">
+                            {[
+                                { key: 'under_13', en: 'Under 13', ml: '13-ൽ താഴെ' },
+                                { key: '13_17', en: '13–17', ml: '13–17' },
+                                { key: '18_plus', en: '18+', ml: '18+' },
+                            ].map((item) => (
+                                <button
+                                    key={item.key}
+                                    onClick={() => setForm((f) => ({ ...f, age_range: item.key }))}
+                                    className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-colors ${
+                                        form.age_range === item.key
+                                            ? 'bg-primary border-primary text-white'
+                                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+                                    }`}
+                                >
+                                    {displayLanguage === 'ml' ? item.ml : item.en}
+                                </button>
+                            ))}
+                        </div>
+                    </Field>
+
+                    <Field label={displayLanguage === 'ml' ? 'സംസ്ഥാനം / പ്രദേശം' : 'State / Region'}>
+                        <TextInput
+                            value={form.region}
+                            onChange={handleField('region')}
+                            placeholder={displayLanguage === 'ml' ? 'ഉദാ. കേരളം' : 'e.g. Kerala'}
+                        />
                     </Field>
                 </div>
 
