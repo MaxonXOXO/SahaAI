@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, HeartHandshake, CheckCircle, Clock, XCircle, Send } from 'lucide-react';
 
 const REFLECTION_OPTIONS = [
@@ -30,13 +30,26 @@ const REFLECTION_OPTIONS = [
 
 /**
  * SessionSummary - End-of-session ADHD self-compassion check-in.
+ * Pre-selects outcome based on real task breakdown progress, allowing manual override.
  */
-export default function SessionSummary({ onSubmitCheckIn }) {
-    const [selectedStatus, setSelectedStatus] = useState('partially');
+export default function SessionSummary({ onSubmitCheckIn, initialStatus = 'not_completed' }) {
+    const [selectedStatus, setSelectedStatus] = useState(initialStatus);
+    const [hasInteracted, setHasInteracted] = useState(false);
     const [notes, setNotes] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
 
+    useEffect(() => {
+        if (!hasInteracted) {
+            setSelectedStatus(initialStatus);
+        }
+    }, [initialStatus, hasInteracted]);
+
     const activeOption = REFLECTION_OPTIONS.find((opt) => opt.id === selectedStatus) || REFLECTION_OPTIONS[1];
+
+    const handleSelectStatus = (statusId) => {
+        setHasInteracted(true);
+        setSelectedStatus(statusId);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -75,7 +88,7 @@ export default function SessionSummary({ onSubmitCheckIn }) {
                             <button
                                 key={opt.id}
                                 type="button"
-                                onClick={() => setSelectedStatus(opt.id)}
+                                onClick={() => handleSelectStatus(opt.id)}
                                 className={`w-full p-4 rounded-2xl border-2 font-bold text-base-sm flex items-center justify-between transition-all ${
                                     isSelected
                                         ? `${opt.color} shadow-sm scale-[1.01]`

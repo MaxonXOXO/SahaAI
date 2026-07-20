@@ -6,6 +6,7 @@ import FocusSessionTab from './FocusSessionTab';
 import TaskBreakdownTab from './TaskBreakdownTab';
 import CheckInTab from './CheckInTab';
 import useProfileStore from '../../store/useProfileStore';
+import useFocusStore from './useFocusStore';
 
 const TABS = [
     { key: 'focus', label: 'Focus Timer', icon: Flame },
@@ -21,10 +22,21 @@ export default function FocusModeScreen() {
     const [activeTab, setActiveTab] = useState(initialTab);
     const primaryMode = useProfileStore((s) => s.primaryMode);
     const isLowVision = primaryMode === 'lowVision';
+    const streakDays = useFocusStore((s) => s.streakDays);
 
     return (
         <div className={`flex-1 flex flex-col min-h-screen ${isLowVision ? 'bg-gray-950 text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100'}`}>
-            <ScreenHeader title="ADHD Focus Mode" showBack={true} />
+            <ScreenHeader
+                title="ADHD Focus Mode"
+                showBack={true}
+                rightAction={
+                    streakDays >= 1 ? (
+                        <div className="flex items-center gap-1 text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800">
+                            🔥 {streakDays}-day streak
+                        </div>
+                    ) : null
+                }
+            />
 
             <div className="p-4 flex flex-col gap-5 max-w-[420px] mx-auto w-full pb-20">
                 {/* Mode Tabs */}
@@ -53,7 +65,9 @@ export default function FocusModeScreen() {
                 {activeTab === 'focus' && (
                     <FocusSessionTab onNavigateToCheckin={() => setActiveTab('checkin')} />
                 )}
-                {activeTab === 'tasks' && <TaskBreakdownTab />}
+                {activeTab === 'tasks' && (
+                    <TaskBreakdownTab onNavigateToFocus={() => setActiveTab('focus')} />
+                )}
                 {activeTab === 'checkin' && <CheckInTab />}
             </div>
         </div>

@@ -6,10 +6,12 @@ export default function FocusSessionTab({ onNavigateToCheckin }) {
     const userId = useProfileStore((s) => s.id);
 
     const handleSessionComplete = async (sessionData) => {
+        // Candidate for future enhancement: auto-check completed step in checklist upon session completion
         await logActivity(userId, 'focus_session_completed', {
             duration: sessionData.minutes,
             mode: sessionData.mode,
             distractionCount: sessionData.distractionCount,
+            stepTitle: sessionData.stepTitle || null,
         });
 
         if (onNavigateToCheckin) {
