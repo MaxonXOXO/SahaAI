@@ -1,29 +1,28 @@
-import { useEffect } from 'react';
-import { Play, Pause, Square, FileText, HelpCircle } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { RotateCcw, FileText, HelpCircle } from 'lucide-react';
 import Card from '../../shared/components/Card';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 
 /**
  * TextRecognitionPanel - Renders extracted text from OCR mode
- * Provides full playback controls: Read, Pause/Resume, and Stop.
+ * Provides a single Repeat playback control button.
  */
 export default function TextRecognitionPanel({
     result,
     isSpeaking,
-    isPaused,
     speakResult,
-    stopSpeaking,
-    pauseSpeaking,
-    resumeSpeaking,
     playBeep,
     resultRef,
 }) {
-    // Automatically read results when a new scan completes
+    const lastSpokenRef = useRef(null);
+
+    // Automatically read results when a new scan completes (once per new result)
     useEffect(() => {
-        if (result) {
+        if (result && lastSpokenRef.current !== result) {
+            lastSpokenRef.current = result;
             speakResult();
         }
-    }, [result, speakResult]);
+    }, [result]);
 
     if (!result) {
         return (
@@ -51,51 +50,27 @@ export default function TextRecognitionPanel({
             iconColor="bg-primary"
             className="border-2 border-primary/20 bg-white dark:bg-gray-900"
         >
-            {/* Playback Control Bar */}
+            {/* Playback Control Bar: Single Repeat Button */}
             <div className="flex gap-2 mb-4 mt-2">
-                {!isSpeaking ? (
-                    <button
-                        onClick={() => {
-                            if (playBeep) playBeep(440, 0.08);
-                            speakResult();
-                        }}
-                        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white py-3 rounded-card font-bold text-base-md min-h-touch border-2 border-white focus:outline-none"
-                        aria-label="Read document text out loud"
-                    >
-                        <Play size={22} />
-                        Read Out Loud
-                    </button>
-                ) : (
-                    <>
-                        <button
-                            onClick={() => {
-                                if (isPaused) {
-                                    if (playBeep) playBeep(440, 0.08);
-                                    resumeSpeaking();
-                                } else {
-                                    if (playBeep) playBeep(350, 0.08);
-                                    pauseSpeaking();
-                                }
-                            }}
-                            className="flex-1 flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-card font-bold text-base-md min-h-touch border-2 border-white focus:outline-none"
-                            aria-label={isPaused ? "Resume reading text" : "Pause reading text"}
-                        >
-                            {isPaused ? <Play size={20} /> : <Pause size={20} />}
-                            {isPaused ? 'Resume' : 'Pause'}
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (playBeep) playBeep(300, 0.15);
-                                stopSpeaking();
-                            }}
-                            className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-3 rounded-card font-bold text-base-md min-h-touch border-2 border-white focus:outline-none"
-                            aria-label="Stop reading text"
-                        >
-                            <Square size={20} />
-                            Stop
-                        </button>
-                    </>
-                )}
+                <button
+                    onClick={() => {
+                        if (playBeep) playBeep(440, 0.08);
+                        if (window.speechSynthesis) {
+                            window.speechSynthesis.cancel();
+                        }
+                        speakResult();
+                    }}
+                    disabled={isSpeaking}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-card font-bold text-base-md min-h-touch border-2 border-white focus:outline-none transition-all ${
+                        isSpeaking
+                            ? 'bg-primary/60 text-white/80 cursor-not-allowed'
+                            : 'bg-primary hover:bg-primary-dark text-white active:scale-98 cursor-pointer'
+                    }`}
+                    aria-label={isSpeaking ? "Reading document text out loud" : "Repeat reading document text out loud"}
+                >
+                    <RotateCcw size={20} className={isSpeaking ? 'animate-spin' : ''} />
+                    {isSpeaking ? 'Speaking…' : '🔁 Repeat'}
+                </button>
             </div>
 
             {/* Document Text Area */}
@@ -104,7 +79,7 @@ export default function TextRecognitionPanel({
                 tabIndex={-1}
                 aria-live="polite"
                 role="status"
-                className="bg-gray-50 dark:bg-gray-800 p-5 rounded-card border border-gray-200 dark:border-gray-700 shadow-inner outline-none"
+                className="bg-gray-50 dark:bg-gray-800 p-5 rounded-card border border-gray-200 dark:border-gray-700 shadow-inner outline-none max-h-[260px] overflow-y-auto"
             >
                 <p className="text-base-lg font-bold text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
                     {renderMarkdown(textToShow)}

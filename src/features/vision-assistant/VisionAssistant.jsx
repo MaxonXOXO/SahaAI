@@ -5,6 +5,7 @@ import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
 import CameraCapture from './CameraCapture';
 import AskAIBar from './AskAIBar';
+import TextRecognitionPanel from './TextRecognitionPanel';
 import useSpeak from './useSpeak';
 import useVisionAI from './useVisionAI';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
@@ -116,6 +117,10 @@ export default function VisionAssistant() {
         speak(announcement, speechRate);
     };
 
+    // Effective mode & caption gating: captions are ONLY for Identify (object) & Describe (scene) modes
+    const effectiveMode = reviewScan ? reviewScan.mode : activeMode;
+    const isCaptionMode = effectiveMode === 'object' || effectiveMode === 'scene';
+
     // Review Mode Handlers
     const handleOpenReview = (scan) => {
         playBeep(520, 0.08);
@@ -125,10 +130,11 @@ export default function VisionAssistant() {
         setShowAskBar(false);
         stop();
 
+        const isScanCaption = scan.mode === 'object' || scan.mode === 'scene';
         const msg = `Reviewing scan from ${scan.timestamp}`;
         speak(msg, speechRate, () => {
-            speak(stripMarkdown(scan.result), speechRate, null, setCurrentSubtitle);
-        }, setCurrentSubtitle);
+            speak(stripMarkdown(scan.result), speechRate, null, isScanCaption ? setCurrentSubtitle : null);
+        }, isScanCaption ? setCurrentSubtitle : null);
     };
 
     const handleExitReview = () => {
@@ -145,7 +151,9 @@ export default function VisionAssistant() {
     const handleCapture = async (base64Image) => {
         setCapturedImage(base64Image);
         stop();
-        setCurrentSubtitle("Analyzing image, please wait...");
+        if (isCaptionMode) {
+            setCurrentSubtitle("Analyzing image, please wait...");
+        }
 
         try {
             const resultText = await analyzeImage(base64Image, activeMode);
@@ -168,8 +176,8 @@ export default function VisionAssistant() {
                 logActivity(userId, 'document_read', { mode: activeMode });
             }
 
-            // Speak result sentence-by-sentence with live subtitle tracking
-            speak(stripMarkdown(resultText), speechRate, null, setCurrentSubtitle);
+            // Speak result (driving captions ONLY if in Identify or Describe mode)
+            speak(stripMarkdown(resultText), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
         } catch (err) {
             console.error('[VisionAI] Vision analysis failure:', err);
             setCurrentSubtitle('');
@@ -187,7 +195,9 @@ export default function VisionAssistant() {
         }
 
         stop();
-        setCurrentSubtitle("Thinking, please wait...");
+        if (isCaptionMode) {
+            setCurrentSubtitle("Thinking, please wait...");
+        }
 
         try {
             const resultText = await analyzeImage(targetImage, 'qa', questionText);
@@ -201,7 +211,7 @@ export default function VisionAssistant() {
                 );
             }
 
-            speak(stripMarkdown(resultText), speechRate, null, setCurrentSubtitle);
+            speak(stripMarkdown(resultText), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
         } catch (err) {
             console.error('[VisionAI] Q&A analysis failure:', err);
             setCurrentSubtitle('');
@@ -331,7 +341,8 @@ export default function VisionAssistant() {
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 playBeep(440, 0.08);
-                                                speak(stripMarkdown(scan.result), speechRate, null, setCurrentSubtitle);
+                                                const isScanCaption = scan.mode === 'object' || scan.mode === 'scene';
+                                                speak(stripMarkdown(scan.result), speechRate, null, isScanCaption ? setCurrentSubtitle : null);
                                             }}
                                             aria-label={`Play audio description for this ${scan.mode} scan`}
                                             className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20"
@@ -513,14 +524,28 @@ export default function VisionAssistant() {
                     )}
 
                     {/* YOUTUBE-STYLE LIVE SUBTITLE CAPTION STRIP */}
-                    {(speaking || loading || currentSubtitle) && (
+                    // Read Text = text panel, Identify/Describe = captions — do not remove this gate
+                    {isCaptionMode && (speaking || loading || currentSubtitle) && (
                         <div className="absolute bottom-2 left-2 right-2 z-20 flex justify-center pointer-events-none">
-                            <div className="bg-black/75 backdrop-blur-sm text-white text-base-md font-semibold px-4 py-2 rounded-lg text-center max-w-[95%] shadow-lg border border-white/15 line-clamp-2 overflow-hidden leading-snug">
+                            <div aria-live="polite" className="bg-black/75 backdrop-blur-sm text-white text-base-md font-semibold px-4 py-2 rounded-lg text-center max-w-[95%] shadow-lg border border-white/15 line-clamp-2 overflow-hidden leading-snug">
                                 {renderMarkdown(currentSubtitle || (loading ? "Analyzing image, please wait..." : ""))}
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* --- READ TEXT OCR RESULT PANEL --- */}
+                {effectiveMode === 'ocr' && (analysisResult || (reviewScan && reviewScan.result)) && (
+                    <div className="shrink-0 my-2">
+                        <TextRecognitionPanel
+                            result={analysisResult || (reviewScan ? reviewScan.result : '')}
+                            isSpeaking={speaking}
+                            speakResult={() => speak(stripMarkdown(analysisResult || (reviewScan ? reviewScan.result : '')), speechRate, null, null)}
+                            playBeep={playBeep}
+                            resultRef={resultRef}
+                        />
+                    </div>
+                )}
 
                 {/* --- ASK AI OVERLAY BAR (SHRINK-0) --- */}
                 {showAskBar && (capturedImage || reviewScan) && (
@@ -562,7 +587,7 @@ export default function VisionAssistant() {
                         <button
                             onClick={() => {
                                 playBeep(440, 0.08);
-                                speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, setCurrentSubtitle);
+                                speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
                             }}
                             aria-label="Replay audio description for this scan"
                             className="w-16 h-16 rounded-full bg-primary hover:bg-primary-dark active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"

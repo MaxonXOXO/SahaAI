@@ -1,13 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, ShieldAlert, Flame, Volume2, VolumeX, Bot } from 'lucide-react';
+import { Play, Pause, RotateCcw, ShieldAlert, Flame, Volume2, VolumeX, Bot, Check } from 'lucide-react';
 import useFocusStore from '../useFocusStore';
 import useTone from '../lib/useTone';
 import RevealTimer from './RevealTimer';
 
+const normalizeTitle = (str) => {
+    if (!str || typeof str !== 'string') return '';
+    return str
+        .replace(/[*`_#]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+};
+
 /**
  * FocusTimer - High contrast, low-distraction circular or picture reveal timer for ADHD Focus Sessions.
- * Features hero timer card filling available screen height, scaled timer/reveal area, equal-width duration chips,
- * 52px action icons, and ghost distraction button.
+ * Features hero timer card filling available screen height, scaled timer/reveal area, step completion flow,
+ * equal-width duration chips, 52px action icons, and ghost distraction button.
  */
 export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) {
     // Individual primitive selectors from useFocusStore
@@ -21,6 +30,11 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
     const currentStepTitle = useFocusStore((s) => s.currentStepTitle);
     const lastSessionDate = useFocusStore((s) => s.lastSessionDate);
     const rawSessionsToday = useFocusStore((s) => s.sessionsToday);
+
+    // Task breakdown steps and completion state
+    const steps = useFocusStore((s) => s.steps);
+    const completedStepIds = useFocusStore((s) => s.completedStepIds);
+    const toggleStepCompleted = useFocusStore((s) => s.toggleStepCompleted);
 
     // Timer Style & Reveal selectors
     const timerStyle = useFocusStore((s) => s.timerStyle);
@@ -41,6 +55,7 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
 
     const [distractionNotice, setDistractionNotice] = useState(false);
     const [celebrationMsg, setCelebrationMsg] = useState(null);
+    const [stepCompletionFlow, setStepCompletionFlow] = useState(null);
     const [now, setNow] = useState(Date.now());
 
     const completedRef = useRef(false);
@@ -116,8 +131,10 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
                     { freq: 784, duration: 0.25, delay: 0.24 },
                 ]);
 
+                // Capture currentStepTitle BEFORE finishSession or any store modification runs
+                const savedStepTitle = currentStepTitle;
                 const msg = mode === 'focus'
-                    ? (currentStepTitle ? `🎉 ${currentStepTitle} done — ${durationMinutes} minutes focused!` : `🎉 ${durationMinutes} minutes focused!`)
+                    ? (savedStepTitle ? `🎉 ${savedStepTitle} done — ${durationMinutes} minutes focused!` : `🎉 ${durationMinutes} minutes focused!`)
                     : `☕ Break's over — ready to focus?`;
 
                 setCelebrationMsg(msg);
@@ -125,12 +142,36 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
 
                 setTimeout(() => {
                     setCelebrationMsg(null);
+
+                    if (mode === 'focus' && savedStepTitle) {
+                        const normSaved = normalizeTitle(savedStepTitle);
+                        const matchedStep = steps.find((s) => normalizeTitle(s.title) === normSaved);
+
+                        if (matchedStep) {
+                            setStepCompletionFlow({
+                                stepId: matchedStep.id,
+                                stepTitle: matchedStep.title,
+                                isNextStepPhase: false,
+                                isUnmatched: false,
+                            });
+                        } else {
+                            // Step title exists but step not found in steps array: show completion card with Skip for now only
+                            setStepCompletionFlow({
+                                stepId: null,
+                                stepTitle: savedStepTitle,
+                                isNextStepPhase: false,
+                                isUnmatched: true,
+                            });
+                        }
+                    }
+
                     if (onSessionComplete) {
                         onSessionComplete({
                             minutes: durationMinutes,
                             mode,
                             distractionCount,
-                            stepTitle: currentStepTitle,
+                            stepTitle: savedStepTitle,
+                            hasStepTitle: Boolean(savedStepTitle),
                         });
                     }
                 }, 2500);
@@ -138,17 +179,19 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
         } else {
             completedRef.current = false;
         }
-    }, [isRunning, secondsLeft, durationMinutes, mode, distractionCount, currentStepTitle, onSessionComplete, playSequence, finishSession, recordSessionCompletion]);
+    }, [isRunning, secondsLeft, durationMinutes, mode, distractionCount, currentStepTitle, onSessionComplete, playSequence, finishSession, recordSessionCompletion, steps]);
 
     // Switch timer modes (Focus vs Short Break)
     const handleSetMode = (newMode, mins) => {
         playTone(520, 0.08);
         halfwayFiredRef.current = false;
         fiveMinFiredRef.current = false;
+        setStepCompletionFlow(null);
         setMode(newMode, mins);
     };
 
     const toggleStartPause = () => {
+        setStepCompletionFlow(null);
         if (!isRunning) {
             playTone(660, 0.1);
             halfwayFiredRef.current = false;
@@ -168,6 +211,7 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
         playTone(300, 0.1);
         halfwayFiredRef.current = false;
         fiveMinFiredRef.current = false;
+        setStepCompletionFlow(null);
         resetTimer();
     };
 
@@ -179,6 +223,41 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
             onDistractionBlocked(distractionCount + 1);
         }
         setTimeout(() => setDistractionNotice(false), 2500);
+    };
+
+    const handleMarkStepDoneFromFlow = () => {
+        if (!stepCompletionFlow) return;
+
+        const currentId = stepCompletionFlow.stepId;
+        toggleStepCompleted(currentId);
+
+        // Find remaining uncompleted steps after marking current one done
+        const remainingUncompleted = steps.filter(
+            (s) => s.id !== currentId && !completedStepIds.includes(s.id)
+        );
+
+        if (remainingUncompleted.length > 0) {
+            const nextStep = remainingUncompleted[0];
+            const nextMins = Math.min(60, Math.max(1, Math.round(nextStep.estMinutes || 25)));
+            setStepCompletionFlow({
+                isNextStepPhase: true,
+                nextStepTitle: nextStep.title,
+                nextStepMins: nextMins,
+            });
+        } else {
+            // All steps completed! Navigate to Check-In
+            setStepCompletionFlow(null);
+            if (onSessionComplete) {
+                onSessionComplete({
+                    minutes: durationMinutes,
+                    mode,
+                    distractionCount,
+                    stepTitle: stepCompletionFlow.stepTitle,
+                    hasStepTitle: false,
+                    navigateNow: true,
+                });
+            }
+        }
     };
 
     // Formatting for display (MM:SS)
@@ -283,9 +362,77 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
                     </div>
                 </div>
 
-                {/* Growing Timer Visual Area: Reveal View vs Scaled Classic Ring */}
+                {/* Growing Timer Visual Area: Step Completion Flow vs Normal Visual */}
                 <div className="flex-1 min-h-0 w-full flex items-center justify-center relative my-1">
-                    {timerStyle === 'reveal' && isFocus ? (
+                    {stepCompletionFlow ? (
+                        /* Step Completion State Card inside Timer Hero area */
+                        <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center p-4 gap-4 bg-slate-950/90 rounded-2xl border border-slate-800 animate-float-slow text-center my-auto">
+                            {!stepCompletionFlow.isNextStepPhase ? (
+                                <>
+                                    <div className="flex flex-col gap-1.5">
+                                        <span className="text-xl sm:text-2xl font-black text-amber-300 leading-snug">
+                                            🎉 {stepCompletionFlow.stepTitle} done!
+                                        </span>
+                                        <span className="text-xs text-slate-400 font-medium">
+                                            {stepCompletionFlow.isUnmatched
+                                                ? "Awesome focus session!"
+                                                : "Awesome focus session! Mark this step complete?"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2.5 w-full max-w-xs mt-2">
+                                        {!stepCompletionFlow.isUnmatched && (
+                                            <button
+                                                onClick={handleMarkStepDoneFromFlow}
+                                                className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                                            >
+                                                <Check size={18} />
+                                                ✓ Mark step done
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setStepCompletionFlow(null)}
+                                            className="w-full py-2.5 px-4 rounded-xl font-bold text-xs text-slate-400 hover:text-slate-200 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all cursor-pointer"
+                                        >
+                                            Skip for now
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex flex-col gap-1.5">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                            Next up:
+                                        </span>
+                                        <span className="text-base sm:text-lg font-black text-slate-100 line-clamp-2 leading-snug">
+                                            {stepCompletionFlow.nextStepTitle}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2.5 w-full max-w-xs mt-2">
+                                        <button
+                                            onClick={() => {
+                                                const nextTitle = stepCompletionFlow.nextStepTitle;
+                                                const nextMins = stepCompletionFlow.nextStepMins;
+                                                setStepCompletionFlow(null);
+                                                startTimer('focus', nextMins, nextTitle);
+                                            }}
+                                            className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                                        >
+                                            <Play size={18} className="fill-current" />
+                                            ▶ Focus next step ({stepCompletionFlow.nextStepMins}m)
+                                        </button>
+                                        <button
+                                            onClick={() => setStepCompletionFlow(null)}
+                                            className="w-full py-2.5 px-4 rounded-xl font-bold text-xs text-slate-400 hover:text-slate-200 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all cursor-pointer"
+                                        >
+                                            Skip for now
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ) : timerStyle === 'reveal' && isFocus ? (
                         <RevealTimer
                             progressFraction={progressFraction}
                             revealSeed={revealSeed}
@@ -346,7 +493,7 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
                 {/* Bottom Actions Container */}
                 <div className="shrink-0 flex flex-col gap-2 w-full">
                     {/* Active Step Badge */}
-                    {isFocus && currentStepTitle && !celebrationMsg && (
+                    {isFocus && currentStepTitle && !celebrationMsg && !stepCompletionFlow && (
                         <div className="w-full p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
                             <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                 Focusing on:

@@ -6,6 +6,18 @@ import { logActivity } from '../../shared/lib/logActivity';
 import useProfileStore from '../../store/useProfileStore';
 import useFocusStore from './useFocusStore';
 
+const stripMarkdown = (str) => {
+    if (!str || typeof str !== 'string') return str || '';
+    return str
+        .replace(/\*\*(.*?)\*\*/g, '$1') // bold **text**
+        .replace(/\*(.*?)\*/g, '$1')     // italic *text*
+        .replace(/__(.*?)__/g, '$1')     // bold __text__
+        .replace(/_(.*?)_/g, '$1')       // italic _text_
+        .replace(/`(.*?)`/g, '$1')       // inline code `text`
+        .replace(/#/g, '')               // headers
+        .trim();
+};
+
 export default function TaskBreakdownTab({ onNavigateToFocus }) {
     const userId = useProfileStore((s) => s.id);
     const profile = useProfileStore((s) => s);
@@ -24,16 +36,20 @@ export default function TaskBreakdownTab({ onNavigateToFocus }) {
     const [errorMsg, setErrorMsg] = useState(null);
 
     // Fallback generator if API call fails
-    const generateFallbackSteps = (promptText) => [
-        { id: 1, title: 'Gather initial materials & clear workspace', estMinutes: 5, description: 'Remove distractions and get everything ready.' },
-        { id: 2, title: `Start the core phase of "${promptText.slice(0, 30)}"`, estMinutes: 15, description: 'Focus on step 1 without worrying about the full result.' },
-        { id: 3, title: 'Take a quick 2-minute stretch & review', estMinutes: 2, description: 'Check your progress so far.' },
-        { id: 4, title: 'Finish remaining details & tidy up', estMinutes: 10, description: 'Wrap up the final tasks and celebrate completing it!' },
-    ];
+    const generateFallbackSteps = (promptText) => {
+        const cleanPrompt = stripMarkdown(promptText);
+        return [
+            { id: 1, title: 'Gather initial materials & clear workspace', estMinutes: 5, description: 'Remove distractions and get everything ready.' },
+            { id: 2, title: `Start the core phase of "${cleanPrompt.slice(0, 30)}"`, estMinutes: 15, description: 'Focus on step 1 without worrying about the full result.' },
+            { id: 3, title: 'Take a quick 2-minute stretch & review', estMinutes: 2, description: 'Check your progress so far.' },
+            { id: 4, title: 'Finish remaining details & tidy up', estMinutes: 10, description: 'Wrap up the final tasks and celebrate completing it!' },
+        ];
+    };
 
     const handleGenerateBreakdown = async (promptText) => {
         setIsLoading(true);
         setErrorMsg(null);
+        const cleanTitle = stripMarkdown(promptText);
 
         try {
             const systemPrompt = buildSystemPrompt(profile);
@@ -41,20 +57,25 @@ export default function TaskBreakdownTab({ onNavigateToFocus }) {
 [
   {"id": 1, "title": "Step title", "estMinutes": 5, "description": "Short explanation"}
 ]
-Task to break down: "${promptText}"`;
+Task to break down: "${cleanTitle}"`;
 
             const reply = await sendMessage(systemPrompt, [{ role: 'user', content: userPrompt }]);
             const cleanedJson = reply.replace(/```json/g, '').replace(/```/g, '').trim();
             const parsedSteps = JSON.parse(cleanedJson);
 
             if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
-                setBreakdown(promptText, parsedSteps);
+                const sanitizedSteps = parsedSteps.map((step) => ({
+                    ...step,
+                    title: stripMarkdown(step.title),
+                    description: stripMarkdown(step.description),
+                }));
+                setBreakdown(cleanTitle, sanitizedSteps);
             } else {
-                setBreakdown(promptText, generateFallbackSteps(promptText));
+                setBreakdown(cleanTitle, generateFallbackSteps(cleanTitle));
             }
         } catch (err) {
             console.error('[TaskBreakdown] Error:', err);
-            setBreakdown(promptText, generateFallbackSteps(promptText));
+            setBreakdown(cleanTitle, generateFallbackSteps(cleanTitle));
         } finally {
             setIsLoading(false);
         }

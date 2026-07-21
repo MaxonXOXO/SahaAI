@@ -162,7 +162,7 @@ const useFocusStore = create(
                     isRunning: false,
                     endTime: null,
                     pausedSecondsLeft: null,
-                    currentStepTitle: null,
+                    currentStepTitle: newMode === 'break' ? null : get().currentStepTitle,
                     revealSeed: null,
                 });
             },
