@@ -24,16 +24,7 @@ export default function FocusSessionTab({ onNavigateToCheckin }) {
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full items-center">
-            <div className="text-center max-w-xs">
-                <h2 className="text-base-md font-bold text-gray-800 dark:text-gray-100">
-                    ADHD Focus Timer
-                </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                    Structured time blocks with low-distraction audio and visual feedback.
-                </p>
-            </div>
-
+        <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-stretch items-center">
             <FocusTimer
                 onSessionComplete={handleSessionComplete}
                 onDistractionBlocked={handleDistractionBlocked}

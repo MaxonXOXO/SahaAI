@@ -44,7 +44,7 @@ function getSeedGradient(seed) {
 
 /**
  * RevealTimer - Alternative Focus Timer view where a hidden image uncovers
- * grid tile by tile as session time progresses.
+ * grid tile by tile as session time progresses. Drops fixed aspect-ratio to fill flexible area.
  */
 export default function RevealTimer({ progressFraction, revealSeed, displayMins, displaySecs, celebrationMsg, isRunning }) {
     const activeSeed = revealSeed || 42;
@@ -69,7 +69,7 @@ export default function RevealTimer({ progressFraction, revealSeed, displayMins,
     const revealedTileCount = Math.round(totalTiles * Math.min(1, Math.max(0, progressFraction)));
 
     return (
-        <div className="relative w-full max-w-xs aspect-[4/3] rounded-2xl overflow-hidden my-2 border-4 border-purple-200 dark:border-purple-900/60 shadow-md bg-gray-200 dark:bg-gray-800">
+        <div className="relative w-full h-full min-h-0 flex-1 rounded-2xl overflow-hidden my-1 border-2 border-slate-700/60 shadow-inner bg-slate-950">
             {/* Background Image / Seed Gradient Fallback */}
             {imgError ? (
                 <div
@@ -102,7 +102,7 @@ export default function RevealTimer({ progressFraction, revealSeed, displayMins,
                     return (
                         <div
                             key={tileIndex}
-                            className={`bg-gray-100 dark:bg-gray-900 border-[0.5px] border-gray-200/40 dark:border-gray-800/40 transition-opacity duration-600 ease-out ${
+                            className={`bg-slate-950 border-[0.5px] border-slate-900/50 transition-opacity duration-600 ease-out ${
                                 isRevealed ? 'opacity-0' : 'opacity-100'
                             }`}
                         />
@@ -118,7 +118,7 @@ export default function RevealTimer({ progressFraction, revealSeed, displayMins,
             )}
 
             {/* Time Overlay Chip */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-xs border border-white/20 text-white flex items-center gap-2 shadow-lg z-20">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white flex items-center gap-2 shadow-lg z-20">
                 <span className="text-xl font-black font-mono tracking-tight">
                     {displayMins}:{displaySecs}
                 </span>
