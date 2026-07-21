@@ -25,7 +25,7 @@ export default function FocusModeScreen() {
     const streakDays = useFocusStore((s) => s.streakDays);
 
     return (
-        <div className={`flex-1 flex flex-col min-h-screen ${isLowVision ? 'bg-gray-950 text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100'}`}>
+        <div className={`flex-1 flex flex-col h-[calc(100dvh-5rem)] overflow-y-auto ${isLowVision ? 'bg-gray-950 text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100'}`}>
             <ScreenHeader
                 title="ADHD Focus Mode"
                 showBack={true}
