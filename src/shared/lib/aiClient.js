@@ -245,6 +245,54 @@ export async function sendMessage(systemPrompt, messages, options = {}) {
 }
 
 /**
+ * Generate a 768-dimensional vector embedding for a given text string using Gemini API.
+ * @param {string} text
+ * @returns {Promise<number[]>} - 768-dimensional vector array
+ */
+export async function getEmbedding(text) {
+    const apiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY)
+        ? import.meta.env.VITE_GEMINI_API_KEY
+        : (typeof process !== 'undefined' && process.env ? process.env.VITE_GEMINI_API_KEY : undefined);
+    if (!apiKey) {
+        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
+    }
+
+
+
+    const cleanText = (text || '').trim();
+    if (!cleanText) return [];
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: 'models/gemini-embedding-001',
+            content: {
+                parts: [{ text: cleanText }]
+            },
+            outputDimensionality: 768
+        })
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini Embedding API error ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const values = data?.embedding?.values;
+
+    if (!values || !Array.isArray(values)) {
+        throw new Error('Invalid response structure from Gemini Embedding API');
+    }
+
+    return values;
+}
+
+
+/**
  * Generate a short summary of a speech therapy session and flag sensitive content.
  * @param {string} transcript - The raw text of the conversation.
  * @param {string} sessionTarget - The focus area of the session (e.g. 'slow_clear').

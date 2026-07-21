@@ -6,7 +6,9 @@ import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
 import { supabase } from '../../shared/lib/supabaseClient';
 import { buildSystemPrompt, sendMessage, generateSpeech } from '../../shared/lib/aiClient';
+import { queryMemory } from '../../shared/lib/memoryService';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
+
 
 export default function ChatScreen() {
     const { chatId } = useParams();
@@ -132,13 +134,29 @@ export default function ChatScreen() {
         await supabase.from('messages').insert(userMsg);
 
         // 2. Build system prompt from current profile
-        const systemPrompt = buildSystemPrompt(profile);
+        let systemPrompt = buildSystemPrompt(profile);
+
+        // 2b. Check if query is memory/recall relevant (using lightweight question/recall heuristic)
+        const isRecallQuery = /[?]|where|what|when|who|why|how|remember|keys|bag|find|put|left|did i|location|place/i.test(text);
+        if (isRecallQuery && profile?.id) {
+            try {
+                const { data: memoryMatches } = await queryMemory(text, profile.id, 0.65, 3);
+                if (memoryMatches && memoryMatches.length > 0) {
+                    const memoryContext = `\n\nRelevant memory notes for this user (only use if directly relevant to their question, otherwise ignore):\n` +
+                        memoryMatches.map((m) => `- ${m.content}`).join('\n');
+                    systemPrompt += memoryContext;
+                }
+            } catch (memErr) {
+                console.warn('Memory search for chat system prompt failed silently:', memErr);
+            }
+        }
 
         // 3. Build full history for the API (include the new message)
         const history = [...messages, userMsg].map((m) => ({
             role: m.role,
             content: m.content,
         }));
+
 
         try {
             // 4. Call Gemini

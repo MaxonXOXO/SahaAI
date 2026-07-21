@@ -8,8 +8,10 @@ import {
     ListChecks,
     Volume2,
     BookOpen,
+    Bookmark,
     ChevronRight
 } from 'lucide-react';
+
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
@@ -120,7 +122,18 @@ const TOOLS_LIST = [
         bgTint: 'bg-[#E8F8F0] dark:bg-emerald-950/40',
         badgeBg: 'bg-[#7C3AED]',
     },
+    {
+        key: 'dearDiary',
+        title: 'Dear Diary & Memory',
+        description: 'Personal journal entries & smart searchable memory notes.',
+        icon: Bookmark,
+        path: '/dear-diary',
+        image: socialStoryImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
 ];
+
 
 export default function ToolsScreen() {
     const navigate = useNavigate();
