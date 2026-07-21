@@ -31,7 +31,7 @@ export default function LoginScreen() {
             return;
         }
 
-        navigate('/dashboard');
+        navigate('/home');
     };
 
     return (

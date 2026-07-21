@@ -18,6 +18,9 @@ const useProfileStore = create((set, get) => ({
     avatar_base64: '',
     role: 'student',
     language: 'en',
+    age_range: null,
+    is_minor: false,
+    region: '',
 
     needs: {
         dyslexia: false,
@@ -86,7 +89,7 @@ const useProfileStore = create((set, get) => ({
     checkSession: async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-            set({ isAuthenticated: true });
+            set({ id: session.user.id, isAuthenticated: true });
             await get().fetchProfile();
         } else {
             useSettingsStore.getState().loadSettings(null);
@@ -102,6 +105,7 @@ const useProfileStore = create((set, get) => ({
             set({ loading: false });
             return;
         }
+        set({ id: user.id });
 
         const { data, error } = await supabase
             .from('profiles')
@@ -128,6 +132,9 @@ const useProfileStore = create((set, get) => ({
             avatar_base64: data.avatar_base64 ?? '',
             role: data.role ?? 'student',
             language: data.language ?? 'en',
+            age_range: data.age_range ?? null,
+            is_minor: data.is_minor ?? (data.age_range === 'under_13' || data.age_range === '13_17'),
+            region: data.region ?? '',
             needs: {
                 dyslexia: data.has_dyslexia ?? false,
                 adhd: data.has_adhd ?? false,
@@ -146,17 +153,48 @@ const useProfileStore = create((set, get) => ({
             loading: false,
         });
         useSettingsStore.getState().loadSettings(data.id);
+        if (data.language) {
+            useSettingsStore.getState().updateSettings({
+                displayLanguage: data.language,
+                ttsLanguage: data.language,
+                aiLanguage: data.language,
+                speechLanguage: data.language,
+            });
+        }
     },
 
     updateProfile: async (updates) => {
         set((state) => ({ ...state, ...updates }));
+        if (updates.language) {
+            useSettingsStore.getState().updateSettings({
+                displayLanguage: updates.language,
+                ttsLanguage: updates.language,
+                aiLanguage: updates.language,
+                speechLanguage: updates.language,
+            });
+        }
         await get().syncProfile();
     },
 
     toggleNeed: async (needKey) => {
-        set((state) => ({
-            needs: { ...state.needs, [needKey]: !state.needs[needKey] },
-        }));
+        set((state) => {
+            const newNeeds = { ...state.needs, [needKey]: !state.needs[needKey] };
+            const activeNeeds = Object.keys(newNeeds).filter(k => newNeeds[k]);
+            let newPrimaryMode = state.primaryMode;
+            
+            if (activeNeeds.length === 0) {
+                newPrimaryMode = null;
+            } else if (activeNeeds.length === 1) {
+                newPrimaryMode = activeNeeds[0];
+            } else if (!activeNeeds.includes(newPrimaryMode)) {
+                newPrimaryMode = activeNeeds[0];
+            }
+            
+            return {
+                needs: newNeeds,
+                primaryMode: newPrimaryMode
+            };
+        });
         await get().syncProfile();
     },
 
@@ -173,6 +211,8 @@ const useProfileStore = create((set, get) => ({
             avatar_base64: state.avatar_base64,
             role: state.role,
             language: state.language,
+            age_range: state.age_range,
+            region: state.region,
             has_dyslexia: state.needs.dyslexia,
             has_adhd: state.needs.adhd,
             has_autism: state.needs.autism,
@@ -187,7 +227,7 @@ const useProfileStore = create((set, get) => ({
     reset: () => {
         set({
             id: null, email: '', username: '', name: '', bio: '', pronouns: '', gender: '', avatar_base64: '',
-            role: 'student', language: 'en', primaryMode: null,
+            role: 'student', language: 'en', age_range: null, is_minor: false, region: '', primaryMode: null,
             needs: { dyslexia: false, adhd: false, autism: false, dyscalculia: false, lowVision: false },
             progress: { readingStreak: 0, focusSessionsWeek: 0, mathAccuracy: 0, dailyStreak: 0 },
             isAuthenticated: false, loading: false, error: null,

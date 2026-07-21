@@ -1,8 +1,69 @@
-import { useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ExternalLink, ListOrdered, Play, Pause, Square, Volume2, VolumeX, Loader2, Sparkles } from 'lucide-react';
+import { useRef, useState, lazy, Suspense } from 'react';
+import { ChevronDown, ChevronUp, ExternalLink, ListOrdered, Play, Pause, Square, Volume2, VolumeX, Loader2, Sparkles, BookOpen } from 'lucide-react';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
+import { generateLearnImage } from '../../shared/lib/aiClient';
+import useProfileStore from '../../store/useProfileStore';
+
+const InlineDyslexiaReader = lazy(() => import('./InlineDyslexiaReader'));
+
+function StepItem({ step, index, topic }) {
+    const [image, setImage] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+
+    const generateImage = async () => {
+        if (loading || image) return;
+        setLoading(true);
+        setError(false);
+        try {
+            // Include the overarching topic so the AI has context (e.g. doesn't generate junk food for a healthy snack step)
+            const url = await generateLearnImage(`${topic} - Step: ${step}`);
+            setImage(url);
+        } catch (err) {
+            console.error('Failed to generate step image:', err);
+            setError(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <li className="flex flex-col gap-3 bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden">
+            <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary font-bold shrink-0">
+                    {index + 1}
+                </div>
+                <div className="flex-1 mt-1 text-base-sm font-semibold text-gray-800 dark:text-gray-100 leading-relaxed">
+                    {renderMarkdown(step)}
+                </div>
+            </div>
+            
+            {image ? (
+                <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <img src={image} alt={`Visual for step ${index + 1}`} className="w-full h-auto object-cover max-h-56" />
+                </div>
+            ) : (
+                <div className="pl-11 mt-1">
+                    <button 
+                        onClick={generateImage} 
+                        disabled={loading}
+                        className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-full transition-colors disabled:opacity-50"
+                    >
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                        {loading ? 'Generating...' : 'Generate Step Visual (Cloudflare AI)'}
+                    </button>
+                    {error && <p className="text-xs text-red-500 mt-2 font-semibold">Failed to generate image. Try again.</p>}
+                </div>
+            )}
+        </li>
+    );
+}
 
 export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridItem }) {
+    const primaryMode = useProfileStore((s) => s.primaryMode);
+    const isDyslexicOrLowVision = primaryMode === 'dyslexia' || primaryMode === 'lowVision';
+    const [showDyslexiaReader, setShowDyslexiaReader] = useState(false);
+    
     const [showSteps, setShowSteps] = useState(false);
     const [videoStarted, setVideoStarted] = useState(false);
     const [isExpanding, setIsExpanding] = useState(false);
@@ -49,7 +110,6 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
     };
 
     return <article className="saha-card overflow-hidden flex flex-col h-full rounded-card border-2 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-        {card.image_url && <img src={card.image_url} alt={`An AI-generated learning illustration for ${card.topic}`} className="h-44 w-full object-cover shrink-0" />}
         <div className="p-4">
             <div className="mb-2 flex items-center justify-between gap-3">
                 <p className="text-xs font-bold uppercase tracking-wide text-primary">{card.source === 'daily_batch' ? 'Suggested for you' : 'You asked'}</p>
@@ -59,29 +119,66 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
             
             {shouldRenderAsStub ? (
                 <div className="mt-2">
-                    <p className="text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{displaySummary}</p>
-                    <button 
-                        onClick={handleExpand} 
-                        disabled={isExpanding}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-card bg-primary px-4 py-3 text-sm font-bold text-white shadow-md disabled:opacity-70"
-                    >
-                        {isExpanding ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                        {isExpanding ? 'Loading...' : 'Learn More & Watch Video'}
-                    </button>
+                    {showDyslexiaReader ? (
+                        <Suspense fallback={<div className="flex items-center justify-center p-6 text-sm text-gray-500 animate-pulse">Loading Reading Assistant...</div>}>
+                            <InlineDyslexiaReader text={displaySummary} onClose={() => setShowDyslexiaReader(false)} />
+                        </Suspense>
+                    ) : (
+                        <div className="text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(displaySummary)}</div>
+                    )}
+                    
+                    {!showDyslexiaReader && (
+                        <div className="mt-4 flex w-full flex-wrap gap-2 sm:flex-nowrap">
+                            {isDyslexicOrLowVision && (
+                                <button 
+                                    onClick={() => setShowDyslexiaReader(true)}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-card bg-green-100 dark:bg-green-900/40 px-3 py-3 text-sm font-bold text-green-700 dark:text-green-400 shadow-sm transition-transform active:scale-95"
+                                    aria-label="Reading Assistant"
+                                >
+                                    <BookOpen size={18} /> Read
+                                </button>
+                            )}
+                            
+                            <button 
+                                onClick={handleExpand} 
+                                disabled={isExpanding}
+                                className="flex-1 flex w-full items-center justify-center gap-2 rounded-card bg-primary px-4 py-3 text-sm font-bold text-white shadow-md disabled:opacity-70 transition-transform active:scale-95"
+                            >
+                                {isExpanding ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                                {isExpanding ? 'Loading...' : 'Learn More & Watch Video'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <>
-                    <div className="mt-2 text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(fullExplanation)}</div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <button onClick={() => onListen(card.id, `${card.topic}. ${fullExplanation}`)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card bg-primary/10 px-3 text-xs font-semibold text-primary">
-                            {isPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />}{isPlaying ? 'Stop' : 'Listen'}
-                        </button>
-                        {steps.length > 0 && <button onClick={() => setShowSteps((value) => !value)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card border border-gray-200 px-3 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">
+                    {showDyslexiaReader ? (
+                        <Suspense fallback={<div className="flex items-center justify-center p-6 text-sm text-gray-500 animate-pulse">Loading Reading Assistant...</div>}>
+                            <InlineDyslexiaReader text={fullExplanation} onClose={() => setShowDyslexiaReader(false)} />
+                        </Suspense>
+                    ) : (
+                        <div className="mt-2 text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(fullExplanation)}</div>
+                    )}
+                    
+                    {!showDyslexiaReader && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {!isDyslexicOrLowVision ? (
+                                <button onClick={() => onListen(card.id, `${card.topic}. ${fullExplanation}`)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card bg-primary/10 px-3 text-xs font-semibold text-primary">
+                                    {isPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />}{isPlaying ? 'Stop' : 'Listen'}
+                                </button>
+                            ) : (
+                                <button onClick={() => setShowDyslexiaReader(true)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card bg-green-100 dark:bg-green-900/40 px-3 text-xs font-semibold text-green-700 dark:text-green-400">
+                                    <BookOpen size={15} /> Reading Assistant
+                                </button>
+                            )}
+                            
+                            {steps.length > 0 && <button onClick={() => setShowSteps((value) => !value)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card border border-gray-200 px-3 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">
                             <ListOrdered size={15} /> Steps {showSteps ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>}
                     </div>
-                    {showSteps && <ol className="mt-3 space-y-2 border-l-2 border-primary/30 pl-4 text-base-sm text-gray-700 dark:text-gray-200">
-                        {steps.map((step, index) => <li key={`${card.id}-${index}`}><span className="font-bold text-primary">{index + 1}. </span>{step}</li>)}
+                    )}
+                    {showSteps && <ol className="mt-4 space-y-4">
+                        {steps.map((step, index) => <StepItem key={`${card.id}-${index}`} step={step} index={index} topic={card.topic} />)}
                     </ol>}
                     {card.video_id && <div className="relative mt-4 overflow-hidden rounded-card bg-black">
                         {/* disablekb=1 & controls=0 hides native YouTube controls */}

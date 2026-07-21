@@ -72,7 +72,7 @@ export const DISABILITY_PATCHES = [
         key: 'dyslexia',
         colorPatch: (isLightContrast) =>
             isLightContrast
-                ? { primary: '#B45309', primaryLight: '#D97706' }
+                ? { primary: '#9333EA', primaryLight: '#A855F7' } // Purple
                 : null,
         structurePatch: () => ({
             borderRadius: '20px',
@@ -82,7 +82,7 @@ export const DISABILITY_PATCHES = [
         key: 'adhd',
         colorPatch: (isLightContrast, alreadyClaimed) =>
             isLightContrast && !alreadyClaimed
-                ? { primary: '#DC2626', primaryLight: '#EF4444' }
+                ? { primary: '#16A34A', primaryLight: '#22C55E' } // Green
                 : null,
         structurePatch: () => ({
             spacingSection: '20px',
@@ -92,12 +92,20 @@ export const DISABILITY_PATCHES = [
         key: 'autism',
         colorPatch: (isLightContrast, alreadyClaimed) =>
             isLightContrast && !alreadyClaimed
-                ? { primary: '#2563EB', primaryLight: '#3B82F6' }
+                ? { primary: '#2563EB', primaryLight: '#3B82F6' } // Blue
                 : null,
         structurePatch: () => ({
             borderRadius: '8px',
             spacingSection: '20px',
         }),
+    },
+    {
+        key: 'dyscalculia',
+        colorPatch: (isLightContrast, alreadyClaimed) =>
+            isLightContrast && !alreadyClaimed
+                ? { primary: '#EA580C', primaryLight: '#F97316' } // Orange
+                : null,
+        structurePatch: () => ({}),
     },
 ];
 
@@ -116,7 +124,7 @@ export const DEFAULT_STRUCTURE = {
  *
  * Pure function — no side effects, fully testable.
  */
-export function buildTheme({ needs = {}, contrastMode = 'default' }) {
+export function buildTheme({ needs = {}, primaryMode = null, contrastMode = 'default' }) {
     // 1. Resolve contrast key (handle alias + lowVision auto-upgrade)
     let activeContrast = contrastMode === 'default' ? 'light' : contrastMode;
 
@@ -133,12 +141,26 @@ export function buildTheme({ needs = {}, contrastMode = 'default' }) {
     // 3. Determine if we are in a "light-contrast" scenario (so disability color patches apply)
     const isLightContrast = activeContrast === 'light';
 
-    // 4. Apply disability color patches in priority order
-    // Track whether primary color has been claimed by a higher-priority disability
+    // 4. Apply disability color patches
+    // Track whether primary color has been claimed
     let colorClaimed = false;
 
+    // First priority: Apply the active primaryMode color patch
+    if (primaryMode && primaryMode !== 'lowVision' && needs[primaryMode]) {
+        const patch = DISABILITY_PATCHES.find((p) => p.key === primaryMode);
+        if (patch?.colorPatch) {
+            const override = patch.colorPatch(isLightContrast, colorClaimed);
+            if (override) {
+                colors = { ...colors, ...override };
+                colorClaimed = true;
+            }
+        }
+    }
+
+    // Second priority: Fallback for other active needs
     for (const patch of DISABILITY_PATCHES) {
         if (patch.key === 'lowVision') continue; // already handled
+        if (patch.key === primaryMode) continue; // already handled above
         if (!needs[patch.key]) continue;
         if (patch.colorPatch) {
             const override = patch.colorPatch(isLightContrast, colorClaimed);

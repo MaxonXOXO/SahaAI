@@ -562,8 +562,6 @@ body {
   font-weight:    800 !important;
   letter-spacing: -0.01em !important;
   color:          var(--a11y-primary) !important;
-  border-left:    4px solid var(--a11y-primary) !important;
-  padding-left:   12px !important;
 }
 
 /* Generous tap targets */

@@ -3,9 +3,12 @@ import BottomNav from '../shared/components/BottomNav';
 import SignupScreen from '../features/auth/SignupScreen';
 import LoginScreen from '../features/auth/LoginScreen';
 import LanguageSelectionScreen from '../features/language-selection/Languageselectionscreen';
+import AgeRangeScreen from '../features/onboarding/AgeRangeScreen';
+import RegionScreen from '../features/onboarding/RegionScreen';
 import SplashScreen from '../features/splash/SplashScreen';
 import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
 import DashboardScreen from '../features/dashboard/DashboardScreen';
+import HomeScreen from '../features/home/HomeScreen';
 import ChatListScreen from '../features/ai-chat/ChatListScreen';
 import ChatScreen from '../features/ai-chat/ChatScreen';
 import ProfileScreen from '../features/profile/ProfileScreen';
@@ -50,13 +53,16 @@ export default function AppRoutes() {
                 <Routes>
                     {/* Onboarding */}
                     <Route path="/" element={<SplashScreen />} />
-                    <Route path="/language" element={<LanguageSelectionScreen />} />
                     <Route path="/signup" element={<SignupScreen />} />
                     <Route path="/login" element={<LoginScreen />} />
+                    <Route path="/language" element={<LanguageSelectionScreen />} />
+                    <Route path="/age-range" element={<AgeRangeScreen />} />
+                    <Route path="/region" element={<RegionScreen />} />
                     <Route path="/profile-setup" element={<ProfileSetupScreen />} />
 
                     {/* Main tabs */}
-                    <Route path="/dashboard" element={<DashboardScreen />} />
+                    <Route path="/home" element={<HomeScreen />} />
+                    <Route path="/dashboard" element={<Navigate to="/home" replace />} />
                     <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
                     <Route path="/learn" element={<LearnScreen />} />

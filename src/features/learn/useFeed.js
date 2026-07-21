@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../shared/lib/supabaseClient';
-import { findLearnVideo, generateDailyLearnTopics, generateLearnExplainer, generateLearnImage } from '../../shared/lib/aiClient';
+import { findLearnVideo, generateDailyLearnTopics, generateLearnExplainer } from '../../shared/lib/aiClient';
 
 const todayStart = () => {
     const date = new Date();
@@ -19,8 +19,7 @@ export default function useFeed(profile) {
 
     const createCard = useCallback(async (topic, source) => {
         const explainer = await generateLearnExplainer(profile, topic);
-        const [imageResult, videoResult] = await Promise.allSettled([
-            generateLearnImage(explainer.topic),
+        const [videoResult] = await Promise.allSettled([
             findLearnVideo(explainer.videoQuery, profileLanguage || 'en'),
         ]);
         return {
@@ -28,7 +27,7 @@ export default function useFeed(profile) {
             topic: explainer.topic,
             explanation: explainer.explanation,
             diagram_steps: explainer.diagramSteps.length ? explainer.diagramSteps : null,
-            image_url: imageResult.status === 'fulfilled' ? imageResult.value : null,
+            image_url: null,
             video_id: videoResult.status === 'fulfilled' ? videoResult.value : null,
             source,
             created_at: new Date().toISOString(),
@@ -70,14 +69,13 @@ export default function useFeed(profile) {
 
     const expandCard = useCallback(async (cardId, topic) => {
         const explainer = await generateLearnExplainer(profile, topic);
-        const [imageResult, videoResult] = await Promise.allSettled([
-            generateLearnImage(explainer.topic),
+        const [videoResult] = await Promise.allSettled([
             findLearnVideo(explainer.videoQuery, profileLanguage || 'en'),
         ]);
         const updates = {
             explanation: explainer.explanation,
             diagram_steps: explainer.diagramSteps.length ? explainer.diagramSteps : null,
-            image_url: imageResult.status === 'fulfilled' ? imageResult.value : null,
+            image_url: null,
             video_id: videoResult.status === 'fulfilled' ? videoResult.value : null,
         };
         const { data, error } = await supabase.from('learn_cards').update(updates).eq('id', cardId).select().single();

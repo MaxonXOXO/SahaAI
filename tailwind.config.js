@@ -6,9 +6,8 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#6D28D9', // purple, matches your sketches
-          light: '#8B5CF6',
-          dark: '#5B21B6',
+          DEFAULT: ({ opacityValue }) => opacityValue === undefined ? 'var(--a11y-primary)' : `color-mix(in srgb, var(--a11y-primary) calc(${opacityValue} * 100%), transparent)`,
+          light: ({ opacityValue }) => opacityValue === undefined ? 'var(--a11y-primary-light)' : `color-mix(in srgb, var(--a11y-primary-light) calc(${opacityValue} * 100%), transparent)`,
         },
         surface: {
           DEFAULT: '#FFFFFF',

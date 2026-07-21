@@ -19,31 +19,51 @@ export default function LanguageSelectionScreen() {
     const [selected, setSelected] = useState(storeLanguage || 'en');
 
     const handleContinue = async () => {
-        // Update local Zustand state
+        // Update local Zustand profile store & settings store immediately
         useProfileStore.setState({ language: selected });
+        useSettingsStore.getState().updateSettings({
+            displayLanguage: selected,
+            ttsLanguage: selected,
+            aiLanguage: selected,
+            speechLanguage: selected,
+        });
 
-        // Direct Supabase update using session user id
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = id || session?.user?.id;
+        try {
+            // Direct Supabase update using session user id
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = id || session?.user?.id;
 
-        if (userId) {
-            await supabase
-                .from('profiles')
-                .update({ language: selected })
-                .eq('id', userId);
+            if (userId) {
+                await supabase
+                    .from('profiles')
+                    .update({ language: selected })
+                    .eq('id', userId);
+            }
+        } catch (err) {
+            console.error('Failed to update language in Supabase:', err);
+        } finally {
+            navigate('/age-range');
         }
-
-        navigate('/profile-setup');
     };
 
     return (
-        <div className="flex-1 flex flex-col justify-center px-6 py-8">
-            <h1 className="text-base-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
-                Choose Your Preferred Language
-            </h1>
-            <p className="text-base-sm text-gray-400 mb-6">
-                You can change this anytime in settings.
-            </p>
+        <div className="flex-1 flex flex-col justify-between px-6 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div>
+                {/* Top Progress Dots (Step 2 of 5) */}
+                <div className="flex items-center justify-center gap-1.5 mb-6">
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary/30" />
+                    <div className="w-8 h-2.5 rounded-full bg-primary" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-700" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-700" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-700" />
+                </div>
+
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+                    Choose Your Preferred Language
+                </h1>
+                <p className="text-sm text-gray-400 mb-6">
+                    You can change this anytime in settings.
+                </p>
 
             <div className="flex flex-col gap-3">
                 {LANGUAGES.map((lang) => {
@@ -80,10 +100,13 @@ export default function LanguageSelectionScreen() {
                     );
                 })}
             </div>
+            </div>
 
-            <Button onClick={handleContinue} className="mt-8 w-full">
-                Continue
-            </Button>
+            <div className="mt-8 pt-4">
+                <Button onClick={handleContinue} className="w-full py-4 text-base font-semibold">
+                    Continue
+                </Button>
+            </div>
         </div>
     );
 }
