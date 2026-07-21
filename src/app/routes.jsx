@@ -24,7 +24,9 @@ import SocialStoryScreen from '../features/social-story/SocialStoryScreen';
 import LearnScreen from '../features/learn/LearnScreen';
 import LearnDetailScreen from '../features/learn/LearnDetailScreen';
 import SpeechTherapyScreen from '../features/speech-therapy/SpeechTherapyScreen';
+import DiaryMemoryScreen from '../features/dear-diary/DiaryMemoryScreen';
 import { getRouteMeta } from './config/routeMeta';
+
 
 /**
  * Temporary placeholder — swap for real feature screen as each
@@ -85,6 +87,7 @@ export default function AppRoutes() {
                     <Route path="/settings" element={<Placeholder name="Settings" />} />
                     <Route path="/aac-board" element={<AACBoardScreen />} />
                     <Route path="/speech-therapy" element={<SpeechTherapyScreen />} />
+                    <Route path="/dear-diary" element={<DiaryMemoryScreen />} />
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
