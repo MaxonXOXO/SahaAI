@@ -204,88 +204,83 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
             <div className="bg-slate-900/80 border border-slate-700/60 shadow-2xl shadow-indigo-950/60 backdrop-blur-md rounded-2xl p-3 sm:p-4 w-full h-full flex-1 min-h-0 flex flex-col justify-between items-center gap-2">
                 {/* Top Controls Container */}
                 <div className="shrink-0 flex flex-col gap-2 w-full">
-                    {/* Top Row: Focus/Break segmented control beside compact Classic/Reveal control */}
+                    {/* Row 1: Full-width Flip Tile Switcher */}
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={!isFocus}
+                        aria-label="Switch between focus and break"
+                        disabled={isRunning}
+                        onClick={() => {
+                            if (isRunning) return;
+                            if (isFocus) {
+                                handleSetMode('break', 5);
+                            } else {
+                                handleSetMode('focus', 25);
+                            }
+                        }}
+                        className={`w-full h-16 shrink-0 [perspective:1000px] text-xs font-bold transition-opacity ${
+                            isRunning ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'
+                        }`}
+                    >
+                        <div
+                            className={`relative w-full h-full rounded-2xl transition-transform duration-400 [transform-style:preserve-3d] motion-reduce:transition-none ${
+                                !isFocus ? '[transform:rotateY(180deg)]' : ''
+                            }`}
+                        >
+                            {/* Front Face: Focus */}
+                            <div className="absolute inset-0 w-full h-full rounded-2xl bg-red-600 text-white shadow-md shadow-red-600/30 flex flex-col items-center justify-center p-1.5 [backface-visibility:hidden]">
+                                <span className="font-extrabold text-sm sm:text-base flex items-center gap-1.5">
+                                    🔥 Focus
+                                </span>
+                                <span className="text-[10px] text-white/60 font-semibold leading-none mt-1">
+                                    {isRunning ? 'pause to switch' : 'tap to switch'}
+                                </span>
+                            </div>
+
+                            {/* Back Face: Break */}
+                            <div className="absolute inset-0 w-full h-full rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/30 flex flex-col items-center justify-center p-1.5 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                                <span className="font-extrabold text-sm sm:text-base flex items-center gap-1.5">
+                                    ☕ Break
+                                </span>
+                                <span className="text-[10px] text-white/60 font-semibold leading-none mt-1">
+                                    {isRunning ? 'pause to switch' : 'tap to switch'}
+                                </span>
+                            </div>
+                        </div>
+                    </button>
+
+                    {/* Row 2: Select Dropdowns */}
                     <div className="flex items-center gap-2 w-full">
-                        {/* Mode Selectors */}
-                        <div className="flex items-center p-1 bg-slate-950/80 rounded-2xl flex-1 border border-slate-800">
-                            <button
-                                onClick={() => handleSetMode('focus', 25)}
-                                className={`flex-1 py-1.5 sm:py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all ${
-                                    isFocus
-                                        ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                }`}
+                        {/* Preset Select (Focus Mode only) */}
+                        {isFocus && (
+                            <select
+                                aria-label="Session duration"
+                                value={durationMinutes}
+                                onChange={(e) => handleSetMode('focus', Number(e.target.value))}
+                                className="flex-1 rounded-xl py-2 px-3 bg-slate-950/80 border border-slate-700/80 text-slate-200 text-xs font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
                             >
-                                <Flame size={14} />
-                                Focus (25m)
-                            </button>
-                            <button
-                                onClick={() => handleSetMode('break', 5)}
-                                className={`flex-1 py-1.5 sm:py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all ${
-                                    !isFocus
-                                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                }`}
-                            >
-                                <Bot size={14} className="text-cyan-300 animate-pulse" />
-                                Break (5m)
-                            </button>
-                        </div>
+                                {![5, 15, 25, 45].includes(durationMinutes) && (
+                                    <option value={durationMinutes}>{durationMinutes} min</option>
+                                )}
+                                <option value={5}>5 min</option>
+                                <option value={15}>15 min</option>
+                                <option value={25}>25 min</option>
+                                <option value={45}>45 min</option>
+                            </select>
+                        )}
 
-                        {/* Compact Timer Style Switcher (~130px, icon-only ⏱️/🖼️) */}
-                        <div className="flex items-center p-1 bg-slate-950/80 rounded-2xl shrink-0 w-[120px] sm:w-[130px] text-xs font-bold border border-slate-800">
-                            <button
-                                type="button"
-                                onClick={() => setTimerStyle('classic')}
-                                aria-label="Classic Timer"
-                                title="Classic Timer"
-                                className={`flex-1 py-1.5 sm:py-2 rounded-xl transition-all flex items-center justify-center ${
-                                    timerStyle === 'classic'
-                                        ? 'bg-slate-800 text-slate-100 shadow-xs'
-                                        : 'text-slate-500 hover:text-slate-300'
-                                }`}
-                            >
-                                ⏱️
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setTimerStyle('reveal')}
-                                aria-label="Picture Reveal Timer"
-                                title="Picture Reveal Timer"
-                                className={`flex-1 py-1.5 sm:py-2 rounded-xl transition-all flex items-center justify-center ${
-                                    timerStyle === 'reveal'
-                                        ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
-                                        : 'text-slate-500 hover:text-slate-300'
-                                }`}
-                            >
-                                🖼️
-                            </button>
-                        </div>
+                        {/* Timer Style Select (Always Visible) */}
+                        <select
+                            aria-label="Timer style"
+                            value={timerStyle}
+                            onChange={(e) => setTimerStyle(e.target.value)}
+                            className="flex-1 rounded-xl py-2 px-3 bg-slate-950/80 border border-slate-700/80 text-slate-200 text-xs font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        >
+                            <option value="classic">⏱️ Classic</option>
+                            <option value="reveal">🖼️ Picture Reveal</option>
+                        </select>
                     </div>
-
-                    {/* Duration Presets for Focus — Equal-width chips in ONE row */}
-                    {isFocus && (
-                        <div className="flex items-center gap-1.5 w-full">
-                            {[
-                                { mins: 5, label: '☄️ 5m' },
-                                { mins: 15, label: '15m' },
-                                { mins: 25, label: '25m' },
-                                { mins: 45, label: '45m' },
-                            ].map(({ mins, label }) => (
-                                <button
-                                    key={mins}
-                                    onClick={() => handleSetMode('focus', mins)}
-                                    className={`flex-1 whitespace-nowrap py-1.5 rounded-xl text-xs font-bold text-center transition-all ${
-                                        durationMinutes === mins
-                                            ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
-                                            : 'bg-slate-800/80 text-slate-300 border border-slate-700/60 hover:bg-slate-700/80'
-                                    }`}
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
                 </div>
 
                 {/* Growing Timer Visual Area: Reveal View vs Scaled Classic Ring */}
