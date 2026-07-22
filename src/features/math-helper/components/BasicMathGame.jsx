@@ -5,13 +5,65 @@ import { generateMathProblem } from '../lib/generateMathProblem';
 import { logActivity } from '../../../shared/lib/logActivity';
 import useProfileStore from '../../../store/useProfileStore';
 import IconButton from '../../../shared/components/IconButton';
+import Button from '../../../shared/components/Button';
+import StoryReadAloud from './StoryReadAloud';
+
+// Pure helper to render visual quantity representations
+function renderQuantityVisual(count, emoji, options = {}) {
+    const threshold = 20;
+    const isSmall = Number.isInteger(count) && count > 0 && count <= threshold;
+
+    if (isSmall) {
+        const { showRemovedFromIndex } = options;
+        return (
+            <div className="flex flex-wrap gap-1.5 justify-center">
+                {Array.from({ length: count }).map((_, idx) => {
+                    const isRemoved = showRemovedFromIndex !== undefined && idx >= showRemovedFromIndex;
+                    return (
+                        <div key={idx} className="relative inline-block">
+                            <span 
+                                className={`text-3xl filter drop-shadow transition-opacity duration-300 ${
+                                    isRemoved ? 'opacity-25' : 'opacity-100'
+                                }`}
+                            >
+                                {emoji}
+                            </span>
+                            {isRemoved && (
+                                <span className="absolute inset-0 flex items-center justify-center text-red-500 font-extrabold text-sm pointer-events-none drop-shadow-md select-none">
+                                    ❌
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    } else {
+        const { isCompactRemoved } = options;
+        return (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 bg-black/20 rounded-xl border border-white/10 ${isCompactRemoved ? 'opacity-30' : ''}`}>
+                <span className="text-3xl filter drop-shadow">{emoji}</span>
+                <span className="text-base font-bold text-white tracking-wide">
+                    × {count}
+                </span>
+                {isCompactRemoved && (
+                    <span className="text-red-500 font-black text-sm ml-1 select-none">
+                        ❌
+                    </span>
+                )}
+            </div>
+        );
+    }
+}
 
 export default function BasicMathGame({ 
     operation = '+', 
     operandA, 
     operandB, 
     entryPath = 'operation-tile',
-    onRestart
+    onRestart,
+    onEnterAnother,
+    onSurpriseMe
 }) {
     const navigate = useNavigate();
     const userId = useProfileStore((s) => s.id);
@@ -30,14 +82,22 @@ export default function BasicMathGame({
     const [isChoiceCorrect, setIsChoiceCorrect] = useState(null);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
-    const fetchProblem = async (diff = difficulty, resetFirstRound = false) => {
+    // Local state tracking which path (custom vs random) is active
+    const [activePath, setActivePath] = useState(entryPath);
+
+    useEffect(() => {
+        setActivePath(entryPath);
+    }, [entryPath]);
+
+    const fetchProblem = async (diff = difficulty, resetFirstRound = false, forcedPath) => {
         setIsLoading(true);
         setProblem(null);
         setSelectedChoice(null);
         setIsChoiceCorrect(null);
         
         const checkFirst = resetFirstRound ? true : isFirstRound;
-        const isCustomPath = entryPath === 'custom';
+        const currentPath = forcedPath !== undefined ? forcedPath : activePath;
+        const isCustomPath = currentPath === 'custom';
 
         try {
             const data = await generateMathProblem({
@@ -84,18 +144,31 @@ export default function BasicMathGame({
                     correct,
                     operation: problem.operation,
                     difficulty,
-                    entryPath
+                    entryPath: activePath
                 });
             }
         } catch (err) {
             console.error('Failed to log math activity:', err);
         }
 
-        // Delay before transitioning to next problem
-        setTimeout(() => {
-            fetchProblem();
+        // Delay before transitioning to next problem only if not custom flow
+        if (activePath !== 'custom') {
+            setTimeout(() => {
+                fetchProblem();
+                setIsTransitioning(false);
+            }, 1800);
+        } else {
             setIsTransitioning(false);
-        }, 1800);
+        }
+    };
+
+    const handleSurpriseMe = () => {
+        setActivePath('operation-tile');
+        setIsFirstRound(false);
+        if (onSurpriseMe) {
+            onSurpriseMe();
+        }
+        fetchProblem(difficulty, false, 'operation-tile');
     };
 
     const handleDifficultyChange = (newDiff) => {
@@ -171,91 +244,96 @@ export default function BasicMathGame({
                 ) : problem ? (
                     <div className="w-full flex flex-col items-center gap-5 relative z-10">
                         {/* Question Text */}
-                        <p className="text-center font-bold text-base-md leading-relaxed text-[#f4faf6] max-w-[280px]">
-                            {problem.story}
-                        </p>
+                        <StoryReadAloud text={problem.story} />
 
                         {/* Visual Count Display */}
                         <div className="flex flex-wrap items-center justify-center gap-3 p-3 bg-black/10 rounded-xl border border-white/5 min-h-[72px] min-w-[200px]">
                             
                             {/* Addition (+) */}
                             {problem.operation === '+' && (
-                                <div className="flex items-center gap-3">
-                                    <div className="flex flex-wrap gap-1.5 justify-center max-w-[120px]">
-                                        {Array.from({ length: problem.operandA }).map((_, i) => (
-                                            <span key={`add-a-${i}`} className="text-3xl filter drop-shadow">
-                                                {problem.itemEmoji}
-                                            </span>
-                                        ))}
+                                <div className="flex items-center justify-center gap-3">
+                                    <div className="max-w-[120px]">
+                                        {renderQuantityVisual(problem.operandA, problem.itemEmoji)}
                                     </div>
                                     <span className="text-2xl font-black text-[#dcedc8]">+</span>
-                                    <div className="flex flex-wrap gap-1.5 justify-center max-w-[120px]">
-                                        {Array.from({ length: problem.operandB }).map((_, i) => (
-                                            <span key={`add-b-${i}`} className="text-3xl filter drop-shadow">
-                                                {problem.itemEmoji}
-                                            </span>
-                                        ))}
+                                    <div className="max-w-[120px]">
+                                        {renderQuantityVisual(problem.operandB, problem.itemEmoji)}
                                     </div>
                                 </div>
                             )}
 
                             {/* Subtraction (-) */}
                             {problem.operation === '-' && (
-                                <div className="flex flex-wrap gap-1.5 items-center justify-center max-w-[280px]">
-                                    {Array.from({ length: problem.operandA }).map((_, idx) => {
-                                        const isRemoved = idx >= (problem.operandA - problem.operandB);
-                                        return (
-                                            <div key={`sub-${idx}`} className="relative">
-                                                <span className={`text-3xl filter drop-shadow transition-opacity ${isRemoved ? 'opacity-25' : 'opacity-100'}`}>
-                                                    {problem.itemEmoji}
-                                                </span>
-                                                {isRemoved && (
-                                                    <span className="absolute inset-0 flex items-center justify-center text-red-500 font-extrabold text-sm pointer-events-none drop-shadow-md select-none">
-                                                        ❌
-                                                    </span>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                <div className="flex items-center justify-center gap-3">
+                                    {Number.isInteger(problem.operandA) && problem.operandA > 0 && problem.operandA <= 20 &&
+                                     Number.isInteger(problem.operandB) && problem.operandB > 0 && problem.operandB <= 20 ? (
+                                        renderQuantityVisual(problem.operandA, problem.itemEmoji, { showRemovedFromIndex: Math.max(0, problem.operandA - problem.operandB) })
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            {renderQuantityVisual(problem.operandA, problem.itemEmoji)}
+                                            <span className="text-2xl font-black text-[#dcedc8]">-</span>
+                                            {renderQuantityVisual(problem.operandB, problem.itemEmoji, { isCompactRemoved: true })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* Multiplication (*) */}
                             {problem.operation === '*' && (
                                 <div className="flex flex-col gap-1.5 items-center justify-center p-1 bg-black/10 rounded-lg">
-                                    {Array.from({ length: problem.operandA }).map((_, rIdx) => (
-                                        <div key={`mul-row-${rIdx}`} className="flex gap-1.5">
-                                            {Array.from({ length: problem.operandB }).map((_, cIdx) => (
-                                                <span key={`mul-col-${cIdx}`} className="text-2xl filter drop-shadow">
-                                                    {problem.itemEmoji}
-                                                </span>
-                                            ))}
+                                    {Number.isInteger(problem.operandA) && problem.operandA > 0 && problem.operandA <= 20 &&
+                                     Number.isInteger(problem.operandB) && problem.operandB > 0 && problem.operandB <= 20 ? (
+                                        Array.from({ length: problem.operandA }).map((_, rIdx) => (
+                                            <div key={`mul-row-${rIdx}`} className="flex gap-1.5">
+                                                {Array.from({ length: problem.operandB }).map((_, cIdx) => (
+                                                    <span key={`mul-col-${cIdx}`} className="text-2xl filter drop-shadow">
+                                                        {problem.itemEmoji}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            {renderQuantityVisual(problem.operandA, problem.itemEmoji)}
+                                            <span className="text-2xl font-black text-[#dcedc8]">×</span>
+                                            {renderQuantityVisual(problem.operandB, problem.itemEmoji)}
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             )}
 
                             {/* Division (/) */}
                             {problem.operation === '/' && (
                                 <div className="flex flex-wrap gap-2 items-center justify-center max-w-[320px]">
-                                    {Array.from({ length: problem.operandB }).map((_, gIdx) => {
-                                        const itemsInGroup = Math.floor(problem.operandA / problem.operandB);
-                                        return (
-                                            <div key={`div-group-${gIdx}`} className="flex flex-col items-center p-1.5 bg-black/20 rounded-lg border border-white/5 min-w-[60px]">
-                                                <span className="text-[8px] font-bold text-[#dcedc8]/50 uppercase mb-0.5">Group {gIdx + 1}</span>
-                                                <div className="flex flex-wrap gap-0.5 justify-center max-w-[50px]">
-                                                    {Array.from({ length: itemsInGroup }).map((_, i) => (
-                                                        <span key={`div-item-${i}`} className="text-lg filter drop-shadow">
-                                                            {problem.itemEmoji}
-                                                        </span>
-                                                    ))}
+                                    {Number.isInteger(problem.operandA) && problem.operandA > 0 && problem.operandA <= 20 &&
+                                     Number.isInteger(problem.operandB) && problem.operandB > 0 && problem.operandB <= 20 ? (
+                                        <>
+                                            {Array.from({ length: problem.operandB }).map((_, gIdx) => {
+                                                const itemsInGroup = Math.floor(problem.operandA / problem.operandB);
+                                                return (
+                                                    <div key={`div-group-${gIdx}`} className="flex flex-col items-center p-1.5 bg-black/20 rounded-lg border border-white/5 min-w-[60px]">
+                                                        <span className="text-[8px] font-bold text-[#dcedc8]/50 uppercase mb-0.5">Group {gIdx + 1}</span>
+                                                        <div className="flex flex-wrap gap-0.5 justify-center max-w-[50px]">
+                                                            {Array.from({ length: itemsInGroup }).map((_, i) => (
+                                                                <span key={`div-item-${i}`} className="text-lg filter drop-shadow">
+                                                                    {problem.itemEmoji}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {problem.operandA % problem.operandB !== 0 && (
+                                                <div className="w-full text-center text-[9px] font-bold text-yellow-300/80 mt-1">
+                                                    (With remainder shared as decimals)
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                    {problem.operandA % problem.operandB !== 0 && (
-                                        <div className="w-full text-center text-[9px] font-bold text-yellow-300/80 mt-1">
-                                            (With remainder shared as decimals)
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            {renderQuantityVisual(problem.operandA, problem.itemEmoji)}
+                                            <span className="text-2xl font-black text-[#dcedc8]">÷</span>
+                                            {renderQuantityVisual(problem.operandB, problem.itemEmoji)}
                                         </div>
                                     )}
                                 </div>
@@ -282,40 +360,62 @@ export default function BasicMathGame({
                 </div>
             )}
 
-            {/* Colored Large-Number Answer Buttons */}
-            <div className="grid grid-cols-2 gap-3.5">
-                {shuffledChoices.map((choice, index) => {
-                    const colorClass = buttonColors[index % buttonColors.length];
-                    const isSelected = selectedChoice === choice;
-                    
-                    let activeBorderClass = 'border-b-4';
-                    if (selectedChoice !== null) {
-                        if (choice === problem?.answer) {
-                            activeBorderClass = 'ring-4 ring-green-400 scale-[1.02] border-b-0';
-                        } else if (isSelected) {
-                            activeBorderClass = 'ring-4 ring-red-400 opacity-80 border-b-0';
-                        } else {
-                            activeBorderClass = 'opacity-40 border-b-0';
+            {/* If user answered a custom problem, show action buttons; otherwise show answer choices */}
+            {selectedChoice !== null && activePath === 'custom' ? (
+                <div className="flex flex-col gap-3.5 w-full animate-fade-in">
+                    <Button
+                        onClick={onEnterAnother}
+                        variant="primary"
+                        size="lg"
+                        className="w-full font-bold shadow-md"
+                    >
+                        ✏️ Enter Another
+                    </Button>
+                    <Button
+                        onClick={handleSurpriseMe}
+                        variant="secondary"
+                        size="lg"
+                        className="w-full font-bold shadow-md bg-amber-500 hover:bg-amber-600 text-white border-none"
+                    >
+                        ✨ Surprise Me
+                    </Button>
+                </div>
+            ) : (
+                /* Colored Large-Number Answer Buttons */
+                <div className="grid grid-cols-2 gap-3.5">
+                    {shuffledChoices.map((choice, index) => {
+                        const colorClass = buttonColors[index % buttonColors.length];
+                        const isSelected = selectedChoice === choice;
+                        
+                        let activeBorderClass = 'border-b-4';
+                        if (selectedChoice !== null) {
+                            if (choice === problem?.answer) {
+                                activeBorderClass = 'ring-4 ring-green-400 scale-[1.02] border-b-0';
+                            } else if (isSelected) {
+                                activeBorderClass = 'ring-4 ring-red-400 opacity-80 border-b-0';
+                            } else {
+                                activeBorderClass = 'opacity-40 border-b-0';
+                            }
                         }
-                    }
 
-                    return (
-                        <button
-                            key={`${choice}-${index}`}
-                            disabled={isLoading || isTransitioning}
-                            onClick={() => handleAnswerClick(choice)}
-                            className={`
-                                min-h-[64px] rounded-2xl text-base-lg font-black tracking-wide transition-all select-none cursor-pointer
-                                active:scale-[0.95] disabled:cursor-not-allowed
-                                ${colorClass}
-                                ${activeBorderClass}
-                            `}
-                        >
-                            {choice}
-                        </button>
-                    );
-                })}
-            </div>
+                        return (
+                            <button
+                                key={`${choice}-${index}`}
+                                disabled={isLoading || isTransitioning}
+                                onClick={() => handleAnswerClick(choice)}
+                                className={`
+                                    min-h-[64px] rounded-2xl text-base-lg font-black tracking-wide transition-all select-none cursor-pointer
+                                    active:scale-[0.95] disabled:cursor-not-allowed
+                                    ${colorClass}
+                                    ${activeBorderClass}
+                                `}
+                            >
+                                {choice}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

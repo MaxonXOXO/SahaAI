@@ -1,20 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { Send, Loader2, Volume2, VolumeX } from 'lucide-react';
+import { useParams, useLocation } from 'react-router-dom';
+import { Send, Loader2, Volume2, VolumeX, Mic } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
+import useSettingsStore from '../../store/useSettingsStore';
 import { supabase } from '../../shared/lib/supabaseClient';
 import { buildSystemPrompt, sendMessage, generateSpeech } from '../../shared/lib/aiClient';
+import { queryMemory } from '../../shared/lib/memoryService';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
+
 
 export default function ChatScreen() {
     const { chatId } = useParams();
+    const location = useLocation();
     const profile = useProfileStore();
+    const displayLanguage = useSettingsStore((s) => s.displayLanguage);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
+    const [isListening, setIsListening] = useState(false);
     const [chatTitle, setChatTitle] = useState('Chat');
     const bottomRef = useRef(null);
+    const hasInitializedRef = useRef(false);
 
     // Audio text-to-speech states
     const [playingMessageId, setPlayingMessageId] = useState(null);
@@ -94,6 +101,15 @@ export default function ChatScreen() {
                 .eq('chat_id', chatId)
                 .order('created_at', { ascending: true });
             if (msgs) setMessages(msgs);
+
+            // Handle initial message from HomeScreen Search
+            if (msgs && msgs.length === 0 && location.state?.initialMessage && !hasInitializedRef.current) {
+                hasInitializedRef.current = true;
+                // Wait a tiny bit for state to settle, then send
+                setTimeout(() => {
+                    handleSend(location.state.initialMessage);
+                }, 100);
+            }
         };
 
         load();
@@ -104,8 +120,8 @@ export default function ChatScreen() {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSend = async () => {
-        const text = input.trim();
+    const handleSend = async (overrideText = null) => {
+        const text = (overrideText || input).trim();
         if (!text || sending) return;
 
         setInput('');
@@ -118,13 +134,29 @@ export default function ChatScreen() {
         await supabase.from('messages').insert(userMsg);
 
         // 2. Build system prompt from current profile
-        const systemPrompt = buildSystemPrompt(profile);
+        let systemPrompt = buildSystemPrompt(profile);
+
+        // 2b. Check if query is memory/recall relevant (using lightweight question/recall heuristic)
+        const isRecallQuery = /[?]|where|what|when|who|why|how|remember|keys|bag|find|put|left|did i|location|place/i.test(text);
+        if (isRecallQuery && profile?.id) {
+            try {
+                const { data: memoryMatches } = await queryMemory(text, profile.id, 0.65, 3);
+                if (memoryMatches && memoryMatches.length > 0) {
+                    const memoryContext = `\n\nRelevant memory notes for this user (only use if directly relevant to their question, otherwise ignore):\n` +
+                        memoryMatches.map((m) => `- ${m.content}`).join('\n');
+                    systemPrompt += memoryContext;
+                }
+            } catch (memErr) {
+                console.warn('Memory search for chat system prompt failed silently:', memErr);
+            }
+        }
 
         // 3. Build full history for the API (include the new message)
         const history = [...messages, userMsg].map((m) => ({
             role: m.role,
             content: m.content,
         }));
+
 
         try {
             // 4. Call Gemini
@@ -166,6 +198,29 @@ export default function ChatScreen() {
             e.preventDefault();
             handleSend();
         }
+    };
+
+    const startVoiceInput = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Voice input is not supported in this browser.");
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = displayLanguage === 'ml' ? 'ml-IN' : 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onerror = () => setIsListening(false);
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            setInput(prev => (prev ? prev + ' ' + transcript : transcript));
+        };
+
+        recognition.start();
     };
 
     return (
@@ -237,21 +292,30 @@ export default function ChatScreen() {
             {/* Input bar */}
             <div className="border-t-2 border-gray-200 dark:border-gray-700 px-4 py-3">
                 <div className="flex items-end gap-2">
+                    <button
+                        onClick={startVoiceInput}
+                        className={`
+                            shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-sm
+                            ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-primary'}
+                        `}
+                    >
+                        <Mic size={22} />
+                    </button>
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Type your message..."
+                        placeholder="Type or speak a message..."
                         rows={1}
                         className="flex-1 resize-none bg-gray-100 dark:bg-gray-800 rounded-card px-4 py-3 text-base-sm text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary/30"
                     />
                     <button
-                        onClick={handleSend}
+                        onClick={() => handleSend()}
                         disabled={!input.trim() || sending}
                         className={`
-                            w-12 h-12 rounded-full flex items-center justify-center transition-colors
+                            shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-sm
                             ${input.trim() && !sending
-                                ? 'bg-primary text-white'
+                                ? 'bg-primary text-white hover:bg-primary-light'
                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}
                         `}
                     >

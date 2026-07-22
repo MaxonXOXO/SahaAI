@@ -6,6 +6,42 @@
  */
 
 /**
+ * Helper to safely extract and parse JSON from an LLM response text,
+ * stripping conversational prefixes or markdown backticks if present.
+ */
+export function safeParseJSON(str) {
+    if (!str) return null;
+    const cleanStr = str.trim();
+    try {
+        return JSON.parse(cleanStr);
+    } catch (e) {
+        // Look for the first '{' or '[' and the last '}' or ']'
+        const firstCurly = cleanStr.indexOf('{');
+        const lastCurly = cleanStr.lastIndexOf('}');
+        if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
+            try {
+                return JSON.parse(cleanStr.substring(firstCurly, lastCurly + 1));
+            } catch (innerErr) {
+                // Try stripping backticks
+                const stripped = cleanStr.replace(/```json|```/gi, '').trim();
+                try {
+                    return JSON.parse(stripped);
+                } catch (stripErr) {
+                    throw new Error(`Failed to parse extracted JSON. Content: "${cleanStr}". Error: ${stripErr.message}`);
+                }
+            }
+        }
+        // Try stripping backticks as a last resort
+        const stripped = cleanStr.replace(/```json|```/gi, '').trim();
+        try {
+            return JSON.parse(stripped);
+        } catch (stripErr) {
+            throw new Error(`Failed to parse JSON. Content: "${cleanStr}". Error: ${stripErr.message}`);
+        }
+    }
+}
+
+/**
  * Build a system prompt that tells the AI who the user is.
  * @param {Object} profile — from useProfileStore
  */
@@ -206,6 +242,98 @@ export async function sendMessage(systemPrompt, messages, options = {}) {
     }
 
     return reply;
+}
+
+/**
+ * Generate a 768-dimensional vector embedding for a given text string using Gemini API.
+ * @param {string} text
+ * @returns {Promise<number[]>} - 768-dimensional vector array
+ */
+export async function getEmbedding(text) {
+    const apiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY)
+        ? import.meta.env.VITE_GEMINI_API_KEY
+        : (typeof process !== 'undefined' && process.env ? process.env.VITE_GEMINI_API_KEY : undefined);
+    if (!apiKey) {
+        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
+    }
+
+
+
+    const cleanText = (text || '').trim();
+    if (!cleanText) return [];
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: 'models/gemini-embedding-001',
+            content: {
+                parts: [{ text: cleanText }]
+            },
+            outputDimensionality: 768
+        })
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini Embedding API error ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const values = data?.embedding?.values;
+
+    if (!values || !Array.isArray(values)) {
+        throw new Error('Invalid response structure from Gemini Embedding API');
+    }
+
+    return values;
+}
+
+
+/**
+ * Generate a short summary of a speech therapy session and flag sensitive content.
+ * @param {string} transcript - The raw text of the conversation.
+ * @param {string} sessionTarget - The focus area of the session (e.g. 'slow_clear').
+ * @returns {Promise<Object>} - { summary, flagged, flag_reason }
+ */
+export async function generateSessionSummary(transcript, sessionTarget) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) throw new Error('Missing VITE_GEMINI_API_KEY in .env');
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const prompt = `Summarize this speech therapy session in 2-3 sentences, factual and neutral. Focus on: what was practiced, any patterns noticed (pronunciation difficulty, topics discussed, confidence level). Do NOT include verbatim quotes. Session mode: ${sessionTarget}.
+Also return whether this session mentioned self-harm, abuse, severe distress, or anything requiring adult attention.
+You MUST respond in strict JSON format:
+{
+  "summary": "...",
+  "flagged": true/false,
+  "flag_reason": "..." or null
+}
+
+Transcript:
+${transcript}`;
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Gemini summary API error ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    return safeParseJSON(reply);
 }
 
 /**
@@ -491,13 +619,13 @@ ${schemaDescription}`;
 
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content;
-    
+
     if (!content) {
         throw new Error('OpenAI returned an empty content body.');
     }
 
     try {
-        const parsed = JSON.parse(content.trim());
+        const parsed = safeParseJSON(content);
         return parsed;
     } catch (err) {
         throw new Error(`Failed to parse OpenAI response as JSON. Content: "${content}". Error: ${err.message}`);
@@ -536,6 +664,7 @@ You MUST output ONLY a valid JSON object matching this schema:
     }
   ]
 }
+
 Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in the response. Return ONLY raw JSON.`;
 
     // Try Gemini first
@@ -568,7 +697,7 @@ Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in th
             const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (text) {
                 try {
-                    const parsed = JSON.parse(text.trim());
+                    const parsed = safeParseJSON(text);
                     if (parsed && Array.isArray(parsed.tiles)) {
                         return parsed.tiles;
                     }
@@ -605,7 +734,7 @@ Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in th
             const content = data?.choices?.[0]?.message?.content;
             if (content) {
                 try {
-                    const parsed = JSON.parse(content.trim());
+                    const parsed = safeParseJSON(content);
                     if (parsed && Array.isArray(parsed.tiles)) {
                         return parsed.tiles;
                     }
@@ -619,4 +748,78 @@ Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in th
     throw new Error('Could not generate contextual tiles. Check your API keys and connection.');
 }
 
+/** Generate a structured, accessibility-aware learning explainer with the active AI provider. */
+export async function generateLearnExplainer(profile, topic) {
+    const prompt = `${buildSystemPrompt(profile)}\n\nCreate a concise explainer for the topic below. Return ONLY valid JSON with this exact shape:\n{"topic":"short title","explanation":"clear markdown-friendly explanation","diagramSteps":["optional ordered step"],"videoQuery":"short educational YouTube search query"}\nUse diagramSteps only when an ordered process, mechanism, or sequence would genuinely help. Keep explanations practical and accurate.\n\nTopic: ${topic}`;
+    const response = await sendMessage(prompt, [{ role: 'user', content: topic }]);
+    const parsed = safeParseJSON(response);
+    if (!parsed || !parsed.explanation) throw new Error('The explainer response was incomplete.');
+    return { topic: parsed.topic?.trim() || topic, explanation: parsed.explanation.trim(), diagramSteps: Array.isArray(parsed.diagramSteps) ? parsed.diagramSteps.filter(Boolean).slice(0, 8) : [], videoQuery: parsed.videoQuery?.trim() || `${topic} explained` };
+}
 
+/** Create a lightweight visual for explainer cards using Cloudflare Workers AI.
+ *  Uses the SDXL-Lightning model for blazing fast image generation.
+ *  Routes through /cf-ai Vite proxy so the key is injected server-side.
+ */
+export async function generateLearnImage(topic) {
+    const accountId = import.meta.env.VITE_CF_ACCOUNT_ID;
+    if (!accountId) {
+        console.warn('VITE_CF_ACCOUNT_ID is missing. Image generation skipped.');
+        return null;
+    }
+    const prompt = `A highly detailed, true to life photorealistic photograph depicting: ${topic}. Cinematic lighting, 8k resolution, shot on 35mm lens, realistic textures, natural colors, highly detailed, no text, professional photography.`;
+    try {
+        // We MUST use a native Cloudflare model for the REST API. 
+        // Third-party models (like Google/nano-banana) are ONLY available from inside a Worker.
+        const model = '@cf/bytedance/stable-diffusion-xl-lightning';
+        const url = `/cf-ai/client/v4/accounts/${accountId}/ai/run/${model}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, num_steps: 4 })
+        });
+        
+        if (!response.ok) {
+            const err = await response.text();
+            console.warn(`Cloudflare AI image gen error ${response.status}:`, err);
+            return null;
+        }
+
+        // Native Cloudflare Workers AI returns raw binary image data (PNG or JPEG)
+        const blob = await response.blob();
+        if (!blob || blob.size === 0) return null;
+
+        // Convert blob to base64 Data URL for easy embedding
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch (err) {
+        console.warn('generateLearnImage failed:', err.message);
+        return null;
+    }
+}
+
+/** Find a single safe, embeddable YouTube video. No request is made when no key is configured. */
+export async function findLearnVideo(searchQuery, language = 'en') {
+    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+    if (!apiKey) return null;
+    const params = new URLSearchParams({ part: 'snippet', q: searchQuery, type: 'video', maxResults: '1', safeSearch: 'strict', videoEmbeddable: 'true', key: apiKey, relevanceLanguage: language });
+    const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+    return response.ok ? (await response.json())?.items?.[0]?.id?.videoId || null : null;
+}
+
+/** Suggest a compact daily set of learning topics from the user's mode and recent activity names. */
+export async function generateDailyLearnTopics(profile, eventTypes = []) {
+    const prompt = `${buildSystemPrompt(profile)}\n\nSuggest 9 short, safe, useful learning topics for today. Base them on the user's primary accessibility mode and recent activity labels. 
+IMPORTANT: Include at least 3 topics related to positive or educational current news and world events from today.
+Return ONLY JSON: {"topics":[{"topic": "Title", "summary": "One or two line short description"}]}. Avoid depressing or controversial news.
+Primary mode: ${profile.primaryMode || 'none'}
+Recent activity: ${eventTypes.join(', ') || 'none'}`;
+    const response = await sendMessage(prompt, [{ role: 'user', content: 'Suggest today’s learning topics.' }]);
+    const parsed = safeParseJSON(response);
+    return (parsed && Array.isArray(parsed.topics)) ? parsed.topics.slice(0, 9) : [];
+}

@@ -3,6 +3,7 @@ export const TRANSLATIONS = {
         // BottomNav
         home: 'Home',
         ai: 'AI',
+        learn: 'Learn',
         tools: 'Tools',
         progress: 'Progress',
         profile: 'Profile',
@@ -15,7 +16,7 @@ export const TRANSLATIONS = {
         greeting_dyscalculia: "Math can be simple!",
         greeting_lowVision: "We've enhanced everything for better visibility.",
         greeting_default: "Ready to learn something new?",
-        
+
         hero_adhd: 'FOCUS TIMER',
         hero_dyslexia: 'READING ASSISTANT',
         hero_autism: "TODAY'S SCHEDULE",
@@ -56,6 +57,8 @@ export const TRANSLATIONS = {
         tile_social_desc: 'Practice conversations with custom AI-generated social scripts.',
         tile_aacBoard: 'AAC Board',
         tile_aacBoard_desc: 'Build sentences using custom tiles with speech support.',
+        tile_speechTherapy: 'Speech Therapy',
+        tile_speechTherapy_desc: 'Practice speaking and pacing with our real-time voice-interactive speech therapist.',
         tile_focus: 'Focus Mode',
         tile_focus_desc: 'A calming screen with a structured task list and white noise timer.',
         tile_vision: 'Vision Assistant',
@@ -98,6 +101,23 @@ export const TRANSLATIONS = {
         tile_largeKeyboard_desc: 'Larger keyboard layout settings for ease of input.',
         tile_colorInverter: 'Color Inverter',
         tile_colorInverter_desc: 'Toggle inverted color mapping to reduce glare.',
+
+        // Home Screen
+        homeGreetingMorning: 'Good morning',
+        homeGreetingAfternoon: 'Good afternoon',
+        homeGreetingEvening: 'Good evening',
+        continueLabel: 'Continue',
+        continueReading: 'Continue reading',
+        continueLearning: 'Continue learning',
+        continueActivity: 'Continue where you left off',
+        yourTools: 'Your Tools',
+        searchBarPlaceholder: 'Ask AI anything or search topics...',
+        searchHelperLine1: 'Type or speak to ask AI or discover topics',
+        searchHelperLine2: 'We\'ll route you to Chat or Learn automatically',
+        allToolsTitle: 'All Tools',
+        allToolsDesc: 'Every feature in one place — always accessible.',
+        learnFeed: 'Learning Feed',
+        learnFeed_desc: 'Explore curated topics and lessons tailored for you.',
 
         // Tools Screen
         toolsTitle: 'Tools Directory',
@@ -154,23 +174,23 @@ export const TRANSLATIONS = {
         accPreferencesDesc: 'Select the learning difficulties you want us to optimize your workspace for.',
         primaryModeSelect: 'Primary Interface Mode',
         primaryModeSelectDesc: 'Choose the main difficulty to optimize your dashboard dashboard tiles and assistant prompts.',
-        
+
         fontStyle: 'Font Style',
         fontStyleStandard: 'Standard (Inter)',
         fontStyleDyslexic: 'OpenDyslexic',
         fontStyleMalayalamStandard: 'Noto Sans',
         fontStyleMalayalamDyslexic: 'Baloo Chettan 2',
-        
+
         uiDisplayScale: 'UI Display Scale',
         scaleSmall: 'Small',
         scaleMedium: 'Medium',
         scaleLarge: 'Large',
-        
+
         textThickness: 'Text Thickness',
         normal: 'Normal',
         medium: 'Medium',
         bold: 'Bold',
-        
+
         themeContrastMode: 'Theme & Contrast Mode',
         themeLight: 'Light Theme',
         themeLightDesc: 'Regular bright mode',
@@ -185,12 +205,23 @@ export const TRANSLATIONS = {
         langDisplay: 'Display Language (UI)',
         langTts: 'Text-to-Speech Voice',
         langAi: 'AI Assistant Language',
-        langSpeech: 'Speech Practice Recognition'
+        langSpeech: 'Speech Practice Recognition',
+
+        // Onboarding New Screens
+        ageRangeTitle: 'How old are you?',
+        ageRangeDesc: 'Choose your age range to personalize your learning experience.',
+        ageUnder13: 'Under 13',
+        age13to17: '13–17',
+        age18plus: '18+',
+        regionTitle: 'Where are you located?',
+        regionDesc: 'Select your state or region.',
+        searchRegionPlaceholder: 'Search state or region...',
     },
     ml: {
         // BottomNav
         home: 'ഹോം',
         ai: 'എഐ',
+        learn: 'പഠിക്കുക',
         tools: 'ടൂളുകൾ',
         progress: 'പുരോഗതി',
         profile: 'പ്രൊഫൈൽ',
@@ -203,7 +234,7 @@ export const TRANSLATIONS = {
         greeting_dyscalculia: "ഗണിതം ലളിതമാക്കാം!",
         greeting_lowVision: "മെച്ചപ്പെട്ട കാഴ്ചയ്ക്കായി ഞങ്ങൾ എല്ലാം ക്രമീകരിച്ചിട്ടുണ്ട്.",
         greeting_default: "പുതിയ എന്തെങ്കിലും പഠിക്കാൻ തയ്യാറാണോ?",
-        
+
         hero_adhd: 'ഫോക്കസ് ടൈമർ',
         hero_dyslexia: 'റീഡിംഗ് അസിസ്റ്റന്റ്',
         hero_autism: 'ഇന്നത്തെ ഷെഡ്യൂൾ',
@@ -245,6 +276,8 @@ export const TRANSLATIONS = {
         tile_social_desc: 'ഇഷ്ടാനുസൃതമായി എഐ നിർമ്മിച്ച സോഷ്യൽ സ്ക്രിപ്റ്റുകൾ ഉപയോഗിച്ച് സംഭാഷണം പരിശീലിക്കുക.',
         tile_aacBoard: 'എഎസി ബോർഡ്',
         tile_aacBoard_desc: 'സംസാര പിന്തുണയുള്ള ഇഷ്‌ടാനുസൃത ടൈലുകൾ ഉപയോഗിച്ച് വാക്യങ്ങൾ നിർമ്മിക്കുക.',
+        tile_speechTherapy: 'സ്പീച്ച് തെറാപ്പി',
+        tile_speechTherapy_desc: 'തത്സമയ വോയ്‌സ് സംഭാഷണത്തിലൂടെ സംസാരിക്കാനും ഉച്ചരിക്കാനും പരിശീലിക്കുക.',
         tile_focus: 'ഫോക്കസ് മോഡ്',
         tile_focus_desc: 'ക്രമീകരിച്ച ടാസ്ക് ലിസ്റ്റും വൈറ്റ് നോയിസ് ടൈമറും ഉള്ള ശാന്തമായ സ്ക്രീൻ.',
         tile_vision: 'വിഷൻ അസിസ്റ്റന്റ്',
@@ -287,6 +320,23 @@ export const TRANSLATIONS = {
         tile_largeKeyboard_desc: 'എളുപ്പത്തിൽ എഴുതാൻ വലിയ കീബോർഡ് ക്രമീകരണങ്ങൾ.',
         tile_colorInverter: 'കളർ ഇൻവെർട്ടർ',
         tile_colorInverter_desc: 'കണ്ണുകൾക്ക് ആയാസം കുറയ്ക്കാൻ നിറങ്ങൾ തിരിച്ചുനൽകുക.',
+
+        // Home Screen
+        homeGreetingMorning: 'സുപ്രഭാതം',
+        homeGreetingAfternoon: 'ശുഭ ഉച്ചതിരിഞ്ഞ്',
+        homeGreetingEvening: 'ശുഭ സായാഹ്നം',
+        continueLabel: 'തുടരുക',
+        continueReading: 'വായന തുടരുക',
+        continueLearning: 'പഠനം തുടരുക',
+        continueActivity: 'നിങ്ങൾ നിർത്തിയിടത്ത് നിന്ന് തുടരുക',
+        yourTools: 'നിങ്ങളുടെ ടൂളുകൾ',
+        searchBarPlaceholder: 'എഐയോട് എന്തും ചോദിക്കുക അല്ലെങ്കിൽ വിഷയങ്ങൾ തിരയുക...',
+        searchHelperLine1: 'എഐയോട് ചോദിക്കാൻ ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ സംസാരിക്കുക',
+        searchHelperLine2: 'ഞങ്ങൾ നിങ്ങളെ ചാറ്റിലേക്കോ പഠനത്തിലേക്കോ സ്വയമേവ നയിക്കും',
+        allToolsTitle: 'എല്ലാ ടൂളുകളും',
+        allToolsDesc: 'എല്ലാ ഫീച്ചറുകളും ഒരിടത്ത് — എപ്പോഴും ലഭ്യമാണ്.',
+        learnFeed: 'പഠന ഫീഡ്',
+        learnFeed_desc: 'നിങ്ങൾക്കായി ക്യൂറേറ്റ് ചെയ്ത വിഷയങ്ങളും പാഠങ്ങളും പര്യവേക്ഷണം ചെയ്യുക.',
 
         // Tools Screen
         toolsTitle: 'ഉപകരണങ്ങളുടെ ഡയറക്ടറി',
@@ -343,23 +393,23 @@ export const TRANSLATIONS = {
         accPreferencesDesc: 'നിങ്ങളുടെ വർക്ക്സ്പേസ് ഒപ്റ്റിമൈസ് ചെയ്യാൻ താല്പര്യമുള്ള പഠന ബുദ്ധിമുട്ടുകൾ തിരഞ്ഞെടുക്കുക.',
         primaryModeSelect: 'പ്രധാന ഇന്റർഫേസ് മോഡ്',
         primaryModeSelectDesc: 'ഡാഷ്‌ബോർഡ് ടൈലുകളും അസിസ്റ്റന്റ് പ്രോംപ്റ്റുകളും ഒപ്റ്റിമൈസ് ചെയ്യുന്നതിന് പ്രധാന മോഡ് തിരഞ്ഞെടുക്കുക.',
-        
+
         fontStyle: 'ഫോണ്ട് ശൈലി',
         fontStyleStandard: 'സ്റ്റാൻഡേർഡ് (Inter)',
         fontStyleDyslexic: 'OpenDyslexic',
         fontStyleMalayalamStandard: 'നോട്ടോ സാൻസ്',
         fontStyleMalayalamDyslexic: 'ബാലു ചേട്ടൻ 2',
-        
+
         uiDisplayScale: 'ഡിസ്പ്ലേ സ്കെയിൽ',
         scaleSmall: 'ചെറുത്',
         scaleMedium: 'സാധാരണ',
         scaleLarge: 'വലുത്',
-        
+
         textThickness: 'ടെക്സ്റ്റിന്റെ കനം',
         normal: 'സാധാരണ',
         medium: 'മീഡിയം',
         bold: 'ബോൾഡ്',
-        
+
         themeContrastMode: 'തീമും കോൺട്രാസ്റ്റും',
         themeLight: 'ലൈറ്റ് തീം',
         themeLightDesc: 'സാധാരണ വെളിച്ചമുള്ള മോഡ്',
@@ -374,7 +424,17 @@ export const TRANSLATIONS = {
         langDisplay: 'ഡിസ്പ്ലേ ഭാഷ (UI)',
         langTts: 'ടെക്സ്റ്റ്-ടു-സ്പീച്ച് ശബ്ദം',
         langAi: 'എഐ അസിസ്റ്റന്റ് ഭാഷ',
-        langSpeech: 'സ്പീച്ച് പ്രാക്ടീസ് തിരിച്ചറിയൽ'
+        langSpeech: 'സ്പീച്ച് പ്രാക്ടീസ് തിരിച്ചറിയൽ',
+
+        // Onboarding New Screens
+        ageRangeTitle: 'നിങ്ങൾക്ക് എത്ര വയസ്സായി?',
+        ageRangeDesc: 'നിങ്ങളുടെ പഠന അനുഭവം വ്യക്തിഗതമാക്കാൻ വയസ്സ് തിരഞ്ഞെടുക്കുക.',
+        ageUnder13: '13 വയസ്സിൽ താഴെ',
+        age13to17: '13–17 വയസ്സ്',
+        age18plus: '18 വയസ്സും അതിൽ കൂടുതലും',
+        regionTitle: 'നിങ്ങൾ എവിടെയാണ് സ്ഥിതിചെയ്യുന്നത്?',
+        regionDesc: 'നിങ്ങളുടെ സംസ്ഥാനം അല്ലെങ്കിൽ പ്രദേശം തിരഞ്ഞെടുക്കുക.',
+        searchRegionPlaceholder: 'സംസ്ഥാനം തിരയുക...',
     }
 };
 
@@ -385,7 +445,7 @@ export const TRANSLATIONS = {
 export function translate(key, locale = 'en', params = {}) {
     const dict = TRANSLATIONS[locale] || TRANSLATIONS['en'];
     let str = dict[key] || TRANSLATIONS['en'][key] || key;
-    
+
     // Support category nesting
     if (key.includes('.')) {
         const parts = key.split('.');

@@ -16,6 +16,25 @@ const computeImageHash = (str) => {
     return hash;
 };
 
+/**
+ * Removes markdown formatting syntax for clear text-to-speech reading.
+ * @param {string} text - Raw input text with possible markdown syntax
+ * @returns {string} Clean plain text
+ */
+export function stripMarkdown(text) {
+    if (!text) return '';
+    return text
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/^#+\s+/gm, '')
+        .replace(/\*\*([\s\S]*?)\*\*/g, '$1')
+        .replace(/__([\s\S]*?)__/g, '$1')
+        .replace(/\*([\s\S]*?)\*/g, '$1')
+        .replace(/_([\s\S]*?)_/g, '$1')
+        .replace(/[*_#]/g, '');
+}
+
 export default function useVisionAI() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -47,9 +66,9 @@ export default function useVisionAI() {
         if (mode === 'ocr') {
             systemPrompt = 'You are a precise Optical Character Recognition (OCR) system. Extract and read all visible text in the image exactly as it appears. Do not explain, summarize, or describe it. If no text is visible, output: "No text detected."';
         } else if (mode === 'object') {
-            systemPrompt = 'Identify all major objects, obstacles, and currency bills/coins in this image. Give their relative positions (e.g. "a cup on the right side of the table", "a chair in front of you"). Keep it clear, concise, and easy to hear for a visually impaired user.';
+            systemPrompt = 'Identify the single main object directly in front of the camera or most prominent in frame. Describe only that object — its type, color, material, condition, and any visible text or brand. If it is currency, state the denomination. Do not describe the surrounding room, other objects, or their positions. If no single clear object is present, briefly say so. Keep it short and easy to hear for a visually impaired user.';
         } else if (mode === 'scene') {
-            systemPrompt = 'Provide a rich, natural scene description of this image. Describe the room, furniture, lighting, people, and general layout. Focus on details that are helpful for a visually impaired person to orient themselves or navigate the space.';
+            systemPrompt = 'Identify all major objects, obstacles, and currency bills/coins visible in this image. Give their relative positions (e.g. "a cup on the right side of the table", "a chair in front of you"). Keep it clear, concise, and easy to hear for a visually impaired user.';
         } else if (mode === 'qa') {
             systemPrompt = `Answer this question about the image clearly and concisely: "${customQuestion}". Provide details helpful for a visually impaired user, keeping it under 3-4 sentences.`;
         }
@@ -189,5 +208,6 @@ export default function useVisionAI() {
         analyzeImage,
         loading,
         error,
+        stripMarkdown,
     };
 }

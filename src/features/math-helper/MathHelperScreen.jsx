@@ -10,6 +10,8 @@ import EntryActions from './components/EntryActions';
 import BasicMathGame from './components/BasicMathGame';
 import BasicMathEntry from './components/BasicMathEntry';
 import EnterMathInput from './components/EnterMathInput';
+import CalculatorView from './components/CalculatorView';
+import PlaylistBanner from './components/PlaylistBanner';
 
 export default function MathHelperScreen() {
     const navigate = useNavigate();
@@ -26,10 +28,23 @@ export default function MathHelperScreen() {
     const [customOperandB, setCustomOperandB] = useState(undefined);
     const [entryPath, setEntryPath] = useState('operation-tile');
 
-    // Support deep-linking by reading a topic query param on mount/update
+    // Support deep-linking by reading a topic/tab query param on mount/update
     useEffect(() => {
         const queryTopic = searchParams.get('topic');
-        if (queryTopic) {
+        const queryTab = searchParams.get('tab');
+
+        if (queryTab) {
+            if (queryTab === 'solve') {
+                setActiveTopic('basic-math');
+                setGameStep('custom-input');
+            } else if (queryTab === 'games') {
+                setActiveTopic('basic-math');
+                setGameStep('entry');
+            } else if (queryTab === 'steps') {
+                // Map 'steps' to algebra topic
+                setActiveTopic('algebra');
+            }
+        } else if (queryTopic) {
             setActiveTopic(queryTopic);
             if (queryTopic === 'basic-math') {
                 setGameStep('entry');
@@ -98,7 +113,7 @@ export default function MathHelperScreen() {
                 {activeTopic === 'basic-math' ? (
                     <>
                         {gameStep === 'entry' && (
-                            <BasicMathEntry 
+                            <BasicMathEntry
                                 onSelectOperation={(op) => {
                                     setActiveOp(op);
                                     setCustomOperandA(undefined);
@@ -112,7 +127,7 @@ export default function MathHelperScreen() {
                             />
                         )}
                         {gameStep === 'custom-input' && (
-                            <EnterMathInput 
+                            <EnterMathInput
                                 onSubmit={({ operandA, operandB, operation }) => {
                                     setActiveOp(operation);
                                     setCustomOperandA(operandA);
@@ -123,14 +138,18 @@ export default function MathHelperScreen() {
                             />
                         )}
                         {gameStep === 'playing' && (
-                            <BasicMathGame 
+                            <BasicMathGame
                                 operation={activeOp}
                                 operandA={customOperandA}
                                 operandB={customOperandB}
                                 entryPath={entryPath}
+                                onEnterAnother={() => setGameStep('custom-input')}
+                                onSurpriseMe={() => setEntryPath('operation-tile')}
                             />
                         )}
                     </>
+                ) : activeTopic === 'calculator' ? (
+                    <CalculatorView />
                 ) : (
                     <>
                         <div className="flex flex-col gap-4">
@@ -150,6 +169,9 @@ export default function MathHelperScreen() {
                                 onSelectTopic={handleSelectTopic}
                             />
                         </div>
+
+                        {/* YouTube Playlist Banner */}
+                        <PlaylistBanner />
 
                         {/* Scan / Upload action buttons row */}
                         <EntryActions />

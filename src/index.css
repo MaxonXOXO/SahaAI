@@ -187,7 +187,7 @@ body {
 }
 
 /* Nuke primary/purple/violet background tints */
-.theme-high [class*="bg-primary"],
+.theme-high [class~="bg-primary"],
 .theme-high [class*="bg-purple"],
 .theme-high [class*="bg-violet"],
 .theme-high [class*="bg-indigo"] {
@@ -195,11 +195,8 @@ body {
 }
 
 /* ── All text → white by default ── */
-.theme-high * {
-  color: #FFFFFF !important;
-  border-color: #333333 !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
+.theme-high {
+  color: #FFFFFF;
 }
 
 /* ── Headings and labels → bright yellow ── */
@@ -217,8 +214,11 @@ body {
 .theme-high [class*="text-gray-400"],
 .theme-high [class*="text-gray-500"],
 .theme-high [class*="text-gray-600"],
+.theme-high [class*="text-gray-700"],
+.theme-high [class*="text-gray-800"],
+.theme-high [class*="text-gray-900"],
 .theme-high [class*="text-muted"],
-.theme-high placeholder {
+.theme-high ::placeholder {
   color: #AAAAAA !important;
 }
 
@@ -233,7 +233,7 @@ body {
 /* ── Cards, panels, modals, navbars → very dark surfaces ── */
 .theme-high .saha-card,
 .theme-high .saha-surface,
-.theme-high [class*="rounded"],
+.theme-high [role="dialog"],
 .theme-high nav {
   background-color: #141414 !important;
   border-color: #FACC15 !important;
@@ -258,6 +258,9 @@ body {
 .theme-high .bg-primary,
 .theme-high [class*="bg-primary"] {
   background-color: #FACC15 !important;
+  color: #000000 !important;
+}
+.theme-high button[class~="bg-primary"] * {
   color: #000000 !important;
 }
 
@@ -305,27 +308,6 @@ body {
 .theme-high ::-webkit-scrollbar-track { background: #0A0A0A; }
 .theme-high ::-webkit-scrollbar-thumb { background: #FACC15; border-radius: 4px; }
 
-/* ── Active / Selected states in High Contrast ── */
-.theme-high button.border-primary,
-.theme-high button.bg-white,
-.theme-high button[class*="border-yellow-400"],
-.theme-high button.border-yellow-400 {
-  background-color: #FACC15 !important;
-  color: #000000 !important;
-  border-color: #FACC15 !important;
-}
-.theme-high button.border-primary *,
-.theme-high button.bg-white *,
-.theme-high button[class*="border-yellow-400"] *,
-.theme-high button.border-yellow-400 * {
-  color: #000000 !important;
-}
-.theme-high [class*="border-yellow-400"] [class*="bg-yellow-400"] {
-  background-color: #FACC15 !important;
-  border-color: #FACC15 !important;
-  color: #000000 !important;
-}
-
 /* ── BottomNav button styling in High Contrast ── */
 .theme-high nav button {
   background-color: transparent !important;
@@ -340,6 +322,11 @@ body {
 .theme-high nav button:not([aria-current="page"]) *,
 .theme-high nav button:not([aria-current="page"]) svg {
   color: #AAAAAA !important;
+}
+.theme-high nav button[aria-current="page"] > div {
+  background-color: rgb(250 204 21 / 0.16) !important;
+  outline: 2px solid #FACC15;
+  outline-offset: 2px;
 }
 
 
@@ -371,18 +358,15 @@ body {
   background-color: #171717 !important;
 }
 
-.theme-soft [class*="bg-primary"],
+.theme-soft [class~="bg-primary"],
 .theme-soft [class*="bg-purple"],
 .theme-soft [class*="bg-violet"],
 .theme-soft [class*="bg-indigo"] {
   background-color: #2a2512 !important; /* dark gold/yellow tint */
 }
 
-.theme-soft * {
-  color: #F3F4F6 !important;
-  border-color: #2d3748 !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
+.theme-soft {
+  color: #F3F4F6;
 }
 
 .theme-soft h1,
@@ -398,8 +382,11 @@ body {
 .theme-soft [class*="text-gray-400"],
 .theme-soft [class*="text-gray-500"],
 .theme-soft [class*="text-gray-600"],
+.theme-soft [class*="text-gray-700"],
+.theme-soft [class*="text-gray-800"],
+.theme-soft [class*="text-gray-900"],
 .theme-soft [class*="text-muted"],
-.theme-soft placeholder {
+.theme-soft ::placeholder {
   color: #9CA3AF !important;
 }
 
@@ -412,7 +399,7 @@ body {
 
 .theme-soft .saha-card,
 .theme-soft .saha-surface,
-.theme-soft [class*="rounded"],
+.theme-soft [role="dialog"],
 .theme-soft nav {
   background-color: #1F2937 !important;
   border-color: #FCD34D !important;
@@ -433,6 +420,9 @@ body {
 .theme-soft .bg-primary,
 .theme-soft [class*="bg-primary"] {
   background-color: #FCD34D !important;
+  color: #171717 !important;
+}
+.theme-soft button[class~="bg-primary"] * {
   color: #171717 !important;
 }
 
@@ -475,27 +465,6 @@ body {
 .theme-soft ::-webkit-scrollbar-track { background: #171717; }
 .theme-soft ::-webkit-scrollbar-thumb { background: #FCD34D; border-radius: 4px; }
 
-/* ── Active / Selected states in Soft Contrast ── */
-.theme-soft button.border-primary,
-.theme-soft button.bg-white,
-.theme-soft button[class*="border-yellow-400"],
-.theme-soft button.border-yellow-400 {
-  background-color: #FCD34D !important;
-  color: #171717 !important;
-  border-color: #FCD34D !important;
-}
-.theme-soft button.border-primary *,
-.theme-soft button.bg-white *,
-.theme-soft button[class*="border-yellow-400"] *,
-.theme-soft button.border-yellow-400 * {
-  color: #171717 !important;
-}
-.theme-soft [class*="border-yellow-400"] [class*="bg-yellow-400"] {
-  background-color: #FCD34D !important;
-  border-color: #FCD34D !important;
-  color: #171717 !important;
-}
-
 /* ── BottomNav button styling in Soft Contrast ── */
 .theme-soft nav button {
   background-color: transparent !important;
@@ -510,6 +479,68 @@ body {
 .theme-soft nav button:not([aria-current="page"]) *,
 .theme-soft nav button:not([aria-current="page"]) svg {
   color: #9CA3AF !important;
+}
+.theme-soft nav button[aria-current="page"] > div {
+  background-color: rgb(252 211 77 / 0.14) !important;
+  outline: 2px solid #FCD34D;
+  outline-offset: 2px;
+}
+
+/* The viewfinder is live media, not a card. Keep its framing guide transparent
+   so contrast styling can never turn it into an opaque box over the camera. */
+.vision-camera video {
+  display: block;
+  background: #000;
+}
+.vision-camera .vision-frame {
+  background: transparent !important;
+  border-color: rgb(255 255 255 / 0.55) !important;
+}
+
+/* Palette corrections. These intentionally target semantic colour utilities
+   instead of every rounded element, so each theme stays consistent across
+   cards, dialogs, navigation, and feature-specific layouts. */
+.theme-dark [class*="bg-white"],
+.theme-dark [class*="bg-gray-50"],
+.theme-dark [class*="bg-gray-100"],
+.theme-dark [class*="bg-gray-200"],
+.theme-dark [class*="bg-surface"] {
+  background-color: #1E293B !important;
+}
+.theme-dark [class*="bg-gray-700"],
+.theme-dark [class*="bg-gray-800"],
+.theme-dark [class*="bg-gray-900"],
+.theme-dark [class*="bg-gray-950"] {
+  background-color: #111827 !important;
+}
+.theme-dark .saha-card,
+.theme-dark .saha-surface,
+.theme-dark nav {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+}
+.theme-dark [class*="text-gray-700"],
+.theme-dark [class*="text-gray-800"],
+.theme-dark [class*="text-gray-900"] {
+  color: #F8FAFC !important;
+}
+.theme-dark [class*="text-gray-400"],
+.theme-dark [class*="text-gray-500"],
+.theme-dark [class*="text-gray-600"] {
+  color: #CBD5E1 !important;
+}
+
+.theme-high [class~="border-primary"] {
+  border-color: #FACC15 !important;
+}
+.theme-high [class*="bg-primary/"] {
+  background-color: rgb(250 204 21 / 0.14) !important;
+}
+.theme-soft [class~="border-primary"] {
+  border-color: #FCD34D !important;
+}
+.theme-soft [class*="bg-primary/"] {
+  background-color: rgb(252 211 77 / 0.12) !important;
 }
 
 
@@ -562,8 +593,6 @@ body {
   font-weight:    800 !important;
   letter-spacing: -0.01em !important;
   color:          var(--a11y-primary) !important;
-  border-left:    4px solid var(--a11y-primary) !important;
-  padding-left:   12px !important;
 }
 
 /* Generous tap targets */
@@ -664,4 +693,58 @@ h1, h2, h3, h4, h5, h6, b, strong, .font-bold, .font-semibold, .font-extrabold {
 }
 .font-medium, .font-normal {
   font-weight: var(--a11y-font-weight-base) !important;
+}
+
+/* Contrast is the final colour authority. Disability profiles may adjust
+   typography and spacing, but must not repaint a High/Soft Contrast surface
+   after its palette has been selected. */
+.theme-high.a11y-dyslexia .saha-card,
+.theme-high.a11y-dyslexia .saha-surface {
+  background: #141414 !important;
+  color: #FFFFFF !important;
+  border-color: #FACC15 !important;
+}
+.theme-soft.a11y-dyslexia .saha-card,
+.theme-soft.a11y-dyslexia .saha-surface {
+  background: #1F2937 !important;
+  color: #F3F4F6 !important;
+  border-color: #FCD34D !important;
+}
+
+/* Dear Diary notebook treatment */
+.diary-canvas {
+  background-color: #f6dfbd !important;
+  background-image:
+    linear-gradient(90deg, rgb(255 255 255 / 0.1) 1px, transparent 1px),
+    linear-gradient(#fff0d8, #f3d6ab);
+  background-size: 24px 24px, 100% 100%;
+}
+.diary-paper::after {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  border: 1px solid rgb(180 151 112 / 0.18);
+  border-radius: 1.4rem;
+}
+.diary-lines {
+  background-color: #fffaf0;
+  background-image:
+    linear-gradient(to right, transparent 24px, rgb(244 167 154 / 0.45) 25px, transparent 27px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgb(167 190 221 / 0.35) 32px);
+}
+.diary-past-paper {
+  background: linear-gradient(135deg, #f8f1ff, #eee3fb);
+}
+
+.theme-dark .diary-canvas,
+.theme-soft .diary-canvas,
+.theme-high .diary-canvas {
+  background: var(--a11y-bg) !important;
+}
+.theme-dark .diary-paper,
+.theme-soft .diary-paper,
+.theme-high .diary-paper {
+  background: var(--a11y-surface) !important;
+  color: var(--a11y-text) !important;
 }

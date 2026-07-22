@@ -35,8 +35,39 @@ export function useAccessibilityTheme({ active }) {
     const styles = useMemo(() => {
         if (!active) {
             return {
-                '--a11y-primary': '#6D28D9',
-                '--a11y-primary-light': '#8B5CF6',
+                // Scale
+                '--a11y-scale': '1',
+
+                // Typography defaults
+                fontFamily:              'Inter, system-ui, sans-serif',
+                fontWeight:              400,
+                letterSpacing:           '0.01em',
+                wordSpacing:             'normal',
+                lineHeight:              '1.55',
+                '--a11y-font-body':      'Inter, system-ui, sans-serif',
+                '--a11y-font-heading':   'Inter, system-ui, sans-serif',
+                '--a11y-font-weight-base': 400,
+                '--a11y-font-weight-bold': 700,
+                '--a11y-line-height':    '1.55',
+                '--a11y-letter-spacing': '0.01em',
+                '--a11y-word-spacing':   'normal',
+
+                // Color defaults
+                '--a11y-bg':             '#FFFFFF',
+                '--a11y-surface':        '#FFFFFF',
+                '--a11y-text':           '#1F2937',
+                '--a11y-text-muted':     '#6B7280',
+                '--a11y-primary':        '#6D28D9',
+                '--a11y-primary-light':  '#8B5CF6',
+                '--a11y-border-width':   '2px',
+
+                // Structure defaults
+                '--a11y-border-radius':  '16px',
+                '--a11y-spacing-section': '16px',
+
+                // Direct color application defaults
+                backgroundColor: '#FFFFFF',
+                color:           '#1F2937',
             };
         }
 
@@ -79,10 +110,13 @@ export function useAccessibilityTheme({ active }) {
         fontWeightBase, fontWeightBold, colors, structure]);
 
     const containerClass = useMemo(() => {
+        if (!active) {
+            return 'theme-light';
+        }
         const themeClass = `theme-${activeContrast === 'default' ? 'light' : activeContrast}`;
         const darkClass  = isDarkMode ? 'dark' : '';
         return [darkClass, themeClass, needClasses].filter(Boolean).join(' ');
-    }, [activeContrast, isDarkMode, needClasses]);
+    }, [active, activeContrast, isDarkMode, needClasses]);
 
     return { styles, containerClass, isDarkMode };
 }

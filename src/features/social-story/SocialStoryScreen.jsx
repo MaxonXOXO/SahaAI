@@ -76,11 +76,10 @@ export default function SocialStoryScreen() {
 
   return (
     <div
-      className={`flex-1 flex flex-col min-h-screen ${
-        isLowVision
+      className={`flex-1 flex flex-col min-h-screen ${isLowVision
           ? 'bg-gray-950 text-white'
           : 'bg-white dark:bg-gray-900'
-      }`}
+        }`}
     >
       {/* Header */}
       <ScreenHeader
@@ -113,10 +112,9 @@ export default function SocialStoryScreen() {
                   className={`
                     relative flex-1 py-3 text-center font-semibold transition-colors
                     min-h-touch
-                    ${
-                      activeTab === tab.id
-                        ? 'text-accent-autism'
-                        : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                    ${activeTab === tab.id
+                      ? 'text-accent-autism'
+                      : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                     }
                   `}
                   style={{ fontSize: 'var(--a11y-font-size-base, 1rem)' }}

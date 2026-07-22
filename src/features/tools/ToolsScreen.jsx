@@ -1,208 +1,209 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowRight, Sparkles } from 'lucide-react';
+import {
+    Eye,
+    FileText,
+    MessageSquare,
+    Calculator,
+    Sparkles,
+    ListChecks,
+    Volume2,
+    BookOpen,
+    Bookmark,
+    ChevronRight,
+    Navigation
+} from 'lucide-react';
+
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
-import { DASHBOARD_MODES, TILE_REGISTRY } from '../dashboard/dashboardModes';
 import { translate } from '../../shared/lib/translations';
 
-const CATEGORY_MAP = {
-    reading: { titleKey: 'categories.readingWriting', descKey: 'categories.readingWriting_desc' },
-    math: { titleKey: 'categories.mathNumbers', descKey: 'categories.mathNumbers_desc' },
-    focus: { titleKey: 'categories.focusRoutines', descKey: 'categories.focusRoutines_desc' },
-    sensory: { titleKey: 'categories.sensoryVision', descKey: 'categories.sensoryVision_desc' },
-    ai: { titleKey: 'categories.aiChatbot', descKey: 'categories.aiChatbot_desc' }
-};
+// Image imports from assets/Tools
+import visionAssistantImg from '../../assets/Tools/vision-assistant.png';
+import readTextImg from '../../assets/Tools/read-text.png';
+import socialStoryImg from '../../assets/Tools/social-story.png';
+import mathHelperImg from '../../assets/Tools/math-helper.png';
+import aacBoardImg from '../../assets/Tools/aac-board.png';
+import focusModeImg from '../../assets/Tools/focus-mode.png';
+import routineBuilderImg from '../../assets/Tools/routine-builder.png';
+import speechAssistantImg from '../../assets/Tools/speech-assistant.png';
+import learnImg from '../../assets/Tools/learn.png';
 
-const CATEGORIES = [
+/**
+ * ToolsScreen — Rich 2-column feature directory matching the modern SahaAI tools UI.
+ */
+const TOOLS_LIST = [
     {
-        id: 'reading',
-        tiles: ['read', 'textSimplifier', 'readAloud', 'dyslexiaFont', 'spellCheck', 'highlighter']
+        key: 'visualNavigator',
+        title: 'Visual Navigator',
+        description: 'Live camera and voice guidance for nearby surroundings.',
+        icon: Navigation,
+        path: '/visual-navigator',
+        image: visionAssistantImg,
+        bgTint: 'bg-[#E8F4FF] dark:bg-sky-950/40',
+        badgeBg: 'bg-[#7C3AED]',
     },
     {
-        id: 'math',
-        tiles: ['math', 'mathSolver', 'numberSense', 'stepSolver', 'formulaSheet', 'mathGames']
+        key: 'vision',
+        title: 'Vision Assistant',
+        description: 'Describe surroundings and read visual information.',
+        icon: Eye,
+        path: '/vision-assistant',
+        image: visionAssistantImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
     },
     {
-        id: 'focus',
-        tiles: ['focus', 'routine', 'calmCorner']
+        key: 'read',
+        title: 'Read Text',
+        description: 'Scan any text and listen or view it in your preferred way.',
+        icon: FileText,
+        path: '/reading-mode',
+        image: readTextImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
     },
     {
-        id: 'sensory',
-        tiles: ['vision', 'visualAssistant', 'magnifier', 'highContrast', 'textReader', 'largeKeyboard', 'colorInverter']
+        key: 'social',
+        title: 'Social Stories',
+        description: 'Read stories that help understand situations better.',
+        icon: MessageSquare,
+        path: '/social-story',
+        image: socialStoryImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
     },
     {
-        id: 'ai',
-        tiles: ['aiChat', 'social', 'aacBoard']
-    }
+        key: 'math',
+        title: 'Math Helper',
+        description: 'Solve problems step-by-step with visual support.',
+        icon: Calculator,
+        path: '/math-helper',
+        image: mathHelperImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'aacBoard',
+        title: 'AAC Board',
+        description: 'Express easily using pictures, symbols and voice.',
+        icon: MessageSquare,
+        path: '/aac-board',
+        image: aacBoardImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'focus',
+        title: 'Focus Mode',
+        description: 'Stay focused with calming sounds and timers.',
+        icon: Sparkles,
+        path: '/focus-mode',
+        image: focusModeImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'routine',
+        title: 'Routine Builder',
+        description: 'Plan and manage daily routines visually.',
+        icon: ListChecks,
+        path: '/routine-builder',
+        image: routineBuilderImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'speechTherapy',
+        title: 'Speech Therapy',
+        description: 'Practice speech with exercises and voice feedback.',
+        icon: Volume2,
+        path: '/speech-therapy',
+        image: speechAssistantImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'learnFeed',
+        title: 'Learning Feed',
+        description: 'Personalized learning content just for you.',
+        icon: BookOpen,
+        path: '/learn',
+        image: learnImg,
+        bgTint: 'bg-[#E8F8F0] dark:bg-emerald-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
+    {
+        key: 'dearDiary',
+        title: 'Dear Diary & Memory',
+        description: 'Personal journal entries & smart searchable memory notes.',
+        icon: Bookmark,
+        path: '/dear-diary',
+        image: socialStoryImg,
+        bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
 ];
+
 
 export default function ToolsScreen() {
     const navigate = useNavigate();
     const primaryMode = useProfileStore((s) => s.primaryMode);
     const displayLanguage = useSettingsStore((s) => s.displayLanguage);
-    const [searchQuery, setSearchQuery] = useState('');
 
     const isLowVision = primaryMode === 'lowVision';
 
-    // Highlight/Border matching the user's active theme
-    const getPrimaryModeBorderClass = (mode) => {
-        switch (mode) {
-            case 'adhd': return 'border-accent-adhd';
-            case 'dyslexia': return 'border-accent-dyslexia';
-            case 'autism': return 'border-accent-autism';
-            case 'dyscalculia': return 'border-accent-dyscalculia';
-            case 'lowVision': return 'border-yellow-400';
-            default: return 'border-primary';
-        }
-    };
-
-    const getPrimaryModeBgClass = (mode) => {
-        switch (mode) {
-            case 'adhd': return 'bg-accent-adhd/10 text-accent-adhd border-accent-adhd/20';
-            case 'dyslexia': return 'bg-accent-dyslexia/10 text-accent-dyslexia border-accent-dyslexia/20';
-            case 'autism': return 'bg-accent-autism/10 text-accent-autism border-accent-autism/20';
-            case 'dyscalculia': return 'bg-accent-dyscalculia/10 text-accent-dyscalculia border-accent-dyscalculia/20';
-            case 'lowVision': return 'bg-yellow-400/20 text-yellow-400 border-yellow-400/30';
-            default: return 'bg-primary/10 text-primary border-primary/20';
-        }
-    };
-
-    const isPrimaryTool = (tileKey) => {
-        if (!primaryMode) return false;
-        const modeConfig = DASHBOARD_MODES[primaryMode];
-        return modeConfig?.tiles?.includes(tileKey);
-    };
-
-    // Filter tools based on search query
-    const filteredCategories = CATEGORIES.map(category => {
-        const tiles = category.tiles.filter(tileKey => {
-            const tile = TILE_REGISTRY[tileKey];
-            if (!tile) return false;
-            
-            const label = translate('tile_' + tileKey, displayLanguage);
-            const desc = translate('tile_' + tileKey + '_desc', displayLanguage);
-            
-            const matchesSearch = label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                desc.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesSearch;
-        });
-        return { ...category, tiles };
-    }).filter(category => category.tiles.length > 0);
-
     return (
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto pb-24">
-            <ScreenHeader title={translate('toolsTitle', displayLanguage)} showBack={false} />
+        <div
+            className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-28"
+            style={{
+                background: 'var(--a11y-bg)',
+                color: 'var(--a11y-text)',
+                transition: 'var(--a11y-transition)',
+            }}
+        >
+            <ScreenHeader
+                title={translate('allToolsTitle', displayLanguage)}
+                showBack={false}
+            />
 
-            {/* Sticky Search Bar */}
-            <div className="sticky top-0 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md px-4 py-3 z-10 border-b border-gray-100 dark:border-gray-800">
-                <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder={translate('searchPlaceholder', displayLanguage)}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-base-sm"
-                    />
+            {/* Grid Container */}
+            <div className="px-4 sm:px-6 pt-2 pb-6 max-w-6xl mx-auto w-full">
+                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3.5 sm:gap-4">
+                    {TOOLS_LIST.map((tool) => {
+                        const Icon = tool.icon;
+
+                        return (
+                            <button
+                                key={tool.key}
+                                onClick={() => navigate(tool.path)}
+                                className="group relative flex flex-row items-stretch rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-2 sm:p-2.5 active:scale-[0.99] h-36 sm:h-40"
+                            >
+                                {/* Left Section: Image with Soft Tinted Background */}
+                                <div className={`w-[44%] sm:w-[46%] shrink-0 rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
+                                    <img
+                                        src={tool.image}
+                                        alt={tool.title}
+                                        className="w-full h-full object-contain scale-125 sm:scale-130 transition-transform duration-300 group-hover:scale-135 drop-shadow-xs"
+                                    />
+                                </div>
+
+                                {/* Right Section: Badge Icon & Larger Text Title */}
+                                <div className="flex-1 flex flex-col justify-center gap-2 pl-3 pr-2 py-2 min-w-0">
+                                    {/* Icon Badge */}
+                                    <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${tool.badgeBg} text-white flex items-center justify-center shadow-xs shrink-0`}>
+                                        <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
+                                    </div>
+
+                                    {/* Title */}
+                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg leading-tight tracking-tight group-hover:text-[#7C3AED] transition-colors">
+                                        {tool.title}
+                                    </h3>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
-            </div>
-
-            {/* Tools Directory */}
-            <div className="px-4 py-4 flex flex-col gap-6">
-                <AnimatePresence mode="popLayout">
-                    {filteredCategories.length > 0 ? (
-                        filteredCategories.map((category) => {
-                            const catMeta = CATEGORY_MAP[category.id] || { titleKey: category.id, descKey: '' };
-                            return (
-                                <motion.div
-                                    key={category.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="flex flex-col animate-none"
-                                >
-                                    <div className="mb-3 px-1">
-                                        <h2 className="text-base-md font-bold text-gray-800 dark:text-gray-100">
-                                            {translate(catMeta.titleKey, displayLanguage)}
-                                        </h2>
-                                        <p className="text-xs text-gray-400 mt-0.5">
-                                            {translate(catMeta.descKey, displayLanguage)}
-                                        </p>
-                                    </div>
-
-                                    <div className="flex flex-col gap-3">
-                                        {category.tiles.map((tileKey) => {
-                                            const tile = TILE_REGISTRY[tileKey];
-                                            const isPrimary = isPrimaryTool(tileKey);
-                                            const Icon = tile.icon;
-
-                                            return (
-                                                <button
-                                                    key={tileKey}
-                                                    onClick={() => navigate(tile.path)}
-                                                    className={`
-                                                        w-full flex items-center gap-4 p-4 rounded-2xl text-left bg-white dark:bg-gray-800 border-2 transition-all hover:scale-[1.01] active:scale-[0.99]
-                                                        ${isPrimary 
-                                                            ? `${getPrimaryModeBorderClass(primaryMode)} shadow-sm` 
-                                                            : 'border-gray-100 dark:border-gray-750 shadow-xs'}
-                                                    `}
-                                                >
-                                                    {/* Icon container */}
-                                                    <div className={`
-                                                        w-12 h-12 rounded-2xl flex items-center justify-center shrink-0
-                                                        ${isLowVision ? 'bg-transparent text-yellow-400 border border-yellow-400/30' : tile.color}
-                                                    `}>
-                                                        <Icon size={24} className={isLowVision ? 'text-yellow-400' : 'text-white'} />
-                                                    </div>
-
-                                                    {/* Title & Description */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className="text-base-sm font-bold text-gray-800 dark:text-gray-100 truncate">
-                                                                {translate('tile_' + tileKey, displayLanguage)}
-                                                            </span>
-                                                            {isPrimary && (
-                                                                <span className={`
-                                                                    text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 shrink-0
-                                                                    ${getPrimaryModeBgClass(primaryMode)}
-                                                                `}>
-                                                                    <Sparkles size={8} />
-                                                                    {translate('primaryFocus', displayLanguage)}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-                                                            {translate('tile_' + tileKey + '_desc', displayLanguage)}
-                                                        </p>
-                                                    </div>
-
-                                                    <ArrowRight className="text-gray-300 dark:text-gray-600 shrink-0" size={18} />
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </motion.div>
-                            );
-                        })
-                    ) : (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="py-12 text-center"
-                        >
-                            <p className="text-base-md font-semibold text-gray-700 dark:text-gray-300">
-                                {displayLanguage === 'ml' ? 'തിരച്ചിലുമായി പൊരുത്തപ്പെടുന്ന ഉപകരണങ്ങളൊന്നുമില്ല' : 'No tools matched your search'}
-                            </p>
-                            <p className="text-base-sm text-gray-400 mt-1">
-                                {displayLanguage === 'ml' ? 'മറ്റൊരു പേരോ ആശയമോ തിരയാൻ ശ്രമിക്കുക' : 'Try searching for another name or concept'}
-                            </p>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
         </div>
     );

@@ -4,15 +4,23 @@ import TaskChecklist from './components/TaskChecklist';
 import { sendMessage, buildSystemPrompt } from '../../shared/lib/aiClient';
 import { logActivity } from '../../shared/lib/logActivity';
 import useProfileStore from '../../store/useProfileStore';
+import useFocusStore from './useFocusStore';
 
-export default function TaskBreakdownTab() {
+export default function TaskBreakdownTab({ onNavigateToFocus }) {
     const userId = useProfileStore((s) => s.id);
     const profile = useProfileStore((s) => s);
 
+    // Persisted task breakdown state from store (individual primitive selectors)
+    const taskTitle = useFocusStore((s) => s.taskTitle);
+    const steps = useFocusStore((s) => s.steps);
+    const completedStepIds = useFocusStore((s) => s.completedStepIds);
+
+    const setBreakdown = useFocusStore((s) => s.setBreakdown);
+    const toggleStepCompleted = useFocusStore((s) => s.toggleStepCompleted);
+    const clearBreakdown = useFocusStore((s) => s.clearBreakdown);
+
+    // Transient UI state
     const [isLoading, setIsLoading] = useState(false);
-    const [currentTaskTitle, setCurrentTaskTitle] = useState('');
-    const [steps, setSteps] = useState([]);
-    const [completedStepIds, setCompletedStepIds] = useState([]);
     const [errorMsg, setErrorMsg] = useState(null);
 
     // Fallback generator if API call fails
@@ -24,11 +32,8 @@ export default function TaskBreakdownTab() {
     ];
 
     const handleGenerateBreakdown = async (promptText) => {
-        console.log("[TaskBreakdown] Started:", promptText);
         setIsLoading(true);
         setErrorMsg(null);
-        setCurrentTaskTitle(promptText);
-        setCompletedStepIds([]);
 
         try {
             const systemPrompt = buildSystemPrompt(profile);
@@ -38,28 +43,18 @@ export default function TaskBreakdownTab() {
 ]
 Task to break down: "${promptText}"`;
 
-            console.log("[TaskBreakdown] Sending AI request");
             const reply = await sendMessage(systemPrompt, [{ role: 'user', content: userPrompt }]);
-            console.log("[TaskBreakdown] Raw AI response:", reply);
-
-            // Parse JSON response
             const cleanedJson = reply.replace(/```json/g, '').replace(/```/g, '').trim();
-            console.log("[TaskBreakdown] Cleaned JSON:", cleanedJson);
             const parsedSteps = JSON.parse(cleanedJson);
-            console.log("[TaskBreakdown] Parsed steps:", parsedSteps);
 
             if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
-                setSteps(parsedSteps);
-                console.log("[TaskBreakdown] Setting steps");
+                setBreakdown(promptText, parsedSteps);
             } else {
-                setSteps(generateFallbackSteps(promptText));
-                console.log("[TaskBreakdown] Setting steps");
+                setBreakdown(promptText, generateFallbackSteps(promptText));
             }
         } catch (err) {
-            console.error("[TaskBreakdown] Error:", err);
-            console.log("[TaskBreakdown] Using fallback steps:", generateFallbackSteps(promptText));
-            setSteps(generateFallbackSteps(promptText));
-            console.log("[TaskBreakdown] Setting steps");
+            console.error('[TaskBreakdown] Error:', err);
+            setBreakdown(promptText, generateFallbackSteps(promptText));
         } finally {
             setIsLoading(false);
         }
@@ -67,22 +62,16 @@ Task to break down: "${promptText}"`;
 
     const handleToggleStep = async (step) => {
         const isDone = completedStepIds.includes(step.id);
-        const nextCompleted = isDone
-            ? completedStepIds.filter((id) => id !== step.id)
-            : [...completedStepIds, step.id];
-
-        setCompletedStepIds(nextCompleted);
+        toggleStepCompleted(step.id);
 
         // If newly completed, log activity event
         if (!isDone) {
             await logActivity(userId, 'task_completed', {
                 title: step.title,
-                task: currentTaskTitle,
+                task: taskTitle,
             });
         }
     };
-
-    console.log("[TaskBreakdown] Current steps state:", steps);
 
     return (
         <div className="flex flex-col gap-6 w-full">
@@ -107,7 +96,9 @@ Task to break down: "${promptText}"`;
                 steps={steps}
                 completedStepIds={completedStepIds}
                 onToggleStep={handleToggleStep}
-                taskTitle={currentTaskTitle}
+                taskTitle={taskTitle}
+                onNavigateToFocus={onNavigateToFocus}
+                onClearBreakdown={clearBreakdown}
             />
         </div>
     );

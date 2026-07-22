@@ -3,9 +3,12 @@ import BottomNav from '../shared/components/BottomNav';
 import SignupScreen from '../features/auth/SignupScreen';
 import LoginScreen from '../features/auth/LoginScreen';
 import LanguageSelectionScreen from '../features/language-selection/Languageselectionscreen';
+import AgeRangeScreen from '../features/onboarding/AgeRangeScreen';
+import RegionScreen from '../features/onboarding/RegionScreen';
 import SplashScreen from '../features/splash/SplashScreen';
 import ProfileSetupScreen from '../features/profile-setup/ProfileSetupScreen';
 import DashboardScreen from '../features/dashboard/DashboardScreen';
+import HomeScreen from '../features/home/HomeScreen';
 import ChatListScreen from '../features/ai-chat/ChatListScreen';
 import ChatScreen from '../features/ai-chat/ChatScreen';
 import ProfileScreen from '../features/profile/ProfileScreen';
@@ -18,7 +21,13 @@ import ProgressScreen from '../features/progress/ProgressScreen';
 import AACBoardScreen from '../features/aac-board/AACBoardScreen';
 import FocusModeScreen from '../features/focus-mode/FocusModeScreen';
 import SocialStoryScreen from '../features/social-story/SocialStoryScreen';
+import LearnScreen from '../features/learn/LearnScreen';
+import LearnDetailScreen from '../features/learn/LearnDetailScreen';
+import SpeechTherapyScreen from '../features/speech-therapy/SpeechTherapyScreen';
+import DiaryMemoryScreen from '../features/dear-diary/DiaryMemoryScreen';
+import VisualNavigatorScreen from '../features/visual-navigator/VisualNavigatorScreen';
 import { getRouteMeta } from './config/routeMeta';
+
 
 /**
  * Temporary placeholder — swap for real feature screen as each
@@ -47,15 +56,20 @@ export default function AppRoutes() {
                 <Routes>
                     {/* Onboarding */}
                     <Route path="/" element={<SplashScreen />} />
-                    <Route path="/language" element={<LanguageSelectionScreen />} />
                     <Route path="/signup" element={<SignupScreen />} />
                     <Route path="/login" element={<LoginScreen />} />
+                    <Route path="/language" element={<LanguageSelectionScreen />} />
+                    <Route path="/age-range" element={<AgeRangeScreen />} />
+                    <Route path="/region" element={<RegionScreen />} />
                     <Route path="/profile-setup" element={<ProfileSetupScreen />} />
 
                     {/* Main tabs */}
-                    <Route path="/dashboard" element={<DashboardScreen />} />
+                    <Route path="/home" element={<HomeScreen />} />
+                    <Route path="/dashboard" element={<Navigate to="/home" replace />} />
                     <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
+                    <Route path="/learn" element={<LearnScreen />} />
+                    <Route path="/learn/:cardId" element={<LearnDetailScreen />} />
                     <Route path="/tools" element={<ToolsScreen />} />
                     <Route path="/progress" element={<ProgressScreen />} />
                     <Route path="/profile" element={<ProfileScreen />} />
@@ -73,6 +87,9 @@ export default function AppRoutes() {
                     <Route path="/document-reader" element={<Placeholder name="Document Reader" />} />
                     <Route path="/settings" element={<Placeholder name="Settings" />} />
                     <Route path="/aac-board" element={<AACBoardScreen />} />
+                    <Route path="/speech-therapy" element={<SpeechTherapyScreen />} />
+                    <Route path="/dear-diary" element={<DiaryMemoryScreen />} />
+                    <Route path="/visual-navigator" element={<VisualNavigatorScreen />} />
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />

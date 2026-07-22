@@ -8,19 +8,26 @@ import {
   Lightbulb,
   CheckCircle2,
   RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import Button from '../../shared/components/Button';
 import IconButton from '../../shared/components/IconButton';
 import { generateSpeech } from '../../shared/lib/aiClient';
 import { logActivity } from '../../shared/lib/logActivity';
 import useProfileStore from '../../store/useProfileStore';
+import StoryIllustration from './lib/storyIllustrations';
+import { generateStoryImage } from './lib/storyPrompts';
 
 /**
  * ReadStoryView — Interactive, step-by-step social story reader.
  *
  * Props:
- *   story: { title, emoji, pages: [{ text, tip }] }
+ *   story: { title, emoji, illustration, coverImagePrompt, pages: [{ text, tip, imagePrompt }] }
  *   onBack: () => void — return to previous view
+ *
+ * Each page's imagePrompt is sent to generateStoryImage() (OpenAI gpt-image-1)
+ * on demand and cached per story.id — the free icon illustration is shown
+ * while that request is in flight, on error, or if imagePrompt is missing.
  */
 export default function ReadStoryView({ story, onBack }) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -35,6 +42,63 @@ export default function ReadStoryView({ story, onBack }) {
   const totalPages = story.pages.length;
   const isLastPage = currentPage === totalPages - 1;
   const isFirstPage = currentPage === 0;
+
+  // ── Per-page AI illustrations (OpenAI gpt-image-1) ─────
+  // pageImages[index] = { status: 'loading' | 'ready' | 'error', url }
+  // Falls back to the free icon illustration (StoryIllustration) while
+  // loading, on error, or if a page has no imagePrompt at all.
+  const [pageImages, setPageImages] = useState({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadImage = (pageIndex) => {
+      const targetPage = story.pages[pageIndex];
+      if (!targetPage?.imagePrompt) return;
+
+      setPageImages((prev) => {
+        if (prev[pageIndex]) return prev; // already loading/loaded — don't restart
+        return { ...prev, [pageIndex]: { status: 'loading', url: null } };
+      });
+
+      const cacheKey = `${story.id}-page-${pageIndex}`;
+      generateStoryImage(targetPage.imagePrompt, cacheKey)
+        .then((url) => {
+          if (!cancelled) {
+            setPageImages((prev) => ({ ...prev, [pageIndex]: { status: 'ready', url } }));
+          }
+        })
+        .catch((err) => {
+          console.error('Story image generation failed:', err);
+          if (!cancelled) {
+            setPageImages((prev) => ({ ...prev, [pageIndex]: { status: 'error', url: null } }));
+          }
+        });
+    };
+
+    // Load the current page now, and quietly prefetch the next one
+    // so advancing feels instant instead of waiting on a fresh generation.
+    loadImage(currentPage);
+    if (currentPage + 1 < totalPages) {
+      loadImage(currentPage + 1);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, story.id]);
+
+  // Best-effort: cache a cover image for this story so LibraryTab can show
+  // a real thumbnail next time, without LibraryTab itself triggering a call.
+  useEffect(() => {
+    if (!story.coverImagePrompt) return;
+    generateStoryImage(story.coverImagePrompt, story.id).catch(() => {
+      // Silent — the cover thumbnail is a nice-to-have, not required for reading.
+    });
+  }, [story.id, story.coverImagePrompt]);
+
+  const currentImage = pageImages[currentPage];
 
   // Clean up audio on unmount
   useEffect(() => {
@@ -225,6 +289,34 @@ export default function ReadStoryView({ story, onBack }) {
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="flex flex-col gap-4"
           >
+            {/* Page illustration — real AI image once generated, icon while loading/on error */}
+            <div className="relative w-full h-40 rounded-card overflow-hidden">
+              {currentImage?.status === 'ready' ? (
+                <motion.img
+                  key={currentImage.url}
+                  src={currentImage.url}
+                  alt=""
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <>
+                  <StoryIllustration
+                    illustrationKey={story.illustration}
+                    size="lg"
+                    className="!h-40"
+                  />
+                  {currentImage?.status === 'loading' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/30">
+                      <Loader2 size={22} className="animate-spin text-accent-autism" />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             {/* Main text card */}
             <div
               className="rounded-card p-5 border border-accent-autism/20"

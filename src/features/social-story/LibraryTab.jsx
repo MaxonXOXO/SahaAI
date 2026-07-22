@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, BookOpen } from 'lucide-react';
 import Card from '../../shared/components/Card';
 import prebuiltStories, { CATEGORIES } from './lib/prebuiltStories';
+import StoryIllustration from './lib/storyIllustrations';
+import { storyImageCache } from './lib/storyPrompts';
 
 /**
  * LibraryTab — Grid of prebuilt social stories, filterable by category.
@@ -84,10 +86,19 @@ export default function LibraryTab({ onSelectStory }) {
                 className="active:scale-[0.98]"
               >
                 <div className="flex items-start gap-3">
-                  {/* Emoji avatar */}
-                  <div className="w-12 h-12 rounded-xl bg-accent-autism/10 dark:bg-accent-autism/20 flex items-center justify-center shrink-0 text-2xl">
-                    {story.emoji}
-                  </div>
+                  {/* Cover thumbnail — a real AI image if this story has already
+                      been opened this session (cached by ReadStoryView), otherwise
+                      the free icon illustration. Library never triggers new
+                      gpt-image-1 calls itself, to keep browsing free. */}
+                  {storyImageCache.has(story.id) ? (
+                    <img
+                      src={storyImageCache.get(story.id)}
+                      alt=""
+                      className="w-12 h-12 rounded-xl object-cover shrink-0"
+                    />
+                  ) : (
+                    <StoryIllustration illustrationKey={story.illustration} size="sm" />
+                  )}
 
                   <div className="flex-1 min-w-0">
                     <h3

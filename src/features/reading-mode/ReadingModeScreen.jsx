@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sliders, ToggleLeft, ToggleRight, Info } from 'lucide-react';
 import { transcribeImageText } from './lib/openai-ocr';
@@ -10,7 +10,7 @@ import './reading-mode.css';
 // Feature components and hooks
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useReadingSettings from './hooks/useReadingSettings';
-import useTextToSpeech from './hooks/useTextToSpeech';
+import useTextToSpeech from '../../shared/hooks/useTextToSpeech';
 import TopToolbar from './components/TopToolbar';
 import FontControls from './components/FontControls';
 import ReadingPane from './components/ReadingPane';
@@ -27,6 +27,7 @@ You can click on any word directly to start listening from that point, adjust th
 
 export default function ReadingModeScreen() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     // 1. Reading config state (single source of truth)
     const {
@@ -46,7 +47,8 @@ export default function ReadingModeScreen() {
 
     // Local screen visual states
     const [activeTab, setActiveTab] = useState(null); // 'fonts' | 'spacing' | 'overlay' | 'more' | null
-    const [documentText, setDocumentText] = useState(DEFAULT_DOC_TEXT);
+    const initialText = location.state?.text || DEFAULT_DOC_TEXT;
+    const [documentText, setDocumentText] = useState(initialText);
     const [statusMessage, setStatusMessage] = useState('');
     const [isScanning, setIsScanning] = useState(false);
     const [scanError, setScanError] = useState(false);

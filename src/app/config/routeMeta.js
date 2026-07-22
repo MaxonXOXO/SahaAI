@@ -13,35 +13,40 @@
 
 export const ROUTE_META = [
     // ── Onboarding / Auth ──────────────────────────────────────────────────
-    { path: '/',              onboarding: true,  hideNav: true  },
-    { path: '/language',      onboarding: true,  hideNav: true  },
-    { path: '/signup',        onboarding: true,  hideNav: true  },
-    { path: '/login',         onboarding: true,  hideNav: true  },
-    { path: '/profile-setup', onboarding: true,  hideNav: true  },
+    { path: '/', onboarding: true, hideNav: true },
+    { path: '/language', onboarding: true, hideNav: true },
+    { path: '/age-range', onboarding: true, hideNav: true },
+    { path: '/region', onboarding: true, hideNav: true },
+    { path: '/signup', onboarding: true, hideNav: true },
+    { path: '/login', onboarding: true, hideNav: true },
+    { path: '/profile-setup', onboarding: true, hideNav: true },
 
     // ── Full-screen feature flows (nav hidden but theme active) ────────────
-    { path: '/ai-chat/',      onboarding: false, hideNav: true, exactMatch: false },
-    { path: '/edit-profile',  onboarding: false, hideNav: true  },
+    { path: '/ai-chat/', onboarding: false, hideNav: true, exactMatch: false },
+    { path: '/edit-profile', onboarding: false, hideNav: true },
 
     // ── Main tab routes ────────────────────────────────────────────────────
-    { path: '/dashboard',     onboarding: false, hideNav: false },
-    { path: '/ai-chat',       onboarding: false, hideNav: false },
-    { path: '/tools',         onboarding: false, hideNav: false },
-    { path: '/progress',      onboarding: false, hideNav: false },
-    { path: '/profile',       onboarding: false, hideNav: false },
+    { path: '/home', onboarding: false, hideNav: false },
+    { path: '/dashboard', onboarding: false, hideNav: false },
+    { path: '/ai-chat', onboarding: false, hideNav: false },
+    { path: '/learn', onboarding: false, hideNav: false },
+    { path: '/tools', onboarding: false, hideNav: false },
+    { path: '/progress', onboarding: false, hideNav: false },
+    { path: '/profile', onboarding: false, hideNav: false },
 
     // ── Feature screens ────────────────────────────────────────────────────
-    { path: '/reading-mode',          onboarding: false, hideNav: false },
-    { path: '/text-simplifier',       onboarding: false, hideNav: false },
-    { path: '/math-helper',           onboarding: false, hideNav: false },
-    { path: '/focus-mode',            onboarding: false, hideNav: false },
-    { path: '/routine-builder',       onboarding: false, hideNav: false },
-    { path: '/social-story',          onboarding: false, hideNav: false },
+    { path: '/reading-mode', onboarding: false, hideNav: false },
+    { path: '/text-simplifier', onboarding: false, hideNav: false },
+    { path: '/math-helper', onboarding: false, hideNav: false },
+    { path: '/focus-mode', onboarding: false, hideNav: false },
+    { path: '/routine-builder', onboarding: false, hideNav: false },
+    { path: '/social-story', onboarding: false, hideNav: false },
     { path: '/conversation-practice', onboarding: false, hideNav: false },
-    { path: '/vision-assistant',      onboarding: false, hideNav: false },
-    { path: '/document-reader',       onboarding: false, hideNav: false },
-    { path: '/settings',              onboarding: false, hideNav: false },
-    { path: '/aac-board',             onboarding: false, hideNav: false },
+    { path: '/vision-assistant', onboarding: false, hideNav: false },
+    { path: '/document-reader', onboarding: false, hideNav: false },
+    { path: '/settings', onboarding: false, hideNav: false },
+    { path: '/aac-board', onboarding: false, hideNav: false },
+    { path: '/speech-therapy', onboarding: false, hideNav: false },
 ];
 
 /**
