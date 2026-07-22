@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Settings, Loader2 } from 'lucide-react';
+import { Settings, Loader2, Sparkles } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import IconButton from '../../shared/components/IconButton';
 import useProfileStore from '../../store/useProfileStore';
@@ -11,6 +11,10 @@ import BasicMathGame from './components/BasicMathGame';
 import BasicMathEntry from './components/BasicMathEntry';
 import EnterMathInput from './components/EnterMathInput';
 import CalculatorView from './components/CalculatorView';
+import AlgebraView from './components/AlgebraView';
+import PolynomialView from './components/PolynomialView';
+import TrigonometryView from './components/TrigonometryView';
+import SolverModal from './components/SolverModal';
 import DocumentScannerModal from '../../shared/components/DocumentScannerModal';
 import { extractTextFromImage, extractMathProblemsFromText } from '../../shared/lib/documentScanner';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -24,6 +28,7 @@ export default function MathHelperScreen() {
 
     // activeTopic can be 'basic-math' | 'algebra' | 'polynomial' | 'trigonometry' | 'calculator' | null
     const [activeTopic, setActiveTopic] = useState(null);
+    const [isSolverOpen, setIsSolverOpen] = useState(false);
 
     // Basic Math sub-state machine: 'entry' | 'custom-input' | 'playing'
     const [gameStep, setGameStep] = useState('entry');
@@ -177,6 +182,10 @@ export default function MathHelperScreen() {
             if (gameStep === 'playing') return 'Practice Chalkboard';
             return 'Basic Math';
         }
+        if (activeTopic === 'algebra') return 'Algebra Board';
+        if (activeTopic === 'polynomial') return 'Polynomial Evaluation';
+        if (activeTopic === 'trigonometry') return 'Right Triangles';
+        if (activeTopic === 'calculator') return 'Interactive Calculator';
         return 'Math Helper';
     };
 
@@ -244,6 +253,12 @@ export default function MathHelperScreen() {
                     </>
                 ) : activeTopic === 'calculator' ? (
                     <CalculatorView />
+                ) : activeTopic === 'algebra' ? (
+                    <AlgebraView />
+                ) : activeTopic === 'polynomial' ? (
+                    <PolynomialView />
+                ) : activeTopic === 'trigonometry' ? (
+                    <TrigonometryView />
                 ) : (
                     <>
                         {isScanning ? (
@@ -289,6 +304,29 @@ export default function MathHelperScreen() {
                                     />
                                 </div>
 
+                                {/* Solver Banner style button */}
+                                <button
+                                    onClick={() => setIsSolverOpen(true)}
+                                    className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-primary/15 to-[#1b3024]/25 border border-primary/20 dark:border-primary/45 rounded-2xl text-left hover:scale-[1.01] active:scale-[0.99] transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shrink-0 shadow-sm">
+                                            <Sparkles className="w-5 h-5 animate-pulse" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-black text-gray-800 dark:text-gray-100 uppercase tracking-wider">
+                                                Instant Math Solver
+                                            </h3>
+                                            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5 leading-normal">
+                                                Solve any math problem step-by-step
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="text-primary font-black text-lg pr-1 group-hover:translate-x-1 transition-transform">
+                                        →
+                                    </span>
+                                </button>
+
                                 {/* Scan / Upload action buttons row */}
                                 <EntryActions 
                                     onScanClick={() => setIsScannerOpen(true)}
@@ -313,6 +351,9 @@ export default function MathHelperScreen() {
                     </>
                 )}
             </div>
+
+            {/* Solver Modal */}
+            <SolverModal isOpen={isSolverOpen} onClose={() => setIsSolverOpen(false)} />
         </div>
     );
 }
