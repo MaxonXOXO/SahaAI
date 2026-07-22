@@ -61,6 +61,8 @@ export default function BasicMathGame({
     operandA, 
     operandB, 
     entryPath = 'operation-tile',
+    problemsQueue = [],
+    onQueueExhausted,
     onRestart,
     onEnterAnother,
     onSurpriseMe
@@ -82,6 +84,9 @@ export default function BasicMathGame({
     const [isChoiceCorrect, setIsChoiceCorrect] = useState(null);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
+    // Scanned worksheets queue index
+    const [queueIdx, setQueueIdx] = useState(0);
+
     // Local state tracking which path (custom vs random) is active
     const [activePath, setActivePath] = useState(entryPath);
 
@@ -89,7 +94,7 @@ export default function BasicMathGame({
         setActivePath(entryPath);
     }, [entryPath]);
 
-    const fetchProblem = async (diff = difficulty, resetFirstRound = false, forcedPath) => {
+    const fetchProblem = async (diff = difficulty, resetFirstRound = false, forcedPath, forcedIndex) => {
         setIsLoading(true);
         setProblem(null);
         setSelectedChoice(null);
@@ -98,13 +103,30 @@ export default function BasicMathGame({
         const checkFirst = resetFirstRound ? true : isFirstRound;
         const currentPath = forcedPath !== undefined ? forcedPath : activePath;
         const isCustomPath = currentPath === 'custom';
+        const isScannedPath = currentPath === 'scanned';
+
+        const indexToUse = forcedIndex !== undefined ? forcedIndex : (resetFirstRound ? 0 : queueIdx);
 
         try {
+            let activeOpSymbol = operation;
+            let finalOperandA = operandA;
+            let finalOperandB = operandB;
+
+            if (isScannedPath && problemsQueue && problemsQueue.length > 0) {
+                const currentScannedProb = problemsQueue[indexToUse] || problemsQueue[0];
+                let op = currentScannedProb.operation;
+                if (op === '×') op = '*';
+                if (op === '÷') op = '/';
+                activeOpSymbol = op;
+                finalOperandA = currentScannedProb.operandA;
+                finalOperandB = currentScannedProb.operandB;
+            }
+
             const data = await generateMathProblem({
-                operation,
+                operation: activeOpSymbol,
                 difficulty: diff,
-                operandA: (isCustomPath && checkFirst) ? operandA : undefined,
-                operandB: (isCustomPath && checkFirst) ? operandB : undefined
+                operandA: (isCustomPath && checkFirst) || isScannedPath ? finalOperandA : undefined,
+                operandB: (isCustomPath && checkFirst) || isScannedPath ? finalOperandB : undefined
             });
             
             setProblem(data);
@@ -126,8 +148,9 @@ export default function BasicMathGame({
 
     // Load initial problem
     useEffect(() => {
-        fetchProblem(difficulty, true);
-    }, [operation, operandA, operandB, entryPath]);
+        setQueueIdx(0);
+        fetchProblem(difficulty, true, entryPath, 0);
+    }, [operation, operandA, operandB, entryPath, problemsQueue]);
 
     const handleAnswerClick = async (choice) => {
         if (isTransitioning || selectedChoice !== null) return;
@@ -140,11 +163,13 @@ export default function BasicMathGame({
         try {
             if (userId) {
                 // Log activity including which entry path was used per user request
+                const source = activePath === 'operation-tile' ? 'random' : (activePath === 'scanned' ? 'scanned' : 'custom');
                 await logActivity(userId, 'math_problem_solved', {
                     correct,
                     operation: problem.operation,
                     difficulty,
-                    entryPath: activePath
+                    entryPath: activePath,
+                    source
                 });
             }
         } catch (err) {
@@ -152,7 +177,23 @@ export default function BasicMathGame({
         }
 
         // Delay before transitioning to next problem only if not custom flow
-        if (activePath !== 'custom') {
+        if (activePath === 'scanned') {
+            const nextIndex = queueIdx + 1;
+            if (nextIndex < (problemsQueue || []).length) {
+                setTimeout(() => {
+                    setQueueIdx(nextIndex);
+                    fetchProblem(difficulty, false, 'scanned', nextIndex);
+                    setIsTransitioning(false);
+                }, 1800);
+            } else {
+                setTimeout(() => {
+                    setIsTransitioning(false);
+                    if (onQueueExhausted) {
+                        onQueueExhausted();
+                    }
+                }, 1800);
+            }
+        } else if (activePath !== 'custom') {
             setTimeout(() => {
                 fetchProblem();
                 setIsTransitioning(false);

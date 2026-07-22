@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sliders, ToggleLeft, ToggleRight, Info } from 'lucide-react';
-import { transcribeImageText } from './lib/openai-ocr';
+import { extractTextFromImage } from '../../shared/lib/documentScanner';
 
 // Custom CSS styling (OpenDyslexic font-face & spacings)
 import './reading-mode.css';
@@ -16,7 +16,7 @@ import FontControls from './components/FontControls';
 import ReadingPane from './components/ReadingPane';
 import PlaybackBar from './components/PlaybackBar';
 import ScanBar from './components/ScanBar';
-import ScanCaptureModal from './components/ScanCaptureModal';
+import DocumentScannerModal from '../../shared/components/DocumentScannerModal';
 
 // Default document text for initial mount testing
 const DEFAULT_DOC_TEXT = `SahaAI Reading Assistant is ready.
@@ -163,7 +163,7 @@ export default function ReadingModeScreen() {
         setStatusMessage('Processing image with OpenAI Vision...');
 
         try {
-            const text = await transcribeImageText(imageFileOrBlob);
+            const text = await extractTextFromImage(imageFileOrBlob);
 
             // Check if OCR returns empty/garbled text.
             if (!text || text.trim().length === 0 || !/[a-zA-Z0-9]/.test(text)) {
@@ -485,7 +485,7 @@ export default function ReadingModeScreen() {
             />
 
             {/* Laptop/Desktop Webcam & File Upload Modal */}
-            <ScanCaptureModal
+            <DocumentScannerModal
                 isOpen={isCaptureModalOpen}
                 onClose={() => setIsCaptureModalOpen(false)}
                 onImageSelected={processImage}
