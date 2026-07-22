@@ -14,7 +14,9 @@ export default function FocusSessionTab({ onNavigateToCheckin }) {
             stepTitle: sessionData.stepTitle || null,
         });
 
-        if (onNavigateToCheckin) {
+        // Sessions with a stepTitle stay on timer tab for step-completion flow;
+        // sessions without a stepTitle (or when navigateNow is true) navigate to Check-In
+        if ((!sessionData.hasStepTitle || sessionData.navigateNow) && onNavigateToCheckin) {
             onNavigateToCheckin();
         }
     };

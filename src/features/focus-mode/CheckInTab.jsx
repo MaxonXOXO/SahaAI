@@ -21,7 +21,11 @@ export default function CheckInTab() {
     const handleSubmitCheckIn = async (reflectionData) => {
         await logActivity(userId, 'focus_checkin', {
             status: reflectionData.status,
-            notes: reflectionData.notes,
+            helped: reflectionData.helped || [],
+            hindered: reflectionData.hindered || [],
+            mood: reflectionData.mood || null,
+            notes: reflectionData.notes || '',
+            isFullFinished: reflectionData.isFullFinished || false,
         });
     };
 

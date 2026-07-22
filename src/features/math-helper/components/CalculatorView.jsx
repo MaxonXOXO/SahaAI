@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-// import { evaluate } from 'mathjs';
-const evaluate = (expr) => undefined; // temporarily disabled
+import { evaluate } from 'mathjs';
 import { generateStructuredJSON } from '../../../shared/lib/aiClient';
 import { logActivity } from '../../../shared/lib/logActivity';
 import useProfileStore from '../../../store/useProfileStore';

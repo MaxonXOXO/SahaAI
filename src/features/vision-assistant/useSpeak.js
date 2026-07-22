@@ -1,41 +1,136 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
+ * Splits full text into sentence chunks and sub-splits long sentences (>90 chars) at commas.
+ * Records the start character index of each chunk within fullText for onboundary tracking.
+ */
+function createCaptionChunks(fullText) {
+    if (!fullText || typeof fullText !== 'string') return [];
+
+    const text = fullText.trim();
+    if (!text) return [];
+
+    // 1. Split into sentences while tracking start character offset in text
+    const sentences = [];
+    const sentenceRegex = /[^.!?]+[.!?]+|\S+/g;
+    let match;
+    while ((match = sentenceRegex.exec(text)) !== null) {
+        const str = match[0].trim();
+        if (str) {
+            sentences.push({
+                text: str,
+                startIndex: match.index + match[0].indexOf(str),
+            });
+        }
+    }
+    if (sentences.length === 0) {
+        sentences.push({ text, startIndex: 0 });
+    }
+
+    // 2. Sub-split any sentence chunk longer than 90 characters at commas
+    const finalChunks = [];
+    for (const item of sentences) {
+        if (item.text.length <= 90 || !item.text.includes(',')) {
+            finalChunks.push(item);
+        } else {
+            const parts = item.text.split(/,\s*/);
+            let currentOffset = item.startIndex;
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i].trim();
+                if (!part) continue;
+                const idx = text.indexOf(part, currentOffset);
+                const actualIndex = idx !== -1 ? idx : currentOffset;
+                finalChunks.push({
+                    text: part + (i < parts.length - 1 ? ',' : ''),
+                    startIndex: actualIndex,
+                });
+                currentOffset = actualIndex + part.length;
+            }
+        }
+    }
+
+    return finalChunks;
+}
+
+/**
  * useSpeak - Custom Hook for Speech Synthesis and Accessibility Audio Feedback
- * Exposes methods to speak, pause, resume, and cancel TTS.
- * Also plays subtle haptic/beep audio tones using Web Audio API for screen interactions.
+ * Exposes methods to speak, stop, and play audio beeps.
+ * Uses Web Speech API onboundary event to lock live captions to real spoken progress,
+ * with a 1.5s fallback timer for synthesis engines that omit boundary events.
  */
 export default function useSpeak() {
     const [speaking, setSpeaking] = useState(false);
-    const [paused, setPaused] = useState(false);
     const synthRef = useRef(window.speechSynthesis);
+
     const currentUtteranceRef = useRef(null);
+    const fallbackTimerRef = useRef(null);
+    const fallbackTimeoutRef = useRef(null);
+    const onSentenceChangeRef = useRef(null);
+
+    const clearTimers = () => {
+        if (fallbackTimerRef.current) {
+            clearTimeout(fallbackTimerRef.current);
+            fallbackTimerRef.current = null;
+        }
+        if (fallbackTimeoutRef.current) {
+            clearTimeout(fallbackTimeoutRef.current);
+            fallbackTimeoutRef.current = null;
+        }
+    };
 
     useEffect(() => {
-        if (!synthRef.current) return;
-
-        // Monitor speech synthesis state
-        const checkSpeechState = () => {
-            setSpeaking(synthRef.current.speaking);
-            setPaused(synthRef.current.paused);
+        return () => {
+            clearTimers();
+            if (synthRef.current) {
+                synthRef.current.cancel();
+            }
         };
+    }, []);
 
-        const timer = setInterval(checkSpeechState, 200);
-        return () => clearInterval(timer);
+    // Safety interval: Poll once per second while speaking to reset state if speech ends without onend event
+    useEffect(() => {
+        if (!speaking) return;
+
+        const safetyInterval = setInterval(() => {
+            if (!synthRef.current || synthRef.current.speaking === false) {
+                setSpeaking(false);
+                if (onSentenceChangeRef.current) {
+                    onSentenceChangeRef.current('');
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(safetyInterval);
+    }, [speaking]);
+
+    /** Stops current speech output, cancels synthesis, and resets active speech state */
+    const stop = useCallback(() => {
+        clearTimers();
+        if (synthRef.current) {
+            synthRef.current.cancel();
+        }
+        currentUtteranceRef.current = null;
+        setSpeaking(false);
+
+        if (onSentenceChangeRef.current) {
+            onSentenceChangeRef.current('');
+            onSentenceChangeRef.current = null;
+        }
     }, []);
 
     /**
-     * Speaks the given text with customization and sentence-by-sentence subtitle callback
+     * Speaks the full text as a single utterance and updates captions in real-time via onboundary events.
      * @param {string} text - Text to speak
      * @param {number} rate - Speech rate multiplier (0.5 to 2)
      * @param {function} onEnd - Callback function when speech finishes
-     * @param {function} onSentenceChange - Callback function called per sentence with current sentence text
+     * @param {function} onSentenceChange - Subtitle callback function receiving active caption chunk
      */
     const speak = useCallback((text, rate = 1.0, onEnd = null, onSentenceChange = null) => {
         if (!synthRef.current) return;
 
-        // Stop any current reading
-        synthRef.current.cancel();
+        // Stop any current reading and reset timers
+        stop();
+        onSentenceChangeRef.current = onSentenceChange;
 
         // Mutually exclusive: Abort active speech recognition if it is listening
         if (window.sahaSpeechRecognition) {
@@ -51,88 +146,108 @@ export default function useSpeak() {
         const cleanText = text.trim();
         if (cleanText === '') return;
 
-        // Split text into sentences for live subtitle synchronization
-        const sentences = cleanText
-            .split(/(?<=[.!?])\s+/)
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
+        // Split text into caption chunks with recorded start character indices
+        const chunks = createCaptionChunks(cleanText);
+        if (chunks.length === 0) return;
 
-        if (sentences.length === 0) return;
+        // Speak full text as ONE single utterance
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = rate;
+        currentUtteranceRef.current = utterance;
 
-        let index = 0;
+        let boundaryReceived = false;
 
-        const speakNextSentence = () => {
-            if (index >= sentences.length) {
-                setSpeaking(false);
-                setPaused(false);
-                currentUtteranceRef.current = null;
-                if (onSentenceChange) onSentenceChange('');
-                if (onEnd) onEnd();
-                return;
+        // Show initial caption chunk
+        if (onSentenceChange) {
+            onSentenceChange(chunks[0].text);
+        }
+
+        // Real-time speech progress tracking via onboundary
+        utterance.onboundary = (e) => {
+            if (currentUtteranceRef.current !== utterance) return;
+
+            boundaryReceived = true;
+            clearTimers(); // Cancel fallback timer since boundary events are flowing
+
+            const charIndex = e.charIndex !== undefined ? e.charIndex : 0;
+            let activeChunk = chunks[0];
+            for (let i = 0; i < chunks.length; i++) {
+                if (chunks[i].startIndex <= charIndex) {
+                    activeChunk = chunks[i];
+                } else {
+                    break;
+                }
             }
 
-            const sentenceText = sentences[index];
-            if (onSentenceChange) onSentenceChange(sentenceText);
-
-            const utterance = new SpeechSynthesisUtterance(sentenceText);
-            utterance.rate = rate;
-            currentUtteranceRef.current = utterance;
-
-            utterance.onend = () => {
-                if (currentUtteranceRef.current !== utterance) return;
-                index++;
-                speakNextSentence();
-            };
-
-            utterance.onerror = (e) => {
-                if (currentUtteranceRef.current !== utterance) return;
-                if (e.error === 'interrupted' || e.error === 'canceled') {
-                    setSpeaking(false);
-                    setPaused(false);
-                    if (onSentenceChange) onSentenceChange('');
-                    return;
-                }
-                console.error('SpeechSynthesisUtterance error:', e);
-                index++;
-                speakNextSentence();
-            };
-
-            setSpeaking(true);
-            setPaused(false);
-            synthRef.current.speak(utterance);
+            if (activeChunk && onSentenceChangeRef.current) {
+                onSentenceChangeRef.current(activeChunk.text);
+            }
         };
 
-        speakNextSentence();
-    }, []);
+        utterance.onstart = () => {
+            if (currentUtteranceRef.current !== utterance) return;
+            setSpeaking(true);
 
-    /** Stops current speech output */
-    const stop = useCallback(() => {
-        if (!synthRef.current) return;
-        synthRef.current.cancel();
-        currentUtteranceRef.current = null;
-        setSpeaking(false);
-        setPaused(false);
-    }, []);
+            // Fallback timer: If no onboundary event arrives within 1.5s, fall back to duration estimates
+            fallbackTimerRef.current = setTimeout(() => {
+                if (boundaryReceived || currentUtteranceRef.current !== utterance) return;
 
-    /** Pauses speech output */
-    const pause = useCallback(() => {
-        if (!synthRef.current) return;
-        synthRef.current.pause();
-        setPaused(true);
-    }, []);
+                let chunkIdx = 0;
+                const advanceFallback = () => {
+                    if (boundaryReceived || currentUtteranceRef.current !== utterance) return;
+                    if (chunkIdx >= chunks.length) return;
 
-    /** Resumes speech output */
-    const resume = useCallback(() => {
-        if (!synthRef.current) return;
-        synthRef.current.resume();
-        setPaused(false);
-    }, []);
+                    const currentChunk = chunks[chunkIdx];
+                    if (onSentenceChangeRef.current) {
+                        onSentenceChangeRef.current(currentChunk.text);
+                    }
 
-    /**
-     * Plays a high contrast beep sound to help low-vision users confirm buttons actions
-     * @param {number} freq - Sound frequency in Hz (e.g. 440, 880)
-     * @param {number} duration - Sound duration in seconds
-     */
+                    const estDurationMs = Math.max(800, Math.min(6000, Math.round((currentChunk.text.length / (15 * rate)) * 1000)));
+                    chunkIdx++;
+                    fallbackTimeoutRef.current = setTimeout(advanceFallback, estDurationMs);
+                };
+
+                advanceFallback();
+            }, 1500);
+        };
+
+        utterance.onend = () => {
+            if (currentUtteranceRef.current !== utterance) return;
+            clearTimers();
+            currentUtteranceRef.current = null;
+            setSpeaking(false);
+
+            if (onSentenceChangeRef.current) {
+                onSentenceChangeRef.current('');
+                onSentenceChangeRef.current = null;
+            }
+            if (onEnd) onEnd();
+        };
+
+        utterance.onerror = (e) => {
+            if (currentUtteranceRef.current !== utterance) return;
+            clearTimers();
+            if (e.error === 'interrupted' || e.error === 'canceled') {
+                setSpeaking(false);
+                if (onSentenceChangeRef.current) {
+                    onSentenceChangeRef.current('');
+                    onSentenceChangeRef.current = null;
+                }
+                return;
+            }
+            console.error('SpeechSynthesisUtterance error:', e);
+            setSpeaking(false);
+            if (onSentenceChangeRef.current) {
+                onSentenceChangeRef.current('');
+                onSentenceChangeRef.current = null;
+            }
+        };
+
+        setSpeaking(true);
+        synthRef.current.speak(utterance);
+    }, [stop]);
+
+    /** Plays high-contrast audio tone feedback */
     const playBeep = useCallback((freq = 440, duration = 0.08) => {
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -146,7 +261,6 @@ export default function useSpeak() {
             oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
             gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            // Smoothly ramp down volume to avoid clicks
             gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
             oscillator.connect(gainNode);
@@ -162,10 +276,7 @@ export default function useSpeak() {
     return {
         speak,
         stop,
-        pause,
-        resume,
         speaking,
-        paused,
         playBeep,
     };
 }

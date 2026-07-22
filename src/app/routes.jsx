@@ -21,6 +21,7 @@ import ProgressScreen from '../features/progress/ProgressScreen';
 import AACBoardScreen from '../features/aac-board/AACBoardScreen';
 import FocusModeScreen from '../features/focus-mode/FocusModeScreen';
 import SocialStoryScreen from '../features/social-story/SocialStoryScreen';
+import RoutineBuilderScreen from '../features/routine-builder/RoutineBuilderScreen';
 import LearnScreen from '../features/learn/LearnScreen';
 import LearnDetailScreen from '../features/learn/LearnDetailScreen';
 import SpeechTherapyScreen from '../features/speech-therapy/SpeechTherapyScreen';
@@ -80,7 +81,7 @@ export default function AppRoutes() {
                     <Route path="/text-simplifier" element={<Placeholder name="AI Text Simplifier" />} />
                     <Route path="/focus-mode" element={<FocusModeScreen />} />
                     <Route path="/math-helper" element={<MathHelperScreen />} />
-                    <Route path="/routine-builder" element={<Placeholder name="Routine Builder" />} />
+                    <Route path="/routine-builder" element={<RoutineBuilderScreen />} />
                     <Route path="/social-story" element={<SocialStoryScreen />} />
                     <Route path="/conversation-practice" element={<Placeholder name="Conversation Practice" />} />
                     <Route path="/vision-assistant" element={<VisionAssistant />} />
