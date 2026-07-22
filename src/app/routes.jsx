@@ -26,6 +26,7 @@ import LearnScreen from '../features/learn/LearnScreen';
 import LearnDetailScreen from '../features/learn/LearnDetailScreen';
 import SpeechTherapyScreen from '../features/speech-therapy/SpeechTherapyScreen';
 import DiaryMemoryScreen from '../features/dear-diary/DiaryMemoryScreen';
+import VisualNavigatorScreen from '../features/visual-navigator/VisualNavigatorScreen';
 import { getRouteMeta } from './config/routeMeta';
 
 
@@ -89,6 +90,7 @@ export default function AppRoutes() {
                     <Route path="/aac-board" element={<AACBoardScreen />} />
                     <Route path="/speech-therapy" element={<SpeechTherapyScreen />} />
                     <Route path="/dear-diary" element={<DiaryMemoryScreen />} />
+                    <Route path="/visual-navigator" element={<VisualNavigatorScreen />} />
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />

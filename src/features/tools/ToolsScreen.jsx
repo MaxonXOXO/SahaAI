@@ -9,7 +9,8 @@ import {
     Volume2,
     BookOpen,
     Bookmark,
-    ChevronRight
+    ChevronRight,
+    Navigation
 } from 'lucide-react';
 
 import ScreenHeader from '../../shared/components/ScreenHeader';
@@ -32,6 +33,16 @@ import learnImg from '../../assets/Tools/learn.png';
  * ToolsScreen — Rich 2-column feature directory matching the modern SahaAI tools UI.
  */
 const TOOLS_LIST = [
+    {
+        key: 'visualNavigator',
+        title: 'Visual Navigator',
+        description: 'Live camera and voice guidance for nearby surroundings.',
+        icon: Navigation,
+        path: '/visual-navigator',
+        image: visionAssistantImg,
+        bgTint: 'bg-[#E8F4FF] dark:bg-sky-950/40',
+        badgeBg: 'bg-[#7C3AED]',
+    },
     {
         key: 'vision',
         title: 'Vision Assistant',

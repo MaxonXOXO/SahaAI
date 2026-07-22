@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, Mic, BookOpen, Info, Volume2, ArrowRight, Search, MessageSquare } from 'lucide-react';
 import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
+import { useThemeVariables } from '../../app/hooks/useThemeVariables';
 import useRecentActivity from '../../shared/hooks/useRecentActivity';
 import { TILE_REGISTRY } from '../dashboard/dashboardModes';
 import { EVENT_REGISTRY, getEventLabel, getEventLink } from '../../shared/lib/eventRegistry';
@@ -14,6 +15,10 @@ import banner2 from '../../assets/banner2.png';
 import banner3 from '../../assets/banner3.png';
 import banner4 from '../../assets/banner4.png';
 import banner5 from '../../assets/banner5.png';
+import banner1Dark from '../../assets/banner1_dark.png';
+import banner2Dark from '../../assets/banner2_dark.png';
+import banner3Dark from '../../assets/banner3_dark.png';
+import banner4Dark from '../../assets/banner4_dark.png';
 
 // ── Per-profile tile assignments (from spec) ─────────────────────────────────
 const PROFILE_TILES = {
@@ -33,25 +38,14 @@ function getGreetingKey() {
     return 'homeGreetingEvening';
 }
 
-const getBannerImage = (modeKey) => {
+const getBannerImage = (modeKey, useDarkVariant) => {
     switch (modeKey) {
-        case 'adhd': return banner1;
-        case 'autism': return banner2;
-        case 'dyslexia': return banner3;
-        case 'dyscalculia': return banner4;
+        case 'adhd': return useDarkVariant ? banner1Dark : banner1;
+        case 'autism': return useDarkVariant ? banner2Dark : banner2;
+        case 'dyslexia': return useDarkVariant ? banner3Dark : banner3;
+        case 'dyscalculia': return useDarkVariant ? banner4Dark : banner4;
         case 'lowVision': return banner5;
-        default: return banner1;
-    }
-}
-
-const getModeBackgroundTint = (modeKey) => {
-    switch (modeKey) {
-        case 'adhd': return '#F0FDF4'; // subtle green tint
-        case 'dyscalculia': return '#FFF7ED'; // subtle orange tint
-        case 'autism': return '#EFF6FF'; // subtle blue tint
-        case 'dyslexia': return '#FAF5FF'; // subtle purple tint
-        case 'lowVision': return '#0A0A0A'; // let high-contrast take over
-        default: return '#FAFAFC';
+        default: return useDarkVariant ? banner1Dark : banner1;
     }
 }
 
@@ -62,6 +56,7 @@ export default function HomeScreen() {
     const avatar_base64 = useProfileStore((s) => s.avatar_base64);
     const primaryMode = useProfileStore((s) => s.primaryMode);
     const displayLanguage = useSettingsStore((s) => s.displayLanguage);
+    const { activeContrast } = useThemeVariables();
     const { recentItems, loading: recentLoading } = useRecentActivity(1);
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -71,7 +66,7 @@ export default function HomeScreen() {
     const isLowVision = primaryMode === 'lowVision';
     const modeKey = primaryMode && PROFILE_TILES[primaryMode] ? primaryMode : 'default';
     const tiles = PROFILE_TILES[modeKey];
-    const bannerImage = getBannerImage(modeKey);
+    const bannerImage = getBannerImage(modeKey, activeContrast !== 'light');
 
     // Resolve the most recent activity for the Continue Card
     const continueItem = useMemo(() => {
@@ -150,7 +145,10 @@ export default function HomeScreen() {
         <div
             className="flex-1 flex flex-col min-h-0 overflow-y-auto relative"
             style={{
-                background: getModeBackgroundTint(modeKey),
+                // Theme selection, rather than the disability profile, owns
+                // the page background. This keeps Dark, Soft, and High modes
+                // consistent even when Low Vision is not selected.
+                background: 'var(--a11y-bg)',
                 color: 'var(--a11y-text)',
                 transition: 'var(--a11y-transition)',
             }}

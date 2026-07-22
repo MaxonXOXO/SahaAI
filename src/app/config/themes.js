@@ -61,9 +61,10 @@ export const CONTRAST_PRESETS = {
 export const DISABILITY_PATCHES = [
     {
         key: 'lowVision',
-        // Low-vision forces high contrast when user hasn't already picked one
+        // Use high contrast as the initial low-vision default only. An
+        // explicitly selected theme must always win.
         resolveContrast: (contrastMode) =>
-            contrastMode === 'default' || contrastMode === 'light' ? 'high' : contrastMode,
+            contrastMode === 'default' ? 'high' : contrastMode,
         structurePatch: () => ({
             lineHeight: '1.8',
         }),
@@ -125,14 +126,17 @@ export const DEFAULT_STRUCTURE = {
  * Pure function — no side effects, fully testable.
  */
 export function buildTheme({ needs = {}, primaryMode = null, contrastMode = 'default' }) {
-    // 1. Resolve contrast key (handle alias + lowVision auto-upgrade)
-    let activeContrast = contrastMode === 'default' ? 'light' : contrastMode;
+    // Keep the raw setting long enough to distinguish the low-vision default
+    // from an explicit Light selection.
+    let activeContrast = contrastMode;
 
     // lowVision auto-upgrade before anything else
     const lowVisionPatch = DISABILITY_PATCHES.find((p) => p.key === 'lowVision');
     if (needs.lowVision && lowVisionPatch?.resolveContrast) {
         activeContrast = lowVisionPatch.resolveContrast(activeContrast);
     }
+
+    activeContrast = activeContrast === 'default' ? 'light' : activeContrast;
 
     // 2. Start from base color preset
     const basePreset = CONTRAST_PRESETS[activeContrast] ?? CONTRAST_PRESETS.light;

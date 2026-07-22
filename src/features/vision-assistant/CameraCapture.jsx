@@ -250,7 +250,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
 
                         {/* High contrast center crosshair / guidelines */}
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div className="w-48 h-48 border-2 border-white/40 border-dashed rounded-lg flex items-center justify-center">
+                            <div className="vision-frame w-48 h-48 border-2 border-white/40 border-dashed rounded-lg flex items-center justify-center">
                                 <div className="w-4 h-4 border-t-2 border-l-2 border-white"></div>
                                 <div className="w-4 h-4 border-t-2 border-r-2 border-white absolute top-20 right-20"></div>
                                 <div className="w-4 h-4 border-b-2 border-l-2 border-white absolute bottom-20 left-20"></div>
