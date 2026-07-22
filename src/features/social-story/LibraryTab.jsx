@@ -56,10 +56,9 @@ export default function LibraryTab({ onSelectStory }) {
             className={`
               shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium
               transition-all duration-200 min-h-[36px]
-              ${
-                activeCategory === cat.id
-                  ? 'bg-accent-autism text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              ${activeCategory === cat.id
+                ? 'bg-accent-autism text-white shadow-sm'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               }
             `}
           >
