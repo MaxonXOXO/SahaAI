@@ -71,6 +71,8 @@ export default function useVisionAI() {
             systemPrompt = 'Identify all major objects, obstacles, and currency bills/coins visible in this image. Give their relative positions (e.g. "a cup on the right side of the table", "a chair in front of you"). Keep it clear, concise, and easy to hear for a visually impaired user.';
         } else if (mode === 'qa') {
             systemPrompt = `Answer this question about the image clearly and concisely: "${customQuestion}". Provide details helpful for a visually impaired user, keeping it under 3-4 sentences.`;
+        } else if (mode === 'currency') {
+            systemPrompt = 'Identify the single banknote or coin most prominent in this image. Respond ONLY with minified JSON. If clearly identifiable: {"status":"ok","denomination":<number>,"currency":"INR","confidence":"high"|"medium"}. Use "medium" if folded, angled, partly obscured, or poorly lit but still readable. If you cannot identify it: {"status":"unclear","reason":"<string>"}. If no currency visible: {"status":"none"}. Never guess wildly. Never comment on authenticity. Assume INR unless another currency is clearly printed.';
         }
 
         // --- REAL GEMINI API CALL ---
@@ -195,6 +197,16 @@ export default function useVisionAI() {
             } else {
                 mockResult = `Regarding your question: "${customQuestion}", I can see a standard workspace setup. There is a laptop in the center, a water bottle, and a clean desk surface with no obstacles in the immediate vicinity.`;
             }
+        } else if (mode === 'currency') {
+            const currencySamples = [
+                '{"status":"ok","denomination":500,"currency":"INR","confidence":"high"}',
+                '{"status":"ok","denomination":100,"currency":"INR","confidence":"high"}',
+                '{"status":"ok","denomination":50,"currency":"INR","confidence":"medium"}',
+                '{"status":"unclear","reason":"partially out of frame"}',
+            ];
+            const hash = computeImageHash(cleanBase64);
+            setLoading(false);
+            return currencySamples[hash % currencySamples.length];
         }
 
         // Always label demo results clearly so users know this is not a real analysis
