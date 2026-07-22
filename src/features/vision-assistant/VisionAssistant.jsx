@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
 import CameraCapture from './CameraCapture';
@@ -78,8 +78,13 @@ export default function VisionAssistant() {
     const [showHistory, setShowHistory] = useState(false);
     const [showAskBar, setShowAskBar] = useState(false);
     const [reviewScan, setReviewScan] = useState(null);
-    const [currencySession, setCurrencySession] = useState({ notes: [], total: 0 });
+    const [currencySession, setCurrencySession] = useState({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
     const [isMoneyTipsOpen, setIsMoneyTipsOpen] = useState(false);
+    const [isVerifyFormOpen, setIsVerifyFormOpen] = useState(false);
+    const [verifyPrice, setVerifyPrice] = useState('');
+    const [verifyAmountGiven, setVerifyAmountGiven] = useState('');
+    const [verifyError, setVerifyError] = useState('');
+
     const moneyTipsBtnRef = useRef(null);
     const moneyTipsModalRef = useRef(null);
 
@@ -118,21 +123,113 @@ export default function VisionAssistant() {
         }, 50);
     };
 
+    // Verify Change Handlers
+    const openVerifyForm = () => {
+        playBeep(440, 0.08);
+        setVerifyPrice('');
+        setVerifyAmountGiven('');
+        setVerifyError('');
+        setIsVerifyFormOpen(true);
+    };
+
+    const closeVerifyForm = () => {
+        playBeep(350, 0.08);
+        setIsVerifyFormOpen(false);
+        setVerifyError('');
+    };
+
+    const handleStartVerification = () => {
+        playBeep(440, 0.08);
+        setVerifyError('');
+
+        const numPrice = parseFloat(verifyPrice);
+        const numAmount = parseFloat(verifyAmountGiven);
+
+        if (isNaN(numPrice) || numPrice <= 0 || isNaN(numAmount) || numAmount <= 0) {
+            setVerifyError("Please enter valid positive numbers for price and amount given.");
+            return;
+        }
+
+        if (numAmount < numPrice) {
+            setVerifyError("That's less than the price — check the amounts.");
+            return;
+        }
+
+        const expectedChange = numAmount - numPrice;
+        const announcement = `Expected change: ₹${expectedChange}.`;
+        speak(announcement, speechRate);
+
+        setCurrencySession({
+            notes: [],
+            total: 0,
+            verifyTarget: expectedChange,
+            price: numPrice,
+            amountGiven: numAmount,
+        });
+
+        setIsVerifyFormOpen(false);
+    };
+
+    const handleCancelVerifyTarget = () => {
+        playBeep(350, 0.08);
+        speak("Returned to normal currency counting.", speechRate);
+        setCurrencySession((prev) => ({
+            ...prev,
+            verifyTarget: null,
+            price: null,
+            amountGiven: null,
+        }));
+    };
+
     // Currency Session Controls
     const handleFinishCurrencySession = () => {
         playBeep(520, 0.08);
         const breakdownText = formatCurrencyBreakdown(currencySession.notes);
-        speak(breakdownText, speechRate);
+        const counted = currencySession.total;
 
-        const newScan = {
-            id: Date.now(),
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            mode: 'currency',
-            result: breakdownText,
-            image: capturedImage || reviewScan?.image || null,
-        };
-        setScanHistory((prev) => [newScan, ...prev.slice(0, 9)]);
-        setCurrencySession({ notes: [], total: 0 });
+        if (currencySession.verifyTarget !== null) {
+            const expected = currencySession.verifyTarget;
+            const diff = Math.abs(counted - expected);
+
+            let verdictText = '';
+            if (counted === expected) {
+                verdictText = `Correct! You received exactly ₹${counted} change, as expected.`;
+            } else if (counted < expected) {
+                verdictText = `You should have received ₹${expected} but counted ₹${counted} — that's ₹${diff} less. You may want to ask for a recount.`;
+            } else {
+                verdictText = `You counted ₹${counted}, which is ₹${diff} more than the expected ₹${expected}. You may want to double check.`;
+            }
+
+            const fullResultText = `${verdictText} ${breakdownText}`;
+            speak(fullResultText, speechRate);
+
+            const newScan = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                mode: 'currency-verify',
+                result: fullResultText,
+                price: currencySession.price,
+                amountGiven: currencySession.amountGiven,
+                expectedChange: expected,
+                counted: counted,
+                verdict: verdictText,
+                image: capturedImage || reviewScan?.image || null,
+            };
+            setScanHistory((prev) => [newScan, ...prev.slice(0, 9)]);
+            setCurrencySession({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
+        } else {
+            speak(breakdownText, speechRate);
+
+            const newScan = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                mode: 'currency',
+                result: breakdownText,
+                image: capturedImage || reviewScan?.image || null,
+            };
+            setScanHistory((prev) => [newScan, ...prev.slice(0, 9)]);
+            setCurrencySession({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
+        }
     };
 
     const handleUndoLastNote = () => {
@@ -142,7 +239,7 @@ export default function VisionAssistant() {
             const updatedNotes = prev.notes.slice(0, -1);
             const updatedTotal = updatedNotes.reduce((sum, n) => sum + n.denomination, 0);
             speak(`Removed. Total is now ${updatedTotal}.`, speechRate);
-            return { notes: updatedNotes, total: updatedTotal };
+            return { ...prev, notes: updatedNotes, total: updatedTotal };
         });
     };
 
@@ -203,7 +300,7 @@ export default function VisionAssistant() {
         stop();
 
         if (mode === 'currency') {
-            setCurrencySession({ notes: [], total: 0 });
+            setCurrencySession({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
         }
 
         let announcement = '';
@@ -277,8 +374,12 @@ export default function VisionAssistant() {
                         const updatedNotes = [...prev.notes, { denomination, confidence }];
                         const updatedTotal = prev.total + denomination;
                         const prefix = confidence === 'medium' ? 'I think this is ' : '';
-                        speak(`${prefix}${denomination} rupees. Total: ${updatedTotal}.`, speechRate);
-                        return { notes: updatedNotes, total: updatedTotal };
+                        if (prev.verifyTarget !== null) {
+                            speak(`${prefix}${denomination} rupees. Total: ${updatedTotal} of ${prev.verifyTarget} expected.`, speechRate);
+                        } else {
+                            speak(`${prefix}${denomination} rupees. Total: ${updatedTotal}.`, speechRate);
+                        }
+                        return { ...prev, notes: updatedNotes, total: updatedTotal };
                     });
                 } else if (json.status === 'unclear') {
                     const reason = json.reason || 'unclear image';
@@ -665,7 +766,9 @@ export default function VisionAssistant() {
                                     : '₹0'}
                             </span>
                             <span className="text-xs sm:text-base-sm font-bold text-slate-300 mt-0.5">
-                                Total: ₹{currencySession.total} · {currencySession.notes.length} note{currencySession.notes.length !== 1 ? 's' : ''}
+                                {currencySession.verifyTarget !== null
+                                    ? `Total: ₹${currencySession.total} of ₹${currencySession.verifyTarget} expected · ${currencySession.notes.length} note${currencySession.notes.length !== 1 ? 's' : ''}`
+                                    : `Total: ₹${currencySession.total} · ${currencySession.notes.length} note${currencySession.notes.length !== 1 ? 's' : ''}`}
                             </span>
                         </div>
                     )}
@@ -695,7 +798,7 @@ export default function VisionAssistant() {
                 )}
 
                 {/* --- CURRENCY BREAKDOWN RESULT PANEL --- */}
-                {effectiveMode === 'currency' && (reviewScan || currencySession.notes.length > 0) && (
+                {(effectiveMode === 'currency' || effectiveMode === 'currency-verify') && (reviewScan || currencySession.notes.length > 0) && (
                     <div className="shrink-0 my-2">
                         <div className={`${getCardClasses()} border-2 border-amber-500/30 p-4 rounded-card flex flex-col gap-2`}>
                             <div className="flex items-center gap-2 text-amber-500 font-bold text-base-md">
@@ -712,19 +815,43 @@ export default function VisionAssistant() {
                 {/* --- CURRENCY MODE SESSION CONTROLS --- */}
                 {activeMode === 'currency' && !reviewScan && (
                     <div className="bg-surface dark:bg-surface-dark border-2 border-amber-500/40 rounded-card p-3 shadow-md flex flex-col gap-2 shrink-0 my-1">
-                        <div className="flex items-center justify-between">
+                        {currencySession.verifyTarget !== null && (
+                            <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold">
+                                <span>Target: ₹{currencySession.verifyTarget} (Price: ₹{currencySession.price}, Gave: ₹{currencySession.amountGiven})</span>
+                                <button
+                                    onClick={handleCancelVerifyTarget}
+                                    className="text-[11px] underline font-bold px-1 py-0.5 text-gray-600 dark:text-gray-300 hover:text-red-500"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-1 flex-wrap">
                             <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                Session: ₹{currencySession.total} ({currencySession.notes.length} item{currencySession.notes.length !== 1 ? 's' : ''})
+                                {currencySession.verifyTarget !== null
+                                    ? `Total: ₹${currencySession.total} of ₹${currencySession.verifyTarget} expected`
+                                    : `Session: ₹${currencySession.total} (${currencySession.notes.length} item${currencySession.notes.length !== 1 ? 's' : ''})`}
                             </span>
-                            <button
-                                ref={moneyTipsBtnRef}
-                                onClick={openMoneyTips}
-                                aria-label="Open Money Tips and Fold Guide"
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs border border-amber-500/30 transition-colors"
-                            >
-                                <Lightbulb size={16} />
-                                💡 Money Tips
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={openVerifyForm}
+                                    aria-label="Verify change amount"
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-500/30 transition-colors"
+                                >
+                                    <Receipt size={14} />
+                                    🧾 Verify Change
+                                </button>
+                                <button
+                                    ref={moneyTipsBtnRef}
+                                    onClick={openMoneyTips}
+                                    aria-label="Open Money Tips and Fold Guide"
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs border border-amber-500/30 transition-colors"
+                                >
+                                    <Lightbulb size={14} />
+                                    💡 Money Tips
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -744,6 +871,87 @@ export default function VisionAssistant() {
                                 <Check size={16} />
                                 ✓ Done
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- VERIFY CHANGE ENTRY STEP MODAL --- */}
+                {isVerifyFormOpen && (
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="verify-change-title"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
+                    >
+                        <div className={`${getCardClasses()} border-amber-500 max-w-[420px] w-full shadow-2xl flex flex-col gap-4 p-5`}>
+                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+                                <h2 id="verify-change-title" className="text-base-lg font-bold flex items-center gap-2 text-amber-500">
+                                    <Receipt size={22} />
+                                    Verify Change
+                                </h2>
+                                <button
+                                    onClick={closeVerifyForm}
+                                    aria-label="Close Verify Change form"
+                                    className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-1">
+                                    <label htmlFor="verify-price" className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                        Price of item (₹)
+                                    </label>
+                                    <input
+                                        id="verify-price"
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        placeholder="e.g. 320"
+                                        value={verifyPrice}
+                                        onChange={(e) => setVerifyPrice(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-card bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 font-bold text-base-md text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                    <label htmlFor="verify-amount-given" className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                        Amount you gave (₹)
+                                    </label>
+                                    <input
+                                        id="verify-amount-given"
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        placeholder="e.g. 500"
+                                        value={verifyAmountGiven}
+                                        onChange={(e) => setVerifyAmountGiven(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-card bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 font-bold text-base-md text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                    />
+                                </div>
+
+                                {verifyError && (
+                                    <p className="text-xs font-bold text-red-500 dark:text-red-400 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900" role="alert">
+                                        {verifyError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-2">
+                                <button
+                                    onClick={closeVerifyForm}
+                                    className="flex-1 py-3 px-4 rounded-card bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-base-sm min-h-touch transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleStartVerification}
+                                    className="flex-1 py-3 px-4 rounded-card bg-amber-500 hover:bg-amber-600 text-white font-bold text-base-sm min-h-touch shadow-md transition-colors"
+                                >
+                                    Start counting
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
