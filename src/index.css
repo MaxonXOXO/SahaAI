@@ -492,10 +492,6 @@ body {
   display: block;
   background: #000;
 }
-.vision-camera .vision-frame {
-  background: transparent !important;
-  border-color: rgb(255 255 255 / 0.55) !important;
-}
 
 /* Palette corrections. These intentionally target semantic colour utilities
    instead of every rounded element, so each theme stays consistent across

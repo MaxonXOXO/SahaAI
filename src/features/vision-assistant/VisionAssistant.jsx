@@ -849,8 +849,8 @@ export default function VisionAssistant() {
                     </div>
                 )}
 
-                {/* --- MODE SELECTION TABS (FIXED HEIGHT) --- */}
-                <div className="grid grid-cols-4 gap-1.5 shrink-0">
+                {/* --- MODE SELECTION TABS (SEGMENTED PILL CONTAINER) --- */}
+                <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800/80 rounded-2xl shrink-0 gap-1 w-full border border-gray-200/50 dark:border-gray-700/50">
                     {[
                         { key: 'object', label: 'Identify', icon: Map },
                         { key: 'ocr', label: 'Read Text', icon: BookOpen },
@@ -864,14 +864,18 @@ export default function VisionAssistant() {
                                 key={mode.key}
                                 onClick={() => selectMode(mode.key)}
                                 aria-label={`Select ${mode.label} mode`}
-                                className={`flex flex-col items-center justify-center py-2 px-1 rounded-card border-2 font-bold text-xs transition-colors min-h-touch ${
+                                className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs transition-all min-h-touch ${
                                     isSelected
                                         ? contrastMode === 'high-dark'
-                                            ? 'border-yellow-400 bg-yellow-400/20 text-yellow-400'
+                                            ? 'bg-yellow-400 text-black font-black shadow-sm'
                                             : contrastMode === 'high-light'
-                                            ? 'border-black bg-white/10 text-black'
-                                            : 'border-primary bg-primary/10 text-primary'
-                                        : 'border-gray-200 dark:border-gray-800'
+                                            ? 'bg-black text-white font-black shadow-sm'
+                                            : 'bg-white dark:bg-gray-900 text-primary dark:text-primary-light font-bold shadow-sm'
+                                        : contrastMode === 'high-dark'
+                                        ? 'bg-transparent text-yellow-400 font-bold hover:bg-yellow-400/10'
+                                        : contrastMode === 'high-light'
+                                        ? 'bg-transparent text-black font-bold hover:bg-black/10'
+                                        : 'bg-transparent text-gray-600 dark:text-gray-400 font-medium hover:text-gray-900 dark:hover:text-gray-100'
                                 }`}
                             >
                                 <Icon size={18} className="mb-0.5" />
