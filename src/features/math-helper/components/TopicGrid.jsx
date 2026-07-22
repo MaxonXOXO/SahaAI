@@ -111,7 +111,7 @@ export default function TopicGrid({ activeTopic, onSelectTopic }) {
                     >
                         <div className="flex flex-col items-center justify-center py-4 text-center">
                             {/* Icon Wrapper */}
-                            <div className={`w-12 h-12 rounded-full ${topic.color} flex items-center justify-center mb-3 shadow-sm`}>
+                            <div className={`w-12 h-12 rounded-full ${topic.color} flex items-center justify-center mb-3 shadow-sm border-2 border-white/25 dark:border-white/35`}>
                                 <IconComponent className="text-white w-6 h-6" />
                             </div>
                             
