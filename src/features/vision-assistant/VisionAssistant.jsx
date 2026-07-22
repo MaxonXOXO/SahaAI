@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt, Wallet, MinusCircle, PlusCircle, Loader2 } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
 import CameraCapture from './CameraCapture';
@@ -12,6 +12,7 @@ import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 import { logActivity } from '../../shared/lib/logActivity';
 import useProfileStore from '../../store/useProfileStore';
 import { FOLD_GUIDE, GENERAL_TIPS } from './lib/currencyTips';
+import { useWalletStore } from './lib/useWalletStore';
 
 /**
  * VisionAssistant - Main container for Low Vision Mode
@@ -181,6 +182,144 @@ export default function VisionAssistant() {
         }));
     };
 
+    // Wallet Store Selectors (Individual property selectors)
+    const walletBalance = useWalletStore((s) => s.balance);
+    const walletEntries = useWalletStore((s) => s.recentEntries);
+    const walletLoading = useWalletStore((s) => s.isLoading);
+    const walletError = useWalletStore((s) => s.error);
+    const fetchWalletData = useWalletStore((s) => s.fetchWalletData);
+    const addToBalance = useWalletStore((s) => s.addToBalance);
+    const subtractFromBalance = useWalletStore((s) => s.subtractFromBalance);
+    const removeHistoryEntry = useWalletStore((s) => s.removeHistoryEntry);
+
+    // Wallet Tracker UI State
+    const [pendingWalletAdd, setPendingWalletAdd] = useState(null); // { total, breakdownText }
+    const [isSavingToWallet, setIsSavingToWallet] = useState(false);
+    const [walletAddError, setWalletAddError] = useState(null);
+
+    const [isWalletOpen, setIsWalletOpen] = useState(false);
+    const [isSpendInputOpen, setIsSpendInputOpen] = useState(false);
+    const [spendAmount, setSpendAmount] = useState('');
+    const [spendNote, setSpendNote] = useState('');
+    const [spendError, setSpendError] = useState(null);
+    const [isSubmittingSpend, setIsSubmittingSpend] = useState(false);
+    const [removingEntryId, setRemovingEntryId] = useState(null);
+
+    const walletBtnRef = useRef(null);
+    const walletModalRef = useRef(null);
+
+    // Wallet Handlers
+    const handleConfirmAddToWallet = async () => {
+        if (!pendingWalletAdd) return;
+        playBeep(440, 0.08);
+        setIsSavingToWallet(true);
+        setWalletAddError(null);
+
+        const summaryNote = `Counted: ${pendingWalletAdd.breakdownText}`;
+        const result = await addToBalance(userId, pendingWalletAdd.total, summaryNote);
+        setIsSavingToWallet(false);
+
+        if (result.success) {
+            const newBal = useWalletStore.getState().balance;
+            speak(`Added. Your wallet balance is now ₹${newBal}.`, speechRate);
+            setPendingWalletAdd(null);
+            setCurrencySession({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
+        } else {
+            const errMsg = "Couldn't save that to your wallet — check your connection and try again";
+            setWalletAddError(errMsg);
+            speak(errMsg, speechRate);
+        }
+    };
+
+    const handleDismissAddToWallet = () => {
+        playBeep(350, 0.08);
+        setPendingWalletAdd(null);
+        setWalletAddError(null);
+        setCurrencySession({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
+    };
+
+    const openWalletPanel = () => {
+        playBeep(440, 0.08);
+        setIsWalletOpen(true);
+        setIsSpendInputOpen(false);
+        setSpendAmount('');
+        setSpendNote('');
+        setSpendError(null);
+        fetchWalletData(userId);
+    };
+
+    const closeWalletPanel = () => {
+        playBeep(350, 0.08);
+        setIsWalletOpen(false);
+        setIsSpendInputOpen(false);
+        stop();
+        setTimeout(() => {
+            walletBtnRef.current?.focus();
+        }, 50);
+    };
+
+    const prevWalletLoadingRef = useRef(false);
+    useEffect(() => {
+        if (isWalletOpen) {
+            if (prevWalletLoadingRef.current && !walletLoading && !walletError) {
+                speak(`Your wallet balance is ₹${walletBalance}.`, speechRate);
+            }
+            prevWalletLoadingRef.current = walletLoading;
+        }
+    }, [isWalletOpen, walletLoading, walletError, walletBalance, speak, speechRate]);
+
+    useEffect(() => {
+        if (isWalletOpen && walletModalRef.current) {
+            walletModalRef.current.focus();
+        }
+    }, [isWalletOpen]);
+
+    const handleConfirmSpend = async () => {
+        playBeep(440, 0.08);
+        setSpendError(null);
+
+        const numAmount = parseFloat(spendAmount);
+        if (isNaN(numAmount) || numAmount <= 0) {
+            const err = "Please enter a valid positive amount.";
+            setSpendError(err);
+            speak(err, speechRate);
+            return;
+        }
+
+        setIsSubmittingSpend(true);
+        const noteText = spendNote.trim() || 'Spent money';
+
+        const result = await subtractFromBalance(userId, numAmount, noteText);
+        setIsSubmittingSpend(false);
+
+        if (result.success) {
+            const newBal = useWalletStore.getState().balance;
+            if (result.wasCapped) {
+                speak(`You only had ₹${result.available}, so that's what was subtracted. Your wallet balance is now ₹${newBal}.`, speechRate);
+            } else {
+                speak(`Subtracted. Your wallet balance is now ₹${newBal}.`, speechRate);
+            }
+            setIsSpendInputOpen(false);
+            setSpendAmount('');
+            setSpendNote('');
+        } else {
+            const err = "Couldn't save that to your wallet — check your connection and try again";
+            setSpendError(err);
+            speak(err, speechRate);
+        }
+    };
+
+    const handleRemoveEntry = async (entryId) => {
+        playBeep(350, 0.08);
+        setRemovingEntryId(null);
+        const result = await removeHistoryEntry(userId, entryId);
+        if (result.success) {
+            speak("Entry removed from wallet.", speechRate);
+        } else {
+            speak("Couldn't remove entry — check your connection and try again.", speechRate);
+        }
+    };
+
     // Currency Session Controls
     const handleFinishCurrencySession = () => {
         playBeep(520, 0.08);
@@ -228,7 +367,12 @@ export default function VisionAssistant() {
                 image: capturedImage || reviewScan?.image || null,
             };
             setScanHistory((prev) => [newScan, ...prev.slice(0, 9)]);
-            setCurrencySession({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
+
+            if (counted > 0) {
+                setPendingWalletAdd({ total: counted, breakdownText });
+            } else {
+                setCurrencySession({ notes: [], total: 0, verifyTarget: null, price: null, amountGiven: null });
+            }
         }
     };
 
@@ -833,7 +977,16 @@ export default function VisionAssistant() {
                                     ? `Total: ₹${currencySession.total} of ₹${currencySession.verifyTarget} expected`
                                     : `Session: ₹${currencySession.total} (${currencySession.notes.length} item${currencySession.notes.length !== 1 ? 's' : ''})`}
                             </span>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                    ref={walletBtnRef}
+                                    onClick={openWalletPanel}
+                                    aria-label="Open Wallet Tracker"
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-emerald-500/30 transition-colors"
+                                >
+                                    <Wallet size={14} />
+                                    💰 Wallet
+                                </button>
                                 <button
                                     onClick={openVerifyForm}
                                     aria-label="Verify change amount"
@@ -870,6 +1023,45 @@ export default function VisionAssistant() {
                             >
                                 <Check size={16} />
                                 ✓ Done
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- WALLET ADD CONFIRMATION STEP (AFTER COUNTING DONE) --- */}
+                {pendingWalletAdd && (
+                    <div className="p-3 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-card shadow-md flex flex-col gap-2 shrink-0 my-1" role="dialog" aria-label="Wallet add confirmation">
+                        <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
+                            Add ₹{pendingWalletAdd.total} to your Wallet balance?
+                        </p>
+
+                        {walletAddError && (
+                            <p className="text-xs font-bold text-red-500 dark:text-red-400" role="alert">
+                                {walletAddError}
+                            </p>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleConfirmAddToWallet}
+                                disabled={isSavingToWallet}
+                                className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-xs shadow-md transition-colors min-h-touch flex items-center justify-center gap-2"
+                            >
+                                {isSavingToWallet ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Saving…
+                                    </>
+                                ) : (
+                                    'Yes'
+                                )}
+                            </button>
+                            <button
+                                onClick={handleDismissAddToWallet}
+                                disabled={isSavingToWallet}
+                                className="flex-1 py-2.5 px-3 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs transition-colors min-h-touch"
+                            >
+                                No
                             </button>
                         </div>
                     </div>
@@ -1041,6 +1233,221 @@ export default function VisionAssistant() {
                             <Button variant="secondary" className="w-full mt-2" onClick={closeMoneyTips}>
                                 Close
                             </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- WALLET PANEL MODAL --- */}
+                {isWalletOpen && (
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="wallet-panel-title"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
+                    >
+                        <div
+                            ref={walletModalRef}
+                            tabIndex={-1}
+                            className={`${getCardClasses()} border-emerald-500 max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl outline-none flex flex-col gap-4 p-5`}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+                                <h2 id="wallet-panel-title" className="text-base-lg font-bold flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                                    <Wallet size={22} />
+                                    Wallet Tracker
+                                </h2>
+                                <button
+                                    onClick={closeWalletPanel}
+                                    aria-label="Close Wallet panel"
+                                    className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Loading State */}
+                            {walletLoading && walletEntries.length === 0 ? (
+                                <div className="py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
+                                    <Loader2 size={32} className="animate-spin text-emerald-500" />
+                                    <p className="text-base-sm font-semibold">Loading your wallet…</p>
+                                </div>
+                            ) : walletError ? (
+                                /* Error State */
+                                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 flex flex-col items-center gap-3 text-center">
+                                    <p className="text-xs font-bold text-red-600 dark:text-red-400 leading-relaxed">
+                                        {walletError}
+                                    </p>
+                                    <button
+                                        onClick={() => fetchWalletData(userId)}
+                                        className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            ) : (
+                                /* Main Wallet Content */
+                                <>
+                                    {/* Balance Header */}
+                                    <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex flex-col items-center justify-center text-center gap-1">
+                                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                                            Current Balance
+                                        </span>
+                                        <span className="text-3xl font-black text-gray-800 dark:text-gray-100 tracking-tight" aria-live="polite">
+                                            Your wallet: ₹{walletBalance}
+                                        </span>
+                                    </div>
+
+                                    {/* Spend Money Toggle Button & Form */}
+                                    {!isSpendInputOpen ? (
+                                        <button
+                                            onClick={() => {
+                                                playBeep(440, 0.08);
+                                                setSpendAmount('');
+                                                setSpendNote('');
+                                                setSpendError(null);
+                                                setIsSpendInputOpen(true);
+                                            }}
+                                            className="w-full py-3 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-base-sm flex items-center justify-center gap-2 transition-colors min-h-touch"
+                                        >
+                                            <MinusCircle size={18} />
+                                            − I spent money
+                                        </button>
+                                    ) : (
+                                        <div className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+                                            <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                                                Record Spending
+                                            </h3>
+                                            <div className="flex flex-col gap-1">
+                                                <label htmlFor="spend-amount" className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                                                    How much did you spend? (₹)
+                                                </label>
+                                                <input
+                                                    id="spend-amount"
+                                                    type="number"
+                                                    min="0"
+                                                    step="any"
+                                                    placeholder="e.g. 50"
+                                                    value={spendAmount}
+                                                    onChange={(e) => setSpendAmount(e.target.value)}
+                                                    className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-bold text-base-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                                />
+                                            </div>
+
+                                            <div className="flex flex-col gap-1">
+                                                <label htmlFor="spend-note" className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                                                    What for? (optional)
+                                                </label>
+                                                <input
+                                                    id="spend-note"
+                                                    type="text"
+                                                    placeholder="e.g. lunch"
+                                                    value={spendNote}
+                                                    onChange={(e) => setSpendNote(e.target.value)}
+                                                    className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-bold text-base-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                                />
+                                            </div>
+
+                                            {spendError && (
+                                                <p className="text-xs font-bold text-red-500 dark:text-red-400" role="alert">
+                                                    {spendError}
+                                                </p>
+                                            )}
+
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <button
+                                                    onClick={() => setIsSpendInputOpen(false)}
+                                                    disabled={isSubmittingSpend}
+                                                    className="flex-1 py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-800 dark:text-gray-200 font-bold text-xs min-h-touch"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={handleConfirmSpend}
+                                                    disabled={isSubmittingSpend}
+                                                    className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs min-h-touch flex items-center justify-center gap-1.5 shadow-sm"
+                                                >
+                                                    {isSubmittingSpend ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Recent Entries List */}
+                                    <div className="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+                                        <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Recent Wallet Activity ({walletEntries.length})
+                                        </h3>
+
+                                        {walletEntries.length === 0 ? (
+                                            <p className="text-xs text-gray-400 py-4 text-center">
+                                                No wallet activity recorded yet.
+                                            </p>
+                                        ) : (
+                                            <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+                                                {walletEntries.map((entry) => {
+                                                    const isPositive = Number(entry.amount) > 0;
+                                                    const absAmt = Math.abs(Number(entry.amount));
+                                                    const isRemoving = removingEntryId === entry.id;
+
+                                                    return (
+                                                        <div
+                                                            key={entry.id}
+                                                            className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2"
+                                                        >
+                                                            <div className="flex flex-col min-w-0 flex-1">
+                                                                <div className="flex items-center gap-1.5 font-bold text-xs">
+                                                                    <span className={isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}>
+                                                                        {isPositive ? '+' : '−'} ₹{absAmt}
+                                                                    </span>
+                                                                    <span className="text-gray-600 dark:text-gray-300 truncate font-semibold">
+                                                                        — {entry.note || (isPositive ? 'Added money' : 'Spent money')}
+                                                                    </span>
+                                                                </div>
+                                                                {entry.created_at && (
+                                                                    <span className="text-[10px] text-gray-400">
+                                                                        {new Date(entry.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Delete path */}
+                                                            {isRemoving ? (
+                                                                <div className="flex items-center gap-1 shrink-0">
+                                                                    <span className="text-[10px] font-bold text-gray-500">Remove?</span>
+                                                                    <button
+                                                                        onClick={() => handleRemoveEntry(entry.id)}
+                                                                        className="px-2 py-1 rounded bg-red-500 text-white font-bold text-[11px]"
+                                                                    >
+                                                                        Yes
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setRemovingEntryId(null)}
+                                                                        className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-[11px]"
+                                                                    >
+                                                                        No
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => setRemovingEntryId(entry.id)}
+                                                                    aria-label={`Remove wallet entry for ${isPositive ? '+' : '-'}${absAmt} rupees`}
+                                                                    className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0 transition-colors"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <Button variant="secondary" className="w-full mt-2" onClick={closeWalletPanel}>
+                                        Close Wallet
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
