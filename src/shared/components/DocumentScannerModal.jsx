@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Camera, Upload, AlertTriangle, Loader2 } from 'lucide-react';
 
 /**
- * ScanCaptureModal Component
+ * DocumentScannerModal Component
  * Laptop/Desktop fallback to open webcam for live image capture or manual upload.
  */
-export default function ScanCaptureModal({ isOpen, onClose, onImageSelected }) {
+export default function DocumentScannerModal({ isOpen, onClose, onImageSelected }) {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const fileInputRef = useRef(null);
