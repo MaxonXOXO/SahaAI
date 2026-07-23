@@ -300,29 +300,44 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         boundaryFiredRef.current = false;
 
         const textToSpeak = activeText.substring(startCharOffset);
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        
+        // Strip emojis (surrogate pairs) to prevent 'synthesis-failed' errors on some platforms
+        const cleanTextToSpeak = textToSpeak.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '');
+        
+        const utterance = new SpeechSynthesisUtterance(cleanTextToSpeak);
         utterance.rate = refs.current.speechRate;
 
         const allVoices = voices.length > 0 ? voices : (window.speechSynthesis.getVoices() || []);
         
         // Detect language from text
-        const isMalayalam = /[\u0D00-\u0D7F]/.test(textToSpeak);
+        const isMalayalam = /[\u0D00-\u0D7F]/.test(cleanTextToSpeak);
         const targetLang = isMalayalam ? 'ml-IN' : 'en-US';
         
         utterance.lang = targetLang;
         
         let matchedVoice = null;
         if (isMalayalam) {
-            matchedVoice = allVoices.find(v => v.lang.toLowerCase().startsWith('ml')) ||
+            // Prioritize local Malayalam voices to avoid network errors
+            matchedVoice = allVoices.find(v => v.localService && (v.lang.toLowerCase().startsWith('ml') || v.lang.toLowerCase().includes('ml-in'))) ||
+                           allVoices.find(v => v.lang.toLowerCase().startsWith('ml')) ||
                            allVoices.find(v => v.lang.toLowerCase().includes('ml-in'));
         } else {
+            // Prioritize local English voices to avoid network errors
             matchedVoice = allVoices.find(
+                (v) => v.localService && v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
+            ) || allVoices.find(
+                (v) => v.localService && v.lang.startsWith('en')
+            ) || allVoices.find(
                 (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
             ) || allVoices.find((v) => v.lang.startsWith('en'));
         }
 
         if (!matchedVoice && allVoices.length > 0) {
-            matchedVoice = allVoices[0];
+            // Only fall back to first voice if it is local, otherwise let browser pick default voice
+            const firstVoice = allVoices[0];
+            if (firstVoice && firstVoice.localService) {
+                matchedVoice = firstVoice;
+            }
         }
 
         if (matchedVoice) {
@@ -364,6 +379,25 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         utterance.onerror = (err) => {
             if (err.error !== 'interrupted') {
                 console.warn("Speech synthesis boundary warning:", err.error);
+                
+                // If a custom/remote voice failed, retry once with the default system voice
+                if (err.error === 'synthesis-failed' && utterance.voice) {
+                    console.log("Retrying speech synthesis with default system voice...");
+                    const retryUtterance = new SpeechSynthesisUtterance(cleanTextToSpeak);
+                    retryUtterance.rate = utterance.rate;
+                    retryUtterance.lang = utterance.lang;
+                    retryUtterance.onboundary = utterance.onboundary;
+                    retryUtterance.onend = utterance.onend;
+                    retryUtterance.onerror = (retryErr) => {
+                        console.warn("Speech synthesis retry failed:", retryErr.error);
+                        setIsPlaying(false);
+                        setCurrentWordIndex(-1);
+                    };
+                    utteranceRef.current = retryUtterance;
+                    window.speechSynthesis.speak(retryUtterance);
+                    return;
+                }
+
                 setIsPlaying(false);
                 setCurrentWordIndex(-1);
             }
