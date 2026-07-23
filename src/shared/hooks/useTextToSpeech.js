@@ -11,6 +11,24 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
     const [currentWordIndex, setCurrentWordIndex] = useState(-1);
     const [speechRate, setSpeechRate] = useState(1.0);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [voices, setVoices] = useState([]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+        const loadVoices = () => {
+            setVoices(window.speechSynthesis.getVoices() || []);
+        };
+
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+
+        return () => {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
+        };
+    }, []);
 
     const utteranceRef = useRef(null);
     const fallbackTimerRef = useRef(null);
@@ -282,13 +300,30 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.rate = refs.current.speechRate;
 
-        const allVoices = window.speechSynthesis.getVoices();
-        const englishVoice = allVoices.find(
-            (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
-        ) || allVoices.find((v) => v.lang.startsWith('en')) || allVoices[0];
+        const allVoices = voices.length > 0 ? voices : (window.speechSynthesis.getVoices() || []);
+        
+        // Detect language from text
+        const isMalayalam = /[\u0D00-\u0D7F]/.test(textToSpeak);
+        const targetLang = isMalayalam ? 'ml-IN' : 'en-US';
+        
+        utterance.lang = targetLang;
+        
+        let matchedVoice = null;
+        if (isMalayalam) {
+            matchedVoice = allVoices.find(v => v.lang.toLowerCase().startsWith('ml')) ||
+                           allVoices.find(v => v.lang.toLowerCase().includes('ml-in'));
+        } else {
+            matchedVoice = allVoices.find(
+                (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
+            ) || allVoices.find((v) => v.lang.startsWith('en'));
+        }
 
-        if (englishVoice) {
-            utterance.voice = englishVoice;
+        if (!matchedVoice && allVoices.length > 0) {
+            matchedVoice = allVoices[0];
+        }
+
+        if (matchedVoice) {
+            utterance.voice = matchedVoice;
         }
 
         utterance.onboundary = (event) => {
