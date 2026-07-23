@@ -310,7 +310,7 @@ export default function MathHelperScreen() {
                                     className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-primary/15 to-[#1b3024]/25 border border-primary/20 dark:border-primary/45 rounded-2xl text-left hover:scale-[1.01] active:scale-[0.99] transition-all group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shrink-0 shadow-sm">
+                                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shrink-0 shadow-sm border-2 border-white/25 dark:border-white/35">
                                             <Sparkles className="w-5 h-5 animate-pulse" />
                                         </div>
                                         <div>
