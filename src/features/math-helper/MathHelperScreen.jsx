@@ -15,6 +15,7 @@ import AlgebraView from './components/AlgebraView';
 import PolynomialView from './components/PolynomialView';
 import TrigonometryView from './components/TrigonometryView';
 import SolverModal from './components/SolverModal';
+import ScannedSolutionsView from './components/ScannedSolutionsView';
 import DocumentScannerModal from '../../shared/components/DocumentScannerModal';
 import { extractTextFromImage, extractMathProblemsFromText } from '../../shared/lib/documentScanner';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -66,24 +67,13 @@ export default function MathHelperScreen() {
             console.log(JSON.stringify(parsed, null, 2));
 
             if (!parsed || !Array.isArray(parsed.problems) || parsed.problems.length === 0) {
-                setScanWarning("We couldn't find basic math problems in this worksheet. Try Algebra or Calculator mode, or scan a different page.");
+                setScanWarning("We couldn't find math problems in this worksheet. Try scanning a different page.");
                 setIsScannerOpen(false);
                 return;
             }
 
-            const firstProb = parsed.problems[0];
-            
-            // Standardize operation symbol
-            let op = firstProb.operation;
-            if (op === '×') op = '*';
-            if (op === '÷') op = '/';
-
             setScannedProblems(parsed.problems);
-            setEntryPath('scanned');
-            setActiveOp(op);
-            setCustomOperandA(firstProb.operandA);
-            setCustomOperandB(firstProb.operandB);
-            setGameStep('playing');
+            setGameStep('scanned-solutions');
             setIsScannerOpen(false);
         } catch (err) {
             console.error('Worksheet scan error:', err);
@@ -183,6 +173,12 @@ export default function MathHelperScreen() {
     };
 
     const handleBack = () => {
+        if (gameStep === 'scanned-solutions') {
+            setGameStep('entry');
+            setActiveTopic(null);
+            return;
+        }
+
         if (activeTopic === 'basic-math') {
             if (gameStep === 'playing') {
                 setGameStep('entry');
@@ -201,6 +197,7 @@ export default function MathHelperScreen() {
     };
 
     const getScreenTitle = () => {
+        if (gameStep === 'scanned-solutions') return 'Worksheet Solutions';
         if (activeTopic === 'basic-math') {
             if (gameStep === 'custom-input') return 'Custom Problem';
             if (gameStep === 'playing') return 'Practice Chalkboard';
@@ -235,7 +232,15 @@ export default function MathHelperScreen() {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col px-4 py-5 overflow-y-auto pb-24 max-w-[420px] mx-auto w-full justify-between gap-6">
-                {activeTopic === 'basic-math' ? (
+                {gameStep === 'scanned-solutions' ? (
+                    <ScannedSolutionsView
+                        problems={scannedProblems}
+                        onExit={() => {
+                            setGameStep('entry');
+                            setActiveTopic(null);
+                        }}
+                    />
+                ) : activeTopic === 'basic-math' ? (
                     <>
                         {gameStep === 'entry' && (
                             <BasicMathEntry
