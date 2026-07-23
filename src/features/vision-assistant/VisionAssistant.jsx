@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt, Wallet, MinusCircle, PlusCircle, Loader2 } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt, Wallet, MinusCircle, PlusCircle, Loader2, Signpost } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
 import CameraCapture from './CameraCapture';
@@ -65,13 +65,13 @@ export default function VisionAssistant() {
         return `${capitalizedNotesCount}: ${parts.join(', ')}. Total: ${totalAmount} rupees.`;
     };
 
-    // Deep-link tab support: /vision-assistant?tab=identify|read|describe|currency
+    // Deep-link tab support: /vision-assistant?tab=identify|read|describe|currency|signs
     const [searchParams] = useSearchParams();
-    const TAB_PARAM_MAP = { identify: 'object', read: 'ocr', describe: 'scene', currency: 'currency' };
+    const TAB_PARAM_MAP = { identify: 'object', read: 'ocr', describe: 'scene', currency: 'currency', signs: 'signs' };
     const initialTab = TAB_PARAM_MAP[searchParams.get('tab')] || 'object';
 
     // Feature Mode & View State
-    const [activeMode, setActiveMode] = useState(initialTab); // 'object' | 'ocr' | 'scene' | 'currency'
+    const [activeMode, setActiveMode] = useState(initialTab); // 'object' | 'ocr' | 'scene' | 'currency' | 'signs'
     const [capturedImage, setCapturedImage] = useState(null);
     const [analysisResult, setAnalysisResult] = useState('');
     const [currentSubtitle, setCurrentSubtitle] = useState('');
@@ -527,6 +527,7 @@ export default function VisionAssistant() {
         if (mode === 'ocr') announcement = 'Text Recognition OCR active. Focus on pages or labels and tap Capture.';
         if (mode === 'scene') announcement = 'Scene Description active. Point camera at the room and tap Capture.';
         if (mode === 'currency') announcement = 'Currency Detection active. Focus on a note or coin and tap Capture.';
+        if (mode === 'signs') announcement = 'Sign Reader active. Point the camera at a sign and tap Capture.';
 
         speak(announcement, speechRate);
     };
@@ -620,6 +621,8 @@ export default function VisionAssistant() {
                 // Activity logging
                 if (activeMode === 'ocr') {
                     logActivity(userId, 'ocr_scan_used', { chars: resultText.length });
+                } else if (activeMode === 'signs') {
+                    logActivity(userId, 'signs_scan_used', { chars: resultText.length });
                 } else {
                     logActivity(userId, 'document_read', { mode: activeMode });
                 }
@@ -847,6 +850,7 @@ export default function VisionAssistant() {
                             { key: 'ocr', label: 'Read Text', icon: BookOpen },
                             { key: 'scene', label: 'Describe', icon: Sparkles },
                             { key: 'currency', label: 'Currency', icon: Banknote },
+                            { key: 'signs', label: 'Signs', icon: Signpost },
                         ].map((mode) => {
                             const isSelected = activeMode === mode.key;
                             const Icon = mode.icon;
@@ -923,15 +927,18 @@ export default function VisionAssistant() {
                         )}
                     </div>
 
-                    {/* --- READ TEXT OCR RESULT PANEL --- */}
-                    {effectiveMode === 'ocr' && (analysisResult || (reviewScan && reviewScan.result)) && (
+                    {/* --- READ TEXT OCR / SIGNS RESULT PANEL --- */}
+                    {(effectiveMode === 'ocr' || effectiveMode === 'signs') && (analysisResult || (reviewScan && reviewScan.result)) && (
                         <div className="shrink-0 my-2">
                             <TextRecognitionPanel
+                                title={effectiveMode === 'signs' ? "Detected Signs" : "Extracted Document Text"}
                                 result={analysisResult || (reviewScan ? reviewScan.result : '')}
                                 isSpeaking={speaking}
                                 speakResult={() => speak(stripMarkdown(analysisResult || (reviewScan ? reviewScan.result : '')), speechRate, null, null)}
                                 playBeep={playBeep}
                                 resultRef={resultRef}
+                                emptyTitle={effectiveMode === 'signs' ? "Ready to Read Signs" : "Ready to Read Text"}
+                                emptyDescription={effectiveMode === 'signs' ? "Point your camera at a sign and tap Capture to hear what it says." : undefined}
                             />
                         </div>
                     )}
@@ -1177,7 +1184,7 @@ export default function VisionAssistant() {
                         <div className="flex flex-col gap-4">
                             <div className="flex flex-col gap-2">
                                 <span className="text-base-sm font-bold">Contrast Mode</span>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-2">
                                     {[
                                         { key: 'standard', label: 'Standard' },
                                         { key: 'high-dark', label: 'Yellow/Black' },
@@ -1190,14 +1197,14 @@ export default function VisionAssistant() {
                                                 setContrastMode(mode.key);
                                             }}
                                             aria-label={`Set contrast mode to ${mode.label}`}
-                                            className={`py-2 px-1 rounded-card text-base-sm font-bold border-2 transition-colors flex items-center justify-center gap-1 ${
+                                            className={`w-full py-2.5 px-3 rounded-card text-base-sm font-bold border-2 transition-colors flex items-center gap-2 ${
                                                 contrastMode === mode.key
                                                     ? 'border-primary bg-primary/10 text-primary'
                                                     : 'border-gray-300 dark:border-gray-700'
                                             }`}
                                         >
-                                            {contrastMode === mode.key && <Check size={14} />}
-                                            {mode.label}
+                                            {contrastMode === mode.key && <Check size={16} className="shrink-0" />}
+                                            <span>{mode.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -1228,8 +1235,8 @@ export default function VisionAssistant() {
 
                             <div className="flex flex-col gap-2">
                                 <span className="text-base-sm font-bold">Speech Rate Speed</span>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[0.8, 1.0, 1.2, 1.5].map((rate) => (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[0.8, 1.0, 1.2, 1.5, 1.75, 2.0].map((rate) => (
                                         <button
                                             key={rate}
                                             onClick={() => {

@@ -79,6 +79,8 @@ export default function useVisionAI() {
             systemPrompt = `Answer this question about the image clearly and concisely: "${customQuestion}". Provide details helpful for a visually impaired user, keeping it under 3-4 sentences.`;
         } else if (mode === 'currency') {
             systemPrompt = 'Identify the single banknote or coin most prominent in this image. Respond ONLY with minified JSON. If clearly identifiable: {"status":"ok","denomination":<number>,"currency":"INR","confidence":"high"|"medium"}. Use "medium" if folded, angled, partly obscured, or poorly lit but still readable. If you cannot identify it: {"status":"unclear","reason":"<string>"}. If no currency visible: {"status":"none"}. Never guess wildly. Never comment on authenticity. Assume INR unless another currency is clearly printed.';
+        } else if (mode === 'signs') {
+            systemPrompt = 'Identify signs visible in this image. Respond in SHORT, SCANNABLE fragments — NOT full sentences or paragraphs. This is being read aloud to someone walking, so brevity and immediate usefulness matter more than completeness.\nFormat: one short line per sign, in this priority order — (1) hazard/warning/safety signs first, (2) directional/navigational signs (exit, entrance, stairs, restroom, platform) second, (3) shop/business names and informational signs last.\nEach line: \'[Sign type] — [content or meaning], [1-3 word action if relevant]\'. Examples of the target style: \'Warning — wet floor\', \'Exit — straight ahead\', \'Restroom — down the hall on your left\', \'Shop — Café Coffee Day\'.\nIf a sign has no text but a universally recognized icon (hazard, no entry, accessibility, restroom), describe its meaning in the same short style, not the icon\'s visual appearance.\nMaximum 4 lines total even if more signs are visible — pick the 4 most relevant/urgent.\nIf nothing legible: respond with exactly \'No sign detected clearly. Try moving closer.\'\nPlain text only, no markdown, no preamble, no summary sentence at the end.';
         }
 
         // --- REAL GEMINI API CALL ---
@@ -213,6 +215,14 @@ export default function useVisionAI() {
             const hash = computeImageHash(cleanBase64);
             setLoading(false);
             return currencySamples[hash % currencySamples.length];
+        } else if (mode === 'signs') {
+            const signsSamples = [
+                "Warning — wet floor, watch your step\nExit — straight ahead\nRestroom — down the hall on your left",
+                "Caution — construction area\nPlatform 2 — straight ahead\nShop — Café Coffee Day",
+                "No Entry — authorized personnel only\nElevator — to your right"
+            ];
+            const hash = computeImageHash(cleanBase64);
+            mockResult = signsSamples[hash % signsSamples.length];
         }
 
         // Always label demo results clearly so users know this is not a real analysis
