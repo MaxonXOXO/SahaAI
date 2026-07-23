@@ -37,15 +37,15 @@ function StepItem({ step, index, topic }) {
                     {renderMarkdown(step)}
                 </div>
             </div>
-
+            
             {image ? (
                 <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <img src={image} alt={`Visual for step ${index + 1}`} className="w-full h-auto object-cover max-h-56" />
                 </div>
             ) : (
                 <div className="pl-11 mt-1">
-                    <button
-                        onClick={generateImage}
+                    <button 
+                        onClick={generateImage} 
                         disabled={loading}
                         className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-full transition-colors disabled:opacity-50"
                     >
@@ -63,7 +63,7 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
     const primaryMode = useProfileStore((s) => s.primaryMode);
     const isDyslexicOrLowVision = primaryMode === 'dyslexia' || primaryMode === 'lowVision';
     const [showDyslexiaReader, setShowDyslexiaReader] = useState(false);
-
+    
     const [showSteps, setShowSteps] = useState(false);
     const [videoStarted, setVideoStarted] = useState(false);
     const [isExpanding, setIsExpanding] = useState(false);
@@ -73,7 +73,7 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
     let isStub = false;
     let stubSummary = card.explanation;
     let fullExplanation = card.explanation;
-
+    
     try {
         if (card.explanation && card.explanation.trim().startsWith('{')) {
             const parsed = JSON.parse(card.explanation);
@@ -116,7 +116,7 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
                 <time className="text-xs text-gray-400">{new Date(card.created_at).toLocaleDateString()}</time>
             </div>
             <h2 className="text-base-md font-bold text-gray-800 dark:text-gray-100">{card.topic}</h2>
-
+            
             {shouldRenderAsStub ? (
                 <div className="mt-2">
                     {showDyslexiaReader ? (
@@ -126,11 +126,11 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
                     ) : (
                         <div className="text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(displaySummary)}</div>
                     )}
-
+                    
                     {!showDyslexiaReader && (
                         <div className="mt-4 flex w-full flex-wrap gap-2 sm:flex-nowrap">
                             {isDyslexicOrLowVision && (
-                                <button
+                                <button 
                                     onClick={() => setShowDyslexiaReader(true)}
                                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-card bg-green-100 dark:bg-green-900/40 px-3 py-3 text-sm font-bold text-green-700 dark:text-green-400 shadow-sm transition-transform active:scale-95"
                                     aria-label="Reading Assistant"
@@ -138,9 +138,9 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
                                     <BookOpen size={18} /> Read
                                 </button>
                             )}
-
-                            <button
-                                onClick={handleExpand}
+                            
+                            <button 
+                                onClick={handleExpand} 
                                 disabled={isExpanding}
                                 className="flex-1 flex w-full items-center justify-center gap-2 rounded-card bg-primary px-4 py-3 text-sm font-bold text-white shadow-md disabled:opacity-70 transition-transform active:scale-95"
                             >
@@ -159,7 +159,7 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
                     ) : (
                         <div className="mt-2 text-base-sm leading-relaxed text-gray-700 dark:text-gray-200">{renderMarkdown(fullExplanation)}</div>
                     )}
-
+                    
                     {!showDyslexiaReader && (
                         <div className="mt-4 flex flex-wrap gap-2">
                             {!isDyslexicOrLowVision ? (
@@ -171,11 +171,11 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
                                     <BookOpen size={15} /> Reading Assistant
                                 </button>
                             )}
-
+                            
                             {steps.length > 0 && <button onClick={() => setShowSteps((value) => !value)} className="saha-btn flex min-h-touch items-center gap-2 rounded-card border border-gray-200 px-3 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">
-                                <ListOrdered size={15} /> Steps {showSteps ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            </button>}
-                        </div>
+                            <ListOrdered size={15} /> Steps {showSteps ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>}
+                    </div>
                     )}
                     {showSteps && <ol className="mt-4 space-y-4">
                         {steps.map((step, index) => <StepItem key={`${card.id}-${index}`} step={step} index={index} topic={card.topic} />)}
@@ -184,7 +184,7 @@ export default function FeedCard({ card, onListen, isPlaying, onExpand, isGridIt
                         {/* disablekb=1 & controls=0 hides native YouTube controls */}
                         <iframe ref={videoRef} className="pointer-events-none aspect-video w-full" src={`https://www.youtube-nocookie.com/embed/${card.video_id}?rel=0&controls=0&enablejsapi=1&disablekb=1&modestbranding=1&showinfo=0&iv_load_policy=3`} title={`Video about ${card.topic}`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                         {!videoStarted && <button onClick={() => postYoutubeCommand('playVideo')} className="absolute inset-0 flex items-center justify-center bg-black/30 text-white" aria-label={`Play video about ${card.topic}`}><span className="flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-bold shadow-lg"><Play size={18} fill="currentColor" /> Play video</span></button>}
-
+                        
                         {/* Native SahaAI Player Controls */}
                         {videoStarted && (
                             <div className="flex items-center justify-center gap-6 bg-gray-900 px-4 py-3 border-t border-gray-800">

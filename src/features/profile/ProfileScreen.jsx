@@ -463,18 +463,18 @@ export default function ProfileScreen() {
                                                 onClick={() => settings.updateSettings({ contrastMode: contrast.id })}
                                                 className={`flex items-center justify-between p-3 rounded-xl border-2 transition-colors w-full flex ${
                                                     settings.contrastMode === contrast.id 
-                                                        ? 'border-yellow-400 bg-yellow-400/10' 
+                                                        ? 'border-primary bg-primary/10' 
                                                         : 'border-gray-200 dark:border-gray-700'
                                                 }`}
                                             >
                                                 <div className="text-left">
-                                                    <p className={`text-base-sm font-bold ${settings.contrastMode === contrast.id ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                                                    <p className={`text-base-sm font-bold ${settings.contrastMode === contrast.id ? 'text-primary' : 'text-gray-800 dark:text-gray-200'}`}>
                                                         {contrast.label}
                                                     </p>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400">{contrast.desc}</p>
                                                 </div>
                                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                                    settings.contrastMode === contrast.id ? 'border-yellow-400 bg-yellow-400 text-black' : 'border-gray-300'
+                                                    settings.contrastMode === contrast.id ? 'border-primary bg-primary text-white' : 'border-gray-300'
                                                 }`}>
                                                     {settings.contrastMode === contrast.id && <Check size={12} strokeWidth={4} />}
                                                 </div>

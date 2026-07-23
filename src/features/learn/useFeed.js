@@ -122,11 +122,11 @@ export default function useFeed(profile) {
                     return;
                 }
                 setCards(data || []);
-                try {
-                    await ensureDailyBatch();
-                } catch (batchError) {
+                // The saved feed is ready now. Build the daily suggestions in
+                // the background so a first visit never waits on an AI request.
+                void ensureDailyBatch().catch((batchError) => {
                     console.error('Daily Learn batch skipped:', batchError);
-                }
+                });
             } catch (err) {
                 console.error('Learn feed hydration error:', err);
                 setError('Failed to load learning feed. Please refresh the page.');
