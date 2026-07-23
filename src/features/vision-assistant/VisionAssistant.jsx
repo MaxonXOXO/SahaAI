@@ -88,6 +88,46 @@ export default function VisionAssistant() {
 
     const moneyTipsBtnRef = useRef(null);
     const moneyTipsModalRef = useRef(null);
+    const verifyBtnRef = useRef(null);
+    const verifyModalRef = useRef(null);
+
+    // Focus trap handler for modal overlays
+    const handleTrapFocus = (e, modalRef) => {
+        if (e.key !== 'Tab' || !modalRef.current) return;
+
+        const focusableSelector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const focusables = modalRef.current.querySelectorAll(focusableSelector);
+        const focusableElements = Array.from(focusables).filter(
+            (el) => el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0
+        );
+
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (!focusableElements.includes(document.activeElement)) {
+            e.preventDefault();
+            if (e.shiftKey) {
+                lastElement.focus();
+            } else {
+                firstElement.focus();
+            }
+            return;
+        }
+
+        if (e.shiftKey) {
+            if (document.activeElement === firstElement) {
+                e.preventDefault();
+                lastElement.focus();
+            }
+        } else {
+            if (document.activeElement === lastElement) {
+                e.preventDefault();
+                firstElement.focus();
+            }
+        }
+    };
 
     const [scanHistory, setScanHistory] = useState(() => {
         try {
@@ -109,6 +149,13 @@ export default function VisionAssistant() {
             moneyTipsModalRef.current.focus();
         }
     }, [isMoneyTipsOpen]);
+
+    // Focus management for Verify Change dialog
+    useEffect(() => {
+        if (isVerifyFormOpen && verifyModalRef.current) {
+            verifyModalRef.current.focus();
+        }
+    }, [isVerifyFormOpen]);
 
     const openMoneyTips = () => {
         playBeep(440, 0.08);
@@ -137,6 +184,9 @@ export default function VisionAssistant() {
         playBeep(350, 0.08);
         setIsVerifyFormOpen(false);
         setVerifyError('');
+        setTimeout(() => {
+            verifyBtnRef.current?.focus();
+        }, 50);
     };
 
     const handleStartVerification = () => {
@@ -758,829 +808,846 @@ export default function VisionAssistant() {
         );
     }
 
+    const isAnyModalOpen = isWalletOpen || isMoneyTipsOpen || isVerifyFormOpen;
+
     return (
         <div className={getThemeClasses()} style={{ fontSize: `${fontScale}rem` }}>
-            <ScreenHeader
-                title={reviewScan ? "Reviewing Scan" : "Vision Assistant"}
-                showBack={true}
-                onBack={reviewScan ? handleExitReview : undefined}
-                rightAction={
-                    <button
-                        onClick={toggleSettings}
-                        aria-label="Vision Assistant Settings"
-                        className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${
-                            contrastMode === 'high-dark'
-                                ? 'border-yellow-400 bg-black text-yellow-400'
-                                : contrastMode === 'high-light'
-                                ? 'border-black bg-white text-black'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:bg-gray-200'
-                        }`}
-                    >
-                        <Settings size={22} className={isSettingsOpen ? 'animate-spin' : ''} />
-                    </button>
-                }
-            />
+            {/* Main background container hidden from accessibility tree when any modal is open */}
+            <div
+                inert={isAnyModalOpen ? true : undefined}
+                aria-hidden={isAnyModalOpen ? 'true' : undefined}
+                className="flex-1 flex flex-col min-h-0"
+            >
+                <ScreenHeader
+                    title={reviewScan ? "Reviewing Scan" : "Vision Assistant"}
+                    showBack={true}
+                    onBack={reviewScan ? handleExitReview : undefined}
+                    rightAction={
+                        <button
+                            onClick={toggleSettings}
+                            aria-label="Vision Assistant Settings"
+                            className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${
+                                contrastMode === 'high-dark'
+                                    ? 'border-yellow-400 bg-black text-yellow-400'
+                                    : contrastMode === 'high-light'
+                                    ? 'border-black bg-white text-black'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:bg-gray-200'
+                            }`}
+                        >
+                            <Settings size={22} className={isSettingsOpen ? 'animate-spin' : ''} />
+                        </button>
+                    }
+                />
 
-            <div className="flex-1 flex flex-col min-h-0 p-2 gap-2 max-w-[420px] w-full mx-auto">
-                {/* --- SETTINGS DRAWER OVERLAY MODAL --- */}
-                {isSettingsOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-                        <div className={`${getCardClasses()} border-primary max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl`}>
-                            <h2 className="text-base-lg font-bold mb-4 flex items-center gap-2">
-                                <Settings size={22} />
-                                Assistant Controls
-                            </h2>
-
-                            <div className="flex flex-col gap-4">
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-base-sm font-bold">Contrast Mode</span>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[
-                                            { key: 'standard', label: 'Standard' },
-                                            { key: 'high-dark', label: 'Yellow/Black' },
-                                            { key: 'high-light', label: 'Black/White' },
-                                        ].map((mode) => (
-                                            <button
-                                                key={mode.key}
-                                                onClick={() => {
-                                                    playBeep(440, 0.05);
-                                                    setContrastMode(mode.key);
-                                                }}
-                                                aria-label={`Set contrast mode to ${mode.label}`}
-                                                className={`py-2 px-1 rounded-card text-base-sm font-bold border-2 transition-colors flex items-center justify-center gap-1 ${
-                                                    contrastMode === mode.key
-                                                        ? 'border-primary bg-primary/10 text-primary'
-                                                        : 'border-gray-300 dark:border-gray-700'
-                                                }`}
-                                            >
-                                                {contrastMode === mode.key && <Check size={14} />}
-                                                {mode.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-base-sm font-bold">Text Zoom Multiplier</span>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[1.0, 1.25, 1.5, 2.0].map((scale) => (
-                                            <button
-                                                key={scale}
-                                                onClick={() => {
-                                                    playBeep(500, 0.05);
-                                                    setFontScale(scale);
-                                                }}
-                                                aria-label={`Set text zoom to ${scale}x`}
-                                                className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
-                                                    fontScale === scale
-                                                        ? 'border-primary bg-primary/10 text-primary'
-                                                        : 'border-gray-300 dark:border-gray-700'
-                                                }`}
-                                            >
-                                                {scale}x
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-base-sm font-bold">Speech Rate Speed</span>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[0.8, 1.0, 1.2, 1.5].map((rate) => (
-                                            <button
-                                                key={rate}
-                                                onClick={() => {
-                                                    playBeep(550, 0.05);
-                                                    setSpeechRate(rate);
-                                                }}
-                                                aria-label={`Set speech rate speed to ${rate}x`}
-                                                className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
-                                                    speechRate === rate
-                                                        ? 'border-primary bg-primary/10 text-primary'
-                                                        : 'border-gray-300 dark:border-gray-700'
-                                                }`}
-                                            >
-                                                {rate}x
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Button variant="secondary" className="w-full mt-4" onClick={toggleSettings}>
-                                Close Settings
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
-                {/* --- MODE SELECTION TABS (SEGMENTED PILL CONTAINER) --- */}
-                <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800/80 rounded-2xl shrink-0 gap-1 w-full border border-gray-200/50 dark:border-gray-700/50">
-                    {[
-                        { key: 'object', label: 'Identify', icon: Map },
-                        { key: 'ocr', label: 'Read Text', icon: BookOpen },
-                        { key: 'scene', label: 'Describe', icon: Sparkles },
-                        { key: 'currency', label: 'Currency', icon: Banknote },
-                    ].map((mode) => {
-                        const isSelected = activeMode === mode.key;
-                        const Icon = mode.icon;
-                        return (
-                            <button
-                                key={mode.key}
-                                onClick={() => selectMode(mode.key)}
-                                aria-label={`Select ${mode.label} mode`}
-                                className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs transition-all min-h-touch ${
-                                    isSelected
-                                        ? contrastMode === 'high-dark'
-                                            ? 'bg-yellow-400 text-black font-black shadow-sm'
+                <div className="flex-1 flex flex-col min-h-0 p-2 gap-2 max-w-[420px] w-full mx-auto">
+                    {/* --- MODE SELECTION TABS (SEGMENTED PILL CONTAINER) --- */}
+                    <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800/80 rounded-2xl shrink-0 gap-1 w-full border border-gray-200/50 dark:border-gray-700/50">
+                        {[
+                            { key: 'object', label: 'Identify', icon: Map },
+                            { key: 'ocr', label: 'Read Text', icon: BookOpen },
+                            { key: 'scene', label: 'Describe', icon: Sparkles },
+                            { key: 'currency', label: 'Currency', icon: Banknote },
+                        ].map((mode) => {
+                            const isSelected = activeMode === mode.key;
+                            const Icon = mode.icon;
+                            return (
+                                <button
+                                    key={mode.key}
+                                    onClick={() => selectMode(mode.key)}
+                                    aria-label={`Select ${mode.label} mode`}
+                                    className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs transition-all min-h-touch ${
+                                        isSelected
+                                            ? contrastMode === 'high-dark'
+                                                ? 'bg-yellow-400 text-black font-black shadow-sm'
+                                                : contrastMode === 'high-light'
+                                                ? 'bg-black text-white font-black shadow-sm'
+                                                : 'bg-white dark:bg-gray-900 text-primary dark:text-primary-light font-bold shadow-sm'
+                                            : contrastMode === 'high-dark'
+                                            ? 'bg-transparent text-yellow-400 font-bold hover:bg-yellow-400/10'
                                             : contrastMode === 'high-light'
-                                            ? 'bg-black text-white font-black shadow-sm'
-                                            : 'bg-white dark:bg-gray-900 text-primary dark:text-primary-light font-bold shadow-sm'
-                                        : contrastMode === 'high-dark'
-                                        ? 'bg-transparent text-yellow-400 font-bold hover:bg-yellow-400/10'
-                                        : contrastMode === 'high-light'
-                                        ? 'bg-transparent text-black font-bold hover:bg-black/10'
-                                        : 'bg-transparent text-gray-600 dark:text-gray-400 font-medium hover:text-gray-900 dark:hover:text-gray-100'
-                                }`}
-                            >
-                                <Icon size={18} className="mb-0.5" />
-                                <span className="truncate max-w-full">{mode.label}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* --- CAMERA & CAPTION OVERLAY CONTAINER (EXPLICIT VIEWPORT HEIGHT) --- */}
-                <div ref={cameraContainerRef} className="relative h-[48dvh] min-h-[300px] w-full rounded-card overflow-hidden border-4 border-gray-800 dark:border-gray-900 shadow-lg bg-black">
-                    {reviewScan ? (
-                        <img
-                            src={reviewScan.image}
-                            alt={`Reviewing scan from ${reviewScan.timestamp}`}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <CameraCapture
-                            onCapture={handleCapture}
-                            isProcessing={loading}
-                            speakFeedback={speakFeedback}
-                            playBeep={playBeep}
-                        />
-                    )}
-
-                    {/* CURRENCY MODE OVERLAY ON CAMERA */}
-                    {effectiveMode === 'currency' && !reviewScan && (
-                        <div
-                            aria-live="polite"
-                            className="absolute top-3 left-3 right-3 z-20 flex flex-col items-center justify-center p-3 rounded-2xl bg-black/80 backdrop-blur-md text-white border border-amber-400/50 shadow-2xl pointer-events-none text-center"
-                        >
-                            <span className="text-2xl sm:text-3xl font-black text-amber-300 tracking-tight">
-                                {currencySession.notes.length > 0
-                                    ? `₹${currencySession.notes[currencySession.notes.length - 1].denomination}`
-                                    : '₹0'}
-                            </span>
-                            <span className="text-xs sm:text-base-sm font-bold text-slate-300 mt-0.5">
-                                {currencySession.verifyTarget !== null
-                                    ? `Total: ₹${currencySession.total} of ₹${currencySession.verifyTarget} expected · ${currencySession.notes.length} note${currencySession.notes.length !== 1 ? 's' : ''}`
-                                    : `Total: ₹${currencySession.total} · ${currencySession.notes.length} note${currencySession.notes.length !== 1 ? 's' : ''}`}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* YOUTUBE-STYLE LIVE SUBTITLE CAPTION STRIP */}
-                    {/* Read Text = text panel, Identify/Describe = captions — do not remove this gate */}
-                    {isCaptionMode && (speaking || loading || currentSubtitle) && (
-                        <div className="absolute bottom-2 left-2 right-2 z-20 flex justify-center pointer-events-none">
-                            <div aria-live="polite" className="bg-black/75 backdrop-blur-sm text-white text-base-md font-semibold px-4 py-2 rounded-lg text-center max-w-[95%] shadow-lg border border-white/15 line-clamp-2 overflow-hidden leading-snug">
-                                {renderMarkdown(currentSubtitle || (loading ? "Analyzing image, please wait..." : ""))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* --- READ TEXT OCR RESULT PANEL --- */}
-                {effectiveMode === 'ocr' && (analysisResult || (reviewScan && reviewScan.result)) && (
-                    <div className="shrink-0 my-2">
-                        <TextRecognitionPanel
-                            result={analysisResult || (reviewScan ? reviewScan.result : '')}
-                            isSpeaking={speaking}
-                            speakResult={() => speak(stripMarkdown(analysisResult || (reviewScan ? reviewScan.result : '')), speechRate, null, null)}
-                            playBeep={playBeep}
-                            resultRef={resultRef}
-                        />
-                    </div>
-                )}
-
-                {/* --- CURRENCY BREAKDOWN RESULT PANEL --- */}
-                {(effectiveMode === 'currency' || effectiveMode === 'currency-verify') && (reviewScan || currencySession.notes.length > 0) && (
-                    <div className="shrink-0 my-2">
-                        <div className={`${getCardClasses()} border-2 border-amber-500/30 p-4 rounded-card flex flex-col gap-2`}>
-                            <div className="flex items-center gap-2 text-amber-500 font-bold text-base-md">
-                                <Banknote size={20} />
-                                <span>Currency Breakdown</span>
-                            </div>
-                            <p className="text-base-md font-semibold text-gray-800 dark:text-gray-100 leading-relaxed">
-                                {reviewScan ? reviewScan.result : formatCurrencyBreakdown(currencySession.notes)}
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* --- CURRENCY MODE SESSION CONTROLS --- */}
-                {activeMode === 'currency' && !reviewScan && (
-                    <div className="bg-surface dark:bg-surface-dark border-2 border-amber-500/40 rounded-card p-3 shadow-md flex flex-col gap-2 shrink-0 my-1">
-                        {currencySession.verifyTarget !== null && (
-                            <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold">
-                                <span>Target: ₹{currencySession.verifyTarget} (Price: ₹{currencySession.price}, Gave: ₹{currencySession.amountGiven})</span>
-                                <button
-                                    onClick={handleCancelVerifyTarget}
-                                    className="text-[11px] underline font-bold px-1 py-0.5 text-gray-600 dark:text-gray-300 hover:text-red-500"
+                                            ? 'bg-transparent text-black font-bold hover:bg-black/10'
+                                            : 'bg-transparent text-gray-600 dark:text-gray-400 font-medium hover:text-gray-900 dark:hover:text-gray-100'
+                                    }`}
                                 >
-                                    Cancel
+                                    <Icon size={18} className="mb-0.5" />
+                                    <span className="truncate max-w-full">{mode.label}</span>
                                 </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* --- CAMERA & CAPTION OVERLAY CONTAINER (EXPLICIT VIEWPORT HEIGHT) --- */}
+                    <div ref={cameraContainerRef} className="relative h-[48dvh] min-h-[300px] w-full rounded-card overflow-hidden border-4 border-gray-800 dark:border-gray-900 shadow-lg bg-black">
+                        {reviewScan ? (
+                            <img
+                                src={reviewScan.image}
+                                alt={`Reviewing scan from ${reviewScan.timestamp}`}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <CameraCapture
+                                onCapture={handleCapture}
+                                isProcessing={loading}
+                                speakFeedback={speakFeedback}
+                                playBeep={playBeep}
+                            />
+                        )}
+
+                        {/* CURRENCY MODE OVERLAY ON CAMERA */}
+                        {effectiveMode === 'currency' && !reviewScan && (
+                            <div
+                                aria-live="polite"
+                                className="absolute top-3 left-3 right-3 z-20 flex flex-col items-center justify-center p-3 rounded-2xl bg-black/80 backdrop-blur-md text-white border border-amber-400/50 shadow-2xl pointer-events-none text-center"
+                            >
+                                <span className="text-2xl sm:text-3xl font-black text-amber-300 tracking-tight">
+                                    {currencySession.notes.length > 0
+                                        ? `₹${currencySession.notes[currencySession.notes.length - 1].denomination}`
+                                        : '₹0'}
+                                </span>
+                                <span className="text-xs sm:text-base-sm font-bold text-slate-300 mt-0.5">
+                                    {currencySession.verifyTarget !== null
+                                        ? `Total: ₹${currencySession.total} of ₹${currencySession.verifyTarget} expected · ${currencySession.notes.length} note${currencySession.notes.length !== 1 ? 's' : ''}`
+                                        : `Total: ₹${currencySession.total} · ${currencySession.notes.length} note${currencySession.notes.length !== 1 ? 's' : ''}`}
+                                </span>
                             </div>
                         )}
 
-                        <div className="flex items-center justify-between gap-1 flex-wrap">
-                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                {currencySession.verifyTarget !== null
-                                    ? `Total: ₹${currencySession.total} of ₹${currencySession.verifyTarget} expected`
-                                    : `Session: ₹${currencySession.total} (${currencySession.notes.length} item${currencySession.notes.length !== 1 ? 's' : ''})`}
-                            </span>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                <button
-                                    ref={walletBtnRef}
-                                    onClick={openWalletPanel}
-                                    aria-label="Open Wallet Tracker"
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-emerald-500/30 transition-colors"
-                                >
-                                    <Wallet size={14} />
-                                    💰 Wallet
-                                </button>
-                                <button
-                                    onClick={openVerifyForm}
-                                    aria-label="Verify change amount"
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-500/30 transition-colors"
-                                >
-                                    <Receipt size={14} />
-                                    🧾 Verify Change
-                                </button>
-                                <button
-                                    ref={moneyTipsBtnRef}
-                                    onClick={openMoneyTips}
-                                    aria-label="Open Money Tips and Fold Guide"
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs border border-amber-500/30 transition-colors"
-                                >
-                                    <Lightbulb size={14} />
-                                    💡 Money Tips
-                                </button>
+                        {/* YOUTUBE-STYLE LIVE SUBTITLE CAPTION STRIP */}
+                        {/* Read Text = text panel, Identify/Describe = captions — do not remove this gate */}
+                        {isCaptionMode && (speaking || loading || currentSubtitle) && (
+                            <div className="absolute bottom-2 left-2 right-2 z-20 flex justify-center pointer-events-none">
+                                <div aria-live="polite" className="bg-black/75 backdrop-blur-sm text-white text-base-md font-semibold px-4 py-2 rounded-lg text-center max-w-[95%] shadow-lg border border-white/15 line-clamp-2 overflow-hidden leading-snug">
+                                    {renderMarkdown(currentSubtitle || (loading ? "Analyzing image, please wait..." : ""))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* --- READ TEXT OCR RESULT PANEL --- */}
+                    {effectiveMode === 'ocr' && (analysisResult || (reviewScan && reviewScan.result)) && (
+                        <div className="shrink-0 my-2">
+                            <TextRecognitionPanel
+                                result={analysisResult || (reviewScan ? reviewScan.result : '')}
+                                isSpeaking={speaking}
+                                speakResult={() => speak(stripMarkdown(analysisResult || (reviewScan ? reviewScan.result : '')), speechRate, null, null)}
+                                playBeep={playBeep}
+                                resultRef={resultRef}
+                            />
+                        </div>
+                    )}
+
+                    {/* --- CURRENCY BREAKDOWN RESULT PANEL --- */}
+                    {(effectiveMode === 'currency' || effectiveMode === 'currency-verify') && (reviewScan || currencySession.notes.length > 0) && (
+                        <div className="shrink-0 my-2">
+                            <div className={`${getCardClasses()} border-2 border-amber-500/30 p-4 rounded-card flex flex-col gap-2`}>
+                                <div className="flex items-center gap-2 text-amber-500 font-bold text-base-md">
+                                    <Banknote size={20} />
+                                    <span>Currency Breakdown</span>
+                                </div>
+                                <p className="text-base-md font-semibold text-gray-800 dark:text-gray-100 leading-relaxed">
+                                    {reviewScan ? reviewScan.result : formatCurrencyBreakdown(currencySession.notes)}
+                                </p>
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex items-center gap-2">
-                            {currencySession.notes.length >= 1 && (
-                                <button
-                                    onClick={handleUndoLastNote}
-                                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs transition-colors"
-                                >
-                                    <RotateCcw size={16} />
-                                    ↩ Undo last
-                                </button>
+                    {/* --- CURRENCY MODE SESSION CONTROLS --- */}
+                    {activeMode === 'currency' && !reviewScan && (
+                        <div className="bg-surface dark:bg-surface-dark border-2 border-amber-500/40 rounded-card p-3 shadow-md flex flex-col gap-2 shrink-0 my-1">
+                            {currencySession.verifyTarget !== null && (
+                                <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold">
+                                    <span>Target: ₹{currencySession.verifyTarget} (Price: ₹{currencySession.price}, Gave: ₹{currencySession.amountGiven})</span>
+                                    <button
+                                        onClick={handleCancelVerifyTarget}
+                                        className="text-[11px] underline font-bold px-1 py-0.5 text-gray-600 dark:text-gray-300 hover:text-red-500"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             )}
-                            <button
-                                onClick={handleFinishCurrencySession}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-colors"
-                            >
-                                <Check size={16} />
-                                ✓ Done
-                            </button>
+
+                            <div className="flex items-center justify-between gap-1 flex-wrap">
+                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    {currencySession.verifyTarget !== null
+                                        ? `Total: ₹${currencySession.total} of ₹${currencySession.verifyTarget} expected`
+                                        : `Session: ₹${currencySession.total} (${currencySession.notes.length} item${currencySession.notes.length !== 1 ? 's' : ''})`}
+                                </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <button
+                                        ref={walletBtnRef}
+                                        onClick={openWalletPanel}
+                                        aria-label="Open Wallet Tracker"
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-emerald-500/30 transition-colors"
+                                    >
+                                        <Wallet size={14} />
+                                        💰 Wallet
+                                    </button>
+                                    <button
+                                        ref={verifyBtnRef}
+                                        onClick={openVerifyForm}
+                                        aria-label="Verify change amount"
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-500/30 transition-colors"
+                                    >
+                                        <Receipt size={14} />
+                                        🧾 Verify Change
+                                    </button>
+                                    <button
+                                        ref={moneyTipsBtnRef}
+                                        onClick={openMoneyTips}
+                                        aria-label="Open Money Tips and Fold Guide"
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs border border-amber-500/30 transition-colors"
+                                    >
+                                        <Lightbulb size={14} />
+                                        💡 Money Tips
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                {currencySession.notes.length >= 1 && (
+                                    <button
+                                        onClick={handleUndoLastNote}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs transition-colors"
+                                    >
+                                        <RotateCcw size={16} />
+                                        ↩ Undo last
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleFinishCurrencySession}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-colors"
+                                >
+                                    <Check size={16} />
+                                    ✓ Done
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* --- WALLET ADD CONFIRMATION STEP (AFTER COUNTING DONE) --- */}
-                {pendingWalletAdd && (
-                    <div className="p-3 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-card shadow-md flex flex-col gap-2 shrink-0 my-1" role="dialog" aria-label="Wallet add confirmation">
-                        <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
-                            Add ₹{pendingWalletAdd.total} to your Wallet balance?
-                        </p>
-
-                        {walletAddError && (
-                            <p className="text-xs font-bold text-red-500 dark:text-red-400" role="alert">
-                                {walletAddError}
+                    {/* --- WALLET ADD CONFIRMATION STEP (AFTER COUNTING DONE) --- */}
+                    {pendingWalletAdd && (
+                        <div className="p-3 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-card shadow-md flex flex-col gap-2 shrink-0 my-1" role="dialog" aria-label="Wallet add confirmation">
+                            <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
+                                Add ₹{pendingWalletAdd.total} to your Wallet balance?
                             </p>
-                        )}
 
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleConfirmAddToWallet}
-                                disabled={isSavingToWallet}
-                                className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-xs shadow-md transition-colors min-h-touch flex items-center justify-center gap-2"
-                            >
-                                {isSavingToWallet ? (
-                                    <>
-                                        <Loader2 size={16} className="animate-spin" />
-                                        Saving…
-                                    </>
-                                ) : (
-                                    'Yes'
-                                )}
-                            </button>
-                            <button
-                                onClick={handleDismissAddToWallet}
-                                disabled={isSavingToWallet}
-                                className="flex-1 py-2.5 px-3 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs transition-colors min-h-touch"
-                            >
-                                No
-                            </button>
-                        </div>
-                    </div>
-                )}
+                            {walletAddError && (
+                                <p className="text-xs font-bold text-red-500 dark:text-red-400" role="alert">
+                                    {walletAddError}
+                                </p>
+                            )}
 
-                {/* --- VERIFY CHANGE ENTRY STEP MODAL --- */}
-                {isVerifyFormOpen && (
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="verify-change-title"
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
-                    >
-                        <div className={`${getCardClasses()} border-amber-500 max-w-[420px] w-full shadow-2xl flex flex-col gap-4 p-5`}>
-                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
-                                <h2 id="verify-change-title" className="text-base-lg font-bold flex items-center gap-2 text-amber-500">
-                                    <Receipt size={22} />
-                                    Verify Change
-                                </h2>
+                            <div className="flex items-center gap-2">
                                 <button
-                                    onClick={closeVerifyForm}
-                                    aria-label="Close Verify Change form"
-                                    className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+                                    onClick={handleConfirmAddToWallet}
+                                    disabled={isSavingToWallet}
+                                    className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-xs shadow-md transition-colors min-h-touch flex items-center justify-center gap-2"
                                 >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <div className="flex flex-col gap-1">
-                                    <label htmlFor="verify-price" className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                        Price of item (₹)
-                                    </label>
-                                    <input
-                                        id="verify-price"
-                                        type="number"
-                                        min="0"
-                                        step="any"
-                                        placeholder="e.g. 320"
-                                        value={verifyPrice}
-                                        onChange={(e) => setVerifyPrice(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-card bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 font-bold text-base-md text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1">
-                                    <label htmlFor="verify-amount-given" className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                        Amount you gave (₹)
-                                    </label>
-                                    <input
-                                        id="verify-amount-given"
-                                        type="number"
-                                        min="0"
-                                        step="any"
-                                        placeholder="e.g. 500"
-                                        value={verifyAmountGiven}
-                                        onChange={(e) => setVerifyAmountGiven(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-card bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 font-bold text-base-md text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
-                                    />
-                                </div>
-
-                                {verifyError && (
-                                    <p className="text-xs font-bold text-red-500 dark:text-red-400 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900" role="alert">
-                                        {verifyError}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-2">
-                                <button
-                                    onClick={closeVerifyForm}
-                                    className="flex-1 py-3 px-4 rounded-card bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-base-sm min-h-touch transition-colors"
-                                >
-                                    Cancel
+                                    {isSavingToWallet ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" />
+                                            Saving…
+                                        </>
+                                    ) : (
+                                        'Yes'
+                                    )}
                                 </button>
                                 <button
-                                    onClick={handleStartVerification}
-                                    className="flex-1 py-3 px-4 rounded-card bg-amber-500 hover:bg-amber-600 text-white font-bold text-base-sm min-h-touch shadow-md transition-colors"
+                                    onClick={handleDismissAddToWallet}
+                                    disabled={isSavingToWallet}
+                                    className="flex-1 py-2.5 px-3 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs transition-colors min-h-touch"
                                 >
-                                    Start counting
+                                    No
                                 </button>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* --- MONEY TIPS MODAL / SHEET --- */}
-                {isMoneyTipsOpen && (
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="money-tips-title"
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
-                    >
-                        <div
-                            ref={moneyTipsModalRef}
-                            tabIndex={-1}
-                            className={`${getCardClasses()} border-amber-500 max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl outline-none flex flex-col gap-4 p-5`}
-                        >
-                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
-                                <h2 id="money-tips-title" className="text-base-lg font-bold flex items-center gap-2 text-amber-500">
-                                    <Lightbulb size={22} />
-                                    Money Tips & Fold Guide
-                                </h2>
-                                <button
-                                    onClick={closeMoneyTips}
-                                    aria-label="Close Money Tips"
-                                    className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
+                    {/* --- ASK AI OVERLAY BAR (SHRINK-0) --- */}
+                    {showAskBar && (capturedImage || reviewScan) && (
+                        <div className="p-3 bg-surface dark:bg-surface-dark border-2 border-primary rounded-card shadow-lg shrink-0">
+                            <AskAIBar
+                                onSubmit={handleAskAI}
+                                isProcessing={loading}
+                                speakFeedback={speakFeedback}
+                                playBeep={playBeep}
+                                stopSpeaking={handleStopSpeaking}
+                            />
+                        </div>
+                    )}
 
-                            {/* Read Aloud Button */}
+                    {/* --- ACTION BUTTON ROW --- */}
+                    {reviewScan ? (
+                        <div className="flex items-center justify-around gap-2 pt-1 pb-1 shrink-0">
+                            {/* BACK TO CAMERA BUTTON */}
+                            <button
+                                onClick={handleExitReview}
+                                aria-label="Return to live camera mode"
+                                className="w-16 h-16 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                            >
+                                <ArrowLeft size={22} />
+                                <span>Back</span>
+                            </button>
+
+                            {/* ASK BUTTON FOR THIS REVIEW IMAGE */}
+                            <button
+                                onClick={handleAskClick}
+                                aria-label="Ask AI question about this reviewed photo"
+                                className="w-16 h-16 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                            >
+                                <MessageSquare size={22} />
+                                <span>Ask</span>
+                            </button>
+
+                            {/* REPEAT RESULT BUTTON */}
                             <button
                                 onClick={() => {
                                     playBeep(440, 0.08);
-                                    const foldText = FOLD_GUIDE.map((g) => `${g.denomination} rupees: ${g.tip}`).join('. ');
-                                    const generalText = GENERAL_TIPS.join('. ');
-                                    speak(`Money Tips and Tactile Folding Guide. Tactile Folding Guide: ${foldText}. General Tips: ${generalText}`, speechRate);
+                                    speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
                                 }}
-                                className="w-full py-3 px-4 rounded-card bg-amber-500 hover:bg-amber-600 text-white font-bold text-base-md flex items-center justify-center gap-2 shadow-md transition-colors min-h-touch"
-                                aria-label="Read all money tips and folding guide out loud"
+                                aria-label="Replay audio description for this scan"
+                                className="w-16 h-16 rounded-full bg-primary hover:bg-primary-dark active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
                             >
-                                <Volume2 size={20} />
-                                🔊 Read aloud
+                                <Volume2 size={22} />
+                                <span>Repeat</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-between gap-2 pt-1 pb-1 shrink-0">
+                            {/* STOP BUTTON */}
+                            <button
+                                onClick={() => {
+                                    playBeep(300, 0.1);
+                                    handleStopSpeaking();
+                                }}
+                                aria-label="Stop audio output"
+                                className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                            >
+                                <Square size={18} />
+                                <span>Stop</span>
                             </button>
 
-                            {/* Fold Guide Section */}
-                            <div className="flex flex-col gap-2">
-                                <h3 className="text-base-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">
-                                    Tactile Folding Guide (INR)
-                                </h3>
-                                <div className="grid grid-cols-1 gap-2">
-                                    {FOLD_GUIDE.map((item) => (
-                                        <div
-                                            key={item.denomination}
-                                            className="p-3 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex items-start gap-3"
-                                        >
-                                            <span className="font-black text-amber-500 text-base-sm min-w-[50px] shrink-0">
-                                                ₹{item.denomination}
-                                            </span>
-                                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-snug">
-                                                {item.tip}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            {/* ASK BUTTON */}
+                            <button
+                                onClick={handleAskClick}
+                                aria-label="Ask AI question about photo"
+                                className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                            >
+                                <MessageSquare size={18} />
+                                <span>Ask</span>
+                            </button>
 
-                            {/* General Tips Section */}
-                            <div className="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
-                                <h3 className="text-base-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">
-                                    General Tips
-                                </h3>
-                                <ul className="flex flex-col gap-2">
-                                    {GENERAL_TIPS.map((tip, idx) => (
-                                        <li
-                                            key={idx}
-                                            className="text-xs font-medium text-gray-600 dark:text-gray-300 flex items-start gap-2 leading-relaxed"
-                                        >
-                                            <span className="text-amber-500 font-bold select-none">•</span>
-                                            <span>{tip}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                            {/* CAPTURE BUTTON (VISUALLY LARGEST & MOST PROMINENT) */}
+                            <button
+                                onClick={triggerCapture}
+                                disabled={loading}
+                                aria-label="Capture image and analyze"
+                                className="w-20 h-20 rounded-full bg-primary hover:bg-primary-dark disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-xl transition-all border-4 border-white dark:border-gray-800 focus:outline-none focus:ring-4 focus:ring-primary/50"
+                            >
+                                <Camera size={28} />
+                                <span>Capture</span>
+                            </button>
 
-                            <Button variant="secondary" className="w-full mt-2" onClick={closeMoneyTips}>
-                                Close
-                            </Button>
+                            {/* RECENTS BUTTON */}
+                            <button
+                                onClick={() => {
+                                    playBeep(440, 0.08);
+                                    setShowHistory(true);
+                                }}
+                                aria-label="View recent scans history"
+                                className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                            >
+                                <History size={18} />
+                                <span>Recents</span>
+                            </button>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
+            </div>
 
-                {/* --- WALLET PANEL MODAL --- */}
-                {isWalletOpen && (
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="wallet-panel-title"
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
-                    >
-                        <div
-                            ref={walletModalRef}
-                            tabIndex={-1}
-                            className={`${getCardClasses()} border-emerald-500 max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl outline-none flex flex-col gap-4 p-5`}
-                        >
-                            {/* Header */}
-                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
-                                <h2 id="wallet-panel-title" className="text-base-lg font-bold flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                                    <Wallet size={22} />
-                                    Wallet Tracker
-                                </h2>
-                                <button
-                                    onClick={closeWalletPanel}
-                                    aria-label="Close Wallet panel"
-                                    className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
-                                >
-                                    <X size={20} />
-                                </button>
+            {/* --- SETTINGS DRAWER OVERLAY MODAL --- */}
+            {isSettingsOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className={`${getCardClasses()} border-primary max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl`}>
+                        <h2 className="text-base-lg font-bold mb-4 flex items-center gap-2">
+                            <Settings size={22} />
+                            Assistant Controls
+                        </h2>
+
+                        <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-2">
+                                <span className="text-base-sm font-bold">Contrast Mode</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { key: 'standard', label: 'Standard' },
+                                        { key: 'high-dark', label: 'Yellow/Black' },
+                                        { key: 'high-light', label: 'Black/White' },
+                                    ].map((mode) => (
+                                        <button
+                                            key={mode.key}
+                                            onClick={() => {
+                                                playBeep(440, 0.05);
+                                                setContrastMode(mode.key);
+                                            }}
+                                            aria-label={`Set contrast mode to ${mode.label}`}
+                                            className={`py-2 px-1 rounded-card text-base-sm font-bold border-2 transition-colors flex items-center justify-center gap-1 ${
+                                                contrastMode === mode.key
+                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                    : 'border-gray-300 dark:border-gray-700'
+                                            }`}
+                                        >
+                                            {contrastMode === mode.key && <Check size={14} />}
+                                            {mode.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Loading State */}
-                            {walletLoading && walletEntries.length === 0 ? (
-                                <div className="py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
-                                    <Loader2 size={32} className="animate-spin text-emerald-500" />
-                                    <p className="text-base-sm font-semibold">Loading your wallet…</p>
-                                </div>
-                            ) : walletError ? (
-                                /* Error State */
-                                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 flex flex-col items-center gap-3 text-center">
-                                    <p className="text-xs font-bold text-red-600 dark:text-red-400 leading-relaxed">
-                                        {walletError}
-                                    </p>
-                                    <button
-                                        onClick={() => fetchWalletData(userId)}
-                                        className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors"
-                                    >
-                                        Retry
-                                    </button>
-                                </div>
-                            ) : (
-                                /* Main Wallet Content */
-                                <>
-                                    {/* Balance Header */}
-                                    <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex flex-col items-center justify-center text-center gap-1">
-                                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                                            Current Balance
-                                        </span>
-                                        <span className="text-3xl font-black text-gray-800 dark:text-gray-100 tracking-tight" aria-live="polite">
-                                            Your wallet: ₹{walletBalance}
-                                        </span>
-                                    </div>
-
-                                    {/* Spend Money Toggle Button & Form */}
-                                    {!isSpendInputOpen ? (
+                            <div className="flex flex-col gap-2">
+                                <span className="text-base-sm font-bold">Text Zoom Multiplier</span>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[1.0, 1.25, 1.5, 2.0].map((scale) => (
                                         <button
+                                            key={scale}
                                             onClick={() => {
-                                                playBeep(440, 0.08);
-                                                setSpendAmount('');
-                                                setSpendNote('');
-                                                setSpendError(null);
-                                                setIsSpendInputOpen(true);
+                                                playBeep(500, 0.05);
+                                                setFontScale(scale);
                                             }}
-                                            className="w-full py-3 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-base-sm flex items-center justify-center gap-2 transition-colors min-h-touch"
+                                            aria-label={`Set text zoom to ${scale}x`}
+                                            className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
+                                                fontScale === scale
+                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                    : 'border-gray-300 dark:border-gray-700'
+                                            }`}
                                         >
-                                            <MinusCircle size={18} />
-                                            − I spent money
+                                            {scale}x
                                         </button>
-                                    ) : (
-                                        <div className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
-                                            <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                                                Record Spending
-                                            </h3>
-                                            <div className="flex flex-col gap-1">
-                                                <label htmlFor="spend-amount" className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                                                    How much did you spend? (₹)
-                                                </label>
-                                                <input
-                                                    id="spend-amount"
-                                                    type="number"
-                                                    min="0"
-                                                    step="any"
-                                                    placeholder="e.g. 50"
-                                                    value={spendAmount}
-                                                    onChange={(e) => setSpendAmount(e.target.value)}
-                                                    className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-bold text-base-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
-                                                />
-                                            </div>
+                                    ))}
+                                </div>
+                            </div>
 
-                                            <div className="flex flex-col gap-1">
-                                                <label htmlFor="spend-note" className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                                                    What for? (optional)
-                                                </label>
-                                                <input
-                                                    id="spend-note"
-                                                    type="text"
-                                                    placeholder="e.g. lunch"
-                                                    value={spendNote}
-                                                    onChange={(e) => setSpendNote(e.target.value)}
-                                                    className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-bold text-base-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
-                                                />
-                                            </div>
+                            <div className="flex flex-col gap-2">
+                                <span className="text-base-sm font-bold">Speech Rate Speed</span>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[0.8, 1.0, 1.2, 1.5].map((rate) => (
+                                        <button
+                                            key={rate}
+                                            onClick={() => {
+                                                playBeep(550, 0.05);
+                                                setSpeechRate(rate);
+                                            }}
+                                            aria-label={`Set speech rate speed to ${rate}x`}
+                                            className={`py-2 rounded-card text-base-sm font-bold border-2 transition-colors ${
+                                                speechRate === rate
+                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                    : 'border-gray-300 dark:border-gray-700'
+                                            }`}
+                                        >
+                                            {rate}x
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
 
-                                            {spendError && (
-                                                <p className="text-xs font-bold text-red-500 dark:text-red-400" role="alert">
-                                                    {spendError}
-                                                </p>
-                                            )}
+                        <Button variant="secondary" className="w-full mt-4" onClick={toggleSettings}>
+                            Close Settings
+                        </Button>
+                    </div>
+                </div>
+            )}
 
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <button
-                                                    onClick={() => setIsSpendInputOpen(false)}
-                                                    disabled={isSubmittingSpend}
-                                                    className="flex-1 py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-800 dark:text-gray-200 font-bold text-xs min-h-touch"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    onClick={handleConfirmSpend}
-                                                    disabled={isSubmittingSpend}
-                                                    className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs min-h-touch flex items-center justify-center gap-1.5 shadow-sm"
-                                                >
-                                                    {isSubmittingSpend ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
+            {/* --- VERIFY CHANGE ENTRY STEP MODAL --- */}
+            {isVerifyFormOpen && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="verify-change-title"
+                    onKeyDown={(e) => handleTrapFocus(e, verifyModalRef)}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
+                >
+                    <div
+                        ref={verifyModalRef}
+                        tabIndex={-1}
+                        className={`${getCardClasses()} border-amber-500 max-w-[420px] w-full shadow-2xl outline-none flex flex-col gap-4 p-5`}
+                    >
+                        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+                            <h2 id="verify-change-title" className="text-base-lg font-bold flex items-center gap-2 text-amber-500">
+                                <Receipt size={22} />
+                                Verify Change
+                            </h2>
+                            <button
+                                onClick={closeVerifyForm}
+                                aria-label="Close Verify Change form"
+                                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                                    {/* Recent Entries List */}
-                                    <div className="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
-                                        <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Recent Wallet Activity ({walletEntries.length})
-                                        </h3>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-1">
+                                <label htmlFor="verify-price" className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Price of item (₹)
+                                </label>
+                                <input
+                                    id="verify-price"
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    placeholder="e.g. 320"
+                                    value={verifyPrice}
+                                    onChange={(e) => setVerifyPrice(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-card bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 font-bold text-base-md text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                />
+                            </div>
 
-                                        {walletEntries.length === 0 ? (
-                                            <p className="text-xs text-gray-400 py-4 text-center">
-                                                No wallet activity recorded yet.
-                                            </p>
-                                        ) : (
-                                            <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-                                                {walletEntries.map((entry) => {
-                                                    const isPositive = Number(entry.amount) > 0;
-                                                    const absAmt = Math.abs(Number(entry.amount));
-                                                    const isRemoving = removingEntryId === entry.id;
+                            <div className="flex flex-col gap-1">
+                                <label htmlFor="verify-amount-given" className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Amount you gave (₹)
+                                </label>
+                                <input
+                                    id="verify-amount-given"
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    placeholder="e.g. 500"
+                                    value={verifyAmountGiven}
+                                    onChange={(e) => setVerifyAmountGiven(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-card bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 font-bold text-base-md text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                />
+                            </div>
 
-                                                    return (
-                                                        <div
-                                                            key={entry.id}
-                                                            className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2"
-                                                        >
-                                                            <div className="flex flex-col min-w-0 flex-1">
-                                                                <div className="flex items-center gap-1.5 font-bold text-xs">
-                                                                    <span className={isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}>
-                                                                        {isPositive ? '+' : '−'} ₹{absAmt}
-                                                                    </span>
-                                                                    <span className="text-gray-600 dark:text-gray-300 truncate font-semibold">
-                                                                        — {entry.note || (isPositive ? 'Added money' : 'Spent money')}
-                                                                    </span>
-                                                                </div>
-                                                                {entry.created_at && (
-                                                                    <span className="text-[10px] text-gray-400">
-                                                                        {new Date(entry.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Delete path */}
-                                                            {isRemoving ? (
-                                                                <div className="flex items-center gap-1 shrink-0">
-                                                                    <span className="text-[10px] font-bold text-gray-500">Remove?</span>
-                                                                    <button
-                                                                        onClick={() => handleRemoveEntry(entry.id)}
-                                                                        className="px-2 py-1 rounded bg-red-500 text-white font-bold text-[11px]"
-                                                                    >
-                                                                        Yes
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setRemovingEntryId(null)}
-                                                                        className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-[11px]"
-                                                                    >
-                                                                        No
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => setRemovingEntryId(entry.id)}
-                                                                    aria-label={`Remove wallet entry for ${isPositive ? '+' : '-'}${absAmt} rupees`}
-                                                                    className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0 transition-colors"
-                                                                >
-                                                                    <Trash2 size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <Button variant="secondary" className="w-full mt-2" onClick={closeWalletPanel}>
-                                        Close Wallet
-                                    </Button>
-                                </>
+                            {verifyError && (
+                                <p className="text-xs font-bold text-red-500 dark:text-red-400 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900" role="alert">
+                                    {verifyError}
+                                </p>
                             )}
                         </div>
+
+                        <div className="flex items-center gap-2 mt-2">
+                            <button
+                                onClick={closeVerifyForm}
+                                className="flex-1 py-3 px-4 rounded-card bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-base-sm min-h-touch transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleStartVerification}
+                                className="flex-1 py-3 px-4 rounded-card bg-amber-500 hover:bg-amber-600 text-white font-bold text-base-sm min-h-touch shadow-md transition-colors"
+                            >
+                                Start counting
+                            </button>
+                        </div>
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* --- ASK AI OVERLAY BAR (SHRINK-0) --- */}
-                {showAskBar && (capturedImage || reviewScan) && (
-                    <div className="p-3 bg-surface dark:bg-surface-dark border-2 border-primary rounded-card shadow-lg shrink-0">
-                        <AskAIBar
-                            onSubmit={handleAskAI}
-                            isProcessing={loading}
-                            speakFeedback={speakFeedback}
-                            playBeep={playBeep}
-                            stopSpeaking={handleStopSpeaking}
-                        />
-                    </div>
-                )}
+            {/* --- MONEY TIPS MODAL / SHEET --- */}
+            {isMoneyTipsOpen && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="money-tips-title"
+                    onKeyDown={(e) => handleTrapFocus(e, moneyTipsModalRef)}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
+                >
+                    <div
+                        ref={moneyTipsModalRef}
+                        tabIndex={-1}
+                        className={`${getCardClasses()} border-amber-500 max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl outline-none flex flex-col gap-4 p-5`}
+                    >
+                        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+                            <h2 id="money-tips-title" className="text-base-lg font-bold flex items-center gap-2 text-amber-500">
+                                <Lightbulb size={22} />
+                                Money Tips & Fold Guide
+                            </h2>
+                            <button
+                                onClick={closeMoneyTips}
+                                aria-label="Close Money Tips"
+                                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                {/* --- ACTION BUTTON ROW --- */}
-                {reviewScan ? (
-                    <div className="flex items-center justify-around gap-2 pt-1 pb-1 shrink-0">
-                        {/* BACK TO CAMERA BUTTON */}
-                        <button
-                            onClick={handleExitReview}
-                            aria-label="Return to live camera mode"
-                            className="w-16 h-16 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
-                        >
-                            <ArrowLeft size={22} />
-                            <span>Back</span>
-                        </button>
-
-                        {/* ASK BUTTON FOR THIS REVIEW IMAGE */}
-                        <button
-                            onClick={handleAskClick}
-                            aria-label="Ask AI question about this reviewed photo"
-                            className="w-16 h-16 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
-                        >
-                            <MessageSquare size={22} />
-                            <span>Ask</span>
-                        </button>
-
-                        {/* REPEAT RESULT BUTTON */}
+                        {/* Read Aloud Button */}
                         <button
                             onClick={() => {
                                 playBeep(440, 0.08);
-                                speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
+                                const foldText = FOLD_GUIDE.map((g) => `${g.denomination} rupees: ${g.tip}`).join('. ');
+                                const generalText = GENERAL_TIPS.join('. ');
+                                speak(`Money Tips and Tactile Folding Guide. Tactile Folding Guide: ${foldText}. General Tips: ${generalText}`, speechRate);
                             }}
-                            aria-label="Replay audio description for this scan"
-                            className="w-16 h-16 rounded-full bg-primary hover:bg-primary-dark active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                            className="w-full py-3 px-4 rounded-card bg-amber-500 hover:bg-amber-600 text-white font-bold text-base-md flex items-center justify-center gap-2 shadow-md transition-colors min-h-touch"
+                            aria-label="Read all money tips and folding guide out loud"
                         >
-                            <Volume2 size={22} />
-                            <span>Repeat</span>
+                            <Volume2 size={20} />
+                            🔊 Read aloud
                         </button>
+
+                        {/* Fold Guide Section */}
+                        <div className="flex flex-col gap-2">
+                            <h3 className="text-base-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">
+                                Tactile Folding Guide (INR)
+                            </h3>
+                            <div className="grid grid-cols-1 gap-2">
+                                {FOLD_GUIDE.map((item) => (
+                                    <div
+                                        key={item.denomination}
+                                        className="p-3 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex items-start gap-3"
+                                    >
+                                        <span className="font-black text-amber-500 text-base-sm min-w-[50px] shrink-0">
+                                            ₹{item.denomination}
+                                        </span>
+                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-snug">
+                                            {item.tip}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* General Tips Section */}
+                        <div className="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+                            <h3 className="text-base-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">
+                                General Tips
+                            </h3>
+                            <ul className="flex flex-col gap-2">
+                                {GENERAL_TIPS.map((tip, idx) => (
+                                    <li
+                                        key={idx}
+                                        className="text-xs font-medium text-gray-600 dark:text-gray-300 flex items-start gap-2 leading-relaxed"
+                                    >
+                                        <span className="text-amber-500 font-bold select-none">•</span>
+                                        <span>{tip}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <Button variant="secondary" className="w-full mt-2" onClick={closeMoneyTips}>
+                            Close
+                        </Button>
                     </div>
-                ) : (
-                    <div className="flex items-center justify-between gap-2 pt-1 pb-1 shrink-0">
-                        {/* STOP BUTTON */}
-                        <button
-                            onClick={() => {
-                                playBeep(300, 0.1);
-                                handleStopSpeaking();
-                            }}
-                            aria-label="Stop audio output"
-                            className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
-                        >
-                            <Square size={18} />
-                            <span>Stop</span>
-                        </button>
+                </div>
+            )}
 
-                        {/* ASK BUTTON */}
-                        <button
-                            onClick={handleAskClick}
-                            aria-label="Ask AI question about photo"
-                            className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
-                        >
-                            <MessageSquare size={18} />
-                            <span>Ask</span>
-                        </button>
+            {/* --- WALLET PANEL MODAL --- */}
+            {isWalletOpen && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="wallet-panel-title"
+                    onKeyDown={(e) => handleTrapFocus(e, walletModalRef)}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
+                >
+                    <div
+                        ref={walletModalRef}
+                        tabIndex={-1}
+                        className={`${getCardClasses()} border-emerald-500 max-w-[420px] w-full max-h-[90vh] overflow-y-auto shadow-2xl outline-none flex flex-col gap-4 p-5`}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+                            <h2 id="wallet-panel-title" className="text-base-lg font-bold flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                                <Wallet size={22} />
+                                Wallet Tracker
+                            </h2>
+                            <button
+                                onClick={closeWalletPanel}
+                                aria-label="Close Wallet panel"
+                                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                        {/* CAPTURE BUTTON (VISUALLY LARGEST & MOST PROMINENT) */}
-                        <button
-                            onClick={triggerCapture}
-                            disabled={loading}
-                            aria-label="Capture image and analyze"
-                            className="w-20 h-20 rounded-full bg-primary hover:bg-primary-dark disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-xl transition-all border-4 border-white dark:border-gray-800 focus:outline-none focus:ring-4 focus:ring-primary/50"
-                        >
-                            <Camera size={28} />
-                            <span>Capture</span>
-                        </button>
+                        {/* Loading State */}
+                        {walletLoading && walletEntries.length === 0 ? (
+                            <div className="py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
+                                <Loader2 size={32} className="animate-spin text-emerald-500" />
+                                <p className="text-base-sm font-semibold">Loading your wallet…</p>
+                            </div>
+                        ) : walletError ? (
+                            /* Error State */
+                            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 flex flex-col items-center gap-3 text-center">
+                                <p className="text-xs font-bold text-red-600 dark:text-red-400 leading-relaxed">
+                                    {walletError}
+                                </p>
+                                <button
+                                    onClick={() => fetchWalletData(userId)}
+                                    className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        ) : (
+                            /* Main Wallet Content */
+                            <>
+                                {/* Balance Header */}
+                                <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex flex-col items-center justify-center text-center gap-1">
+                                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                                        Current Balance
+                                    </span>
+                                    <span className="text-3xl font-black text-gray-800 dark:text-gray-100 tracking-tight" aria-live="polite">
+                                        Your wallet: ₹{walletBalance}
+                                    </span>
+                                </div>
 
-                        {/* RECENTS BUTTON */}
-                        <button
-                            onClick={() => {
-                                playBeep(440, 0.08);
-                                setShowHistory(true);
-                            }}
-                            aria-label="View recent scans history"
-                            className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
-                        >
-                            <History size={18} />
-                            <span>Recents</span>
-                        </button>
+                                {/* Spend Money Toggle Button & Form */}
+                                {!isSpendInputOpen ? (
+                                    <button
+                                        onClick={() => {
+                                            playBeep(440, 0.08);
+                                            setSpendAmount('');
+                                            setSpendNote('');
+                                            setSpendError(null);
+                                            setIsSpendInputOpen(true);
+                                        }}
+                                        className="w-full py-3 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-base-sm flex items-center justify-center gap-2 transition-colors min-h-touch"
+                                    >
+                                        <MinusCircle size={18} />
+                                        − I spent money
+                                    </button>
+                                ) : (
+                                    <div className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+                                        <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                                            Record Spending
+                                        </h3>
+                                        <div className="flex flex-col gap-1">
+                                            <label htmlFor="spend-amount" className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                                                How much did you spend? (₹)
+                                            </label>
+                                            <input
+                                                id="spend-amount"
+                                                type="number"
+                                                min="0"
+                                                step="any"
+                                                placeholder="e.g. 50"
+                                                value={spendAmount}
+                                                onChange={(e) => setSpendAmount(e.target.value)}
+                                                className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-bold text-base-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                            />
+                                        </div>
+
+                                        <div className="flex flex-col gap-1">
+                                            <label htmlFor="spend-note" className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                                                What for? (optional)
+                                            </label>
+                                            <input
+                                                id="spend-note"
+                                                type="text"
+                                                placeholder="e.g. lunch"
+                                                value={spendNote}
+                                                onChange={(e) => setSpendNote(e.target.value)}
+                                                className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-bold text-base-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-amber-500 min-h-touch"
+                                            />
+                                        </div>
+
+                                        {spendError && (
+                                            <p className="text-xs font-bold text-red-500 dark:text-red-400" role="alert">
+                                                {spendError}
+                                            </p>
+                                        )}
+
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <button
+                                                onClick={() => setIsSpendInputOpen(false)}
+                                                disabled={isSubmittingSpend}
+                                                className="flex-1 py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-800 dark:text-gray-200 font-bold text-xs min-h-touch"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleConfirmSpend}
+                                                disabled={isSubmittingSpend}
+                                                className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs min-h-touch flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                {isSubmittingSpend ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Recent Entries List */}
+                                <div className="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+                                    <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                        Recent Wallet Activity ({walletEntries.length})
+                                    </h3>
+
+                                    {walletEntries.length === 0 ? (
+                                        <p className="text-xs text-gray-400 py-4 text-center">
+                                            No wallet activity recorded yet.
+                                        </p>
+                                    ) : (
+                                        <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+                                            {walletEntries.map((entry) => {
+                                                const isPositive = Number(entry.amount) > 0;
+                                                const absAmt = Math.abs(Number(entry.amount));
+                                                const isRemoving = removingEntryId === entry.id;
+
+                                                return (
+                                                    <div
+                                                        key={entry.id}
+                                                        className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2"
+                                                    >
+                                                        <div className="flex flex-col min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5 font-bold text-xs">
+                                                                <span className={isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}>
+                                                                    {isPositive ? '+' : '−'} ₹{absAmt}
+                                                                </span>
+                                                                <span className="text-gray-600 dark:text-gray-300 truncate font-semibold">
+                                                                    — {entry.note || (isPositive ? 'Added money' : 'Spent money')}
+                                                                </span>
+                                                            </div>
+                                                            {entry.created_at && (
+                                                                <span className="text-[10px] text-gray-400">
+                                                                    {new Date(entry.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Delete path */}
+                                                        {isRemoving ? (
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <span className="text-[10px] font-bold text-gray-500">Remove?</span>
+                                                                <button
+                                                                    onClick={() => handleRemoveEntry(entry.id)}
+                                                                    className="px-2 py-1 rounded bg-red-500 text-white font-bold text-[11px]"
+                                                                >
+                                                                    Yes
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setRemovingEntryId(null)}
+                                                                    className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-[11px]"
+                                                                >
+                                                                    No
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => setRemovingEntryId(entry.id)}
+                                                                aria-label={`Remove wallet entry for ${isPositive ? '+' : '-'}${absAmt} rupees`}
+                                                                className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0 transition-colors"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <Button variant="secondary" className="w-full mt-2" onClick={closeWalletPanel}>
+                                    Close Wallet
+                                </Button>
+                            </>
+                        )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }
