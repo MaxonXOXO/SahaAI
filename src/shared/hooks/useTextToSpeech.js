@@ -289,6 +289,9 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         }
 
         window.speechSynthesis.cancel();
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
         clearTimers();
 
         const startWord = activeWords[startIndex] || activeWords[0];
@@ -368,6 +371,11 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
 
         utteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
+        
+        // Force resume in case browser gets into a stuck paused state
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
         setIsPlaying(true);
 
         setTimeout(() => {
