@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Settings, Loader2, Sparkles } from 'lucide-react';
+import { Settings, Loader2, Sparkles, Info } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import IconButton from '../../shared/components/IconButton';
 import useProfileStore from '../../store/useProfileStore';
@@ -41,6 +41,7 @@ export default function MathHelperScreen() {
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const [scanError, setScanError] = useState(null);
+    const [scanWarning, setScanWarning] = useState(null);
     const [scannedProblems, setScannedProblems] = useState([]);
     
     const pdfInputRef = useRef(null);
@@ -48,15 +49,26 @@ export default function MathHelperScreen() {
     const processScannedImage = async (imageFileOrBlob) => {
         setIsScanning(true);
         setScanError(null);
+        setScanWarning(null);
         try {
             const rawText = await extractTextFromImage(imageFileOrBlob);
+            console.log('[DEBUG 2/3] FULL raw text extracted (OCR):');
+            console.log(rawText);
+
             if (!rawText || rawText.trim().length === 0 || !/[a-zA-Z0-9]/.test(rawText)) {
                 throw new Error('No readable text could be scanned from the worksheet. Please make sure the image is clear and well-lit.');
             }
 
+            console.log('[DEBUG 3/3] Exact text being sent to extractMathProblemsFromText:');
+            console.log(rawText);
             const parsed = await extractMathProblemsFromText(rawText);
+            console.log('[DEBUG 3/3] Raw JSON response before validation:');
+            console.log(JSON.stringify(parsed, null, 2));
+
             if (!parsed || !Array.isArray(parsed.problems) || parsed.problems.length === 0) {
-                throw new Error('No math problems could be parsed from the worksheet text.');
+                setScanWarning("We couldn't find basic math problems in this worksheet. Try Algebra or Calculator mode, or scan a different page.");
+                setIsScannerOpen(false);
+                return;
             }
 
             const firstProb = parsed.problems[0];
@@ -87,6 +99,7 @@ export default function MathHelperScreen() {
 
         setIsScanning(true);
         setScanError(null);
+        setScanWarning(null);
 
         try {
             const arrayBuffer = await file.arrayBuffer();
@@ -105,6 +118,17 @@ export default function MathHelperScreen() {
             canvas.width = viewport.width;
 
             await page.render({ canvasContext: context, viewport }).promise;
+
+            // Log rendering details
+            try {
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                console.log('[DEBUG 1/3] PDF rendered to canvas successfully.');
+                console.log('[DEBUG 1/3] Canvas dimensions:', canvas.width, 'x', canvas.height);
+                console.log('[DEBUG 1/3] Data URL (first 200 chars):', dataUrl.substring(0, 200));
+                console.log('[DEBUG 1/3] Full Data URL:', dataUrl);
+            } catch (logErr) {
+                console.error('[DEBUG 1/3] Failed to log canvas data URL:', logErr);
+            }
 
             const jpegBlob = await new Promise((resolve, reject) => {
                 canvas.toBlob((blob) => {
@@ -261,7 +285,27 @@ export default function MathHelperScreen() {
                     <TrigonometryView />
                 ) : (
                     <>
-                        {isScanning ? (
+                        {scanWarning ? (
+                            <div className="flex-grow flex flex-col items-center justify-center gap-6 text-center py-12 px-4">
+                                <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-500 border border-amber-200 dark:border-amber-900/50 shadow-sm">
+                                    <Info className="w-8 h-8" />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <h3 className="text-base-md font-bold text-gray-800 dark:text-gray-100">
+                                        No Basic Math Found
+                                    </h3>
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-normal max-w-[280px]">
+                                        {scanWarning}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setScanWarning(null)}
+                                    className="mt-2 w-full py-3 px-5 bg-primary text-white font-bold rounded-2xl shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all text-sm"
+                                >
+                                    Back to Math Topics
+                                </button>
+                            </div>
+                        ) : isScanning ? (
                             <div className="flex-grow flex flex-col items-center justify-center gap-4 text-gray-500 dark:text-gray-400 py-12">
                                 <Loader2 className="animate-spin text-primary" size={40} />
                                 <div className="text-center">
