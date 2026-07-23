@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Loader2, Info, LogOut, CheckCircle2 } from 'luci
 import Button from '../../../shared/components/Button';
 import StoryReadAloud from './StoryReadAloud';
 import { solveProblem } from '../lib/solveProblem';
+import MathRenderer from './MathRenderer';
 
 export default function ScannedSolutionsView({ problems, onExit }) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -70,9 +71,9 @@ export default function ScannedSolutionsView({ problems, onExit }) {
                     <span className="text-[10px] font-black text-[#dcedc8]/60 uppercase tracking-widest relative z-10">
                         Question {currentIndex + 1} of {problems.length}
                     </span>
-                    <p className="text-sm font-bold text-white leading-relaxed relative z-10 max-w-[320px]">
-                        {currentProb.expression}
-                    </p>
+                    <div className="text-sm font-bold text-white leading-relaxed relative z-10 max-w-[320px]">
+                        <MathRenderer text={currentProb.expression} />
+                    </div>
                 </div>
             )}
 
@@ -108,9 +109,9 @@ export default function ScannedSolutionsView({ problems, onExit }) {
                         <span className="text-[9px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">
                             Calculated Answer
                         </span>
-                        <span className="text-xl font-black text-green-700 dark:text-green-400 font-mono tracking-wide break-all">
-                            {solution.answer}
-                        </span>
+                        <div className="text-xl font-black text-green-700 dark:text-green-400 font-mono tracking-wide break-all">
+                            <MathRenderer text={solution.answer} />
+                        </div>
                     </div>
 
                     {/* Progressive step cards */}
@@ -139,9 +140,9 @@ export default function ScannedSolutionsView({ problems, onExit }) {
                                                 {isLatest ? (
                                                     <StoryReadAloud text={step.description} />
                                                 ) : (
-                                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-relaxed">
-                                                        {step.description}
-                                                    </p>
+                                                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-relaxed">
+                                                        <MathRenderer text={step.description} />
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

@@ -2,6 +2,7 @@ import { useMemo, useEffect } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import useTextToSpeech from '../../../shared/hooks/useTextToSpeech';
 import IconButton from '../../../shared/components/IconButton';
+import MathRenderer from './MathRenderer';
 
 export default function StoryReadAloud({ text }) {
     const words = useMemo(() => {
@@ -40,9 +41,9 @@ export default function StoryReadAloud({ text }) {
 
     return (
         <div className="flex items-start justify-center gap-2 max-w-[320px] mx-auto w-full">
-            <p className="text-center font-bold text-base-md leading-relaxed text-[#f4faf6] flex-1">
-                {text}
-            </p>
+            <div className="text-center font-bold text-base-md leading-relaxed text-[#f4faf6] flex-1">
+                <MathRenderer text={text} />
+            </div>
             <IconButton
                 icon={isPlaying ? VolumeX : Volume2}
                 label={isPlaying ? "Stop Read Aloud" : "Read Aloud"}
