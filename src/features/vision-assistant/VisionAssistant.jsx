@@ -405,19 +405,44 @@ export default function VisionAssistant() {
 
     // Persist accessibility configurations
     useEffect(() => {
-        localStorage.setItem('saha_vision_contrast', contrastMode);
+        try {
+            localStorage.setItem('saha_vision_contrast', contrastMode);
+        } catch (e) {
+            console.warn('[VisionAssistant] Failed to save contrast setting:', e);
+        }
     }, [contrastMode]);
 
     useEffect(() => {
-        localStorage.setItem('saha_vision_font_scale', fontScale.toString());
+        try {
+            localStorage.setItem('saha_vision_font_scale', fontScale.toString());
+        } catch (e) {
+            console.warn('[VisionAssistant] Failed to save font scale setting:', e);
+        }
     }, [fontScale]);
 
     useEffect(() => {
-        localStorage.setItem('saha_vision_speech_rate', speechRate.toString());
+        try {
+            localStorage.setItem('saha_vision_speech_rate', speechRate.toString());
+        } catch (e) {
+            console.warn('[VisionAssistant] Failed to save speech rate setting:', e);
+        }
     }, [speechRate]);
 
     useEffect(() => {
-        localStorage.setItem('saha_vision_history', JSON.stringify(scanHistory));
+        try {
+            localStorage.setItem('saha_vision_history', JSON.stringify(scanHistory));
+        } catch (err) {
+            console.warn('[VisionAssistant] Quota exceeded or error saving scan history, degrading gracefully:', err);
+            try {
+                const fallbackHistory = scanHistory.map((item, idx) => {
+                    if (idx < 2) return item;
+                    return { ...item, image: null };
+                });
+                localStorage.setItem('saha_vision_history', JSON.stringify(fallbackHistory));
+            } catch (retryErr) {
+                console.warn('[VisionAssistant] Failed to persist scan history after stripping thumbnails:', retryErr);
+            }
+        }
     }, [scanHistory]);
 
     // Initial greeting voice announcement

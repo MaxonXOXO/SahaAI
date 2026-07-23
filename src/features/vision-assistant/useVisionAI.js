@@ -56,7 +56,13 @@ export default function useVisionAI() {
             : base64Image;
 
         // Priority: user-saved key in localStorage, then build-time env variable
-        const apiKey = localStorage.getItem('saha_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+        let userApiKey = '';
+        try {
+            userApiKey = localStorage.getItem('saha_gemini_api_key') || '';
+        } catch (e) {
+            console.warn('[VisionAI] Failed to read API key from localStorage:', e);
+        }
+        const apiKey = userApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
 
         // Diagnostic: log whether a key was found (never logs the actual key value)
         console.log('[VisionAI] API key present:', !!apiKey, '| Mode:', mode);
