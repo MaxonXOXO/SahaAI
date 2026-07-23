@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchSpeechAudio, buildSpeechChunks, estimateWordTimings } from '../../features/reading-mode/lib/openai-tts';
 
 /**
@@ -262,7 +262,7 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         }, delay);
     };
 
-    const play = (startIndex = 0) => {
+    const play = useCallback((startIndex = 0) => {
         const activeText = refs.current.text;
         const activeWords = refs.current.words;
 
@@ -419,9 +419,9 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
                 startTimerFallback(latestIdx);
             }
         }, 600);
-    };
+    }, [voices]);
 
-    const pause = () => {
+    const pause = useCallback(() => {
         if (refs.current.voiceEngine === 'openai') {
             pauseOpenAI();
             return;
@@ -437,9 +437,9 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         }
         clearTimers();
         setIsPlaying(false);
-    };
+    }, []);
 
-    const stop = () => {
+    const stop = useCallback(() => {
         if (refs.current.voiceEngine === 'openai') {
             stopOpenAI();
             return;
@@ -451,15 +451,15 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         clearTimers();
         setIsPlaying(false);
         setCurrentWordIndex(-1);
-    };
+    }, []);
 
-    const changeRate = (rate) => {
+    const changeRate = useCallback((rate) => {
         setSpeechRate(rate);
         if (refs.current.isPlaying || refs.current.currentWordIndex >= 0) {
             const index = refs.current.currentWordIndex >= 0 ? refs.current.currentWordIndex : 0;
             play(index);
         }
-    };
+    }, [play]);
 
     // Clean up SpeechSynthesis on unmount
     useEffect(() => {
