@@ -6,6 +6,7 @@ import useProfileStore from '../../../store/useProfileStore';
 import Button from '../../../shared/components/Button';
 import IconButton from '../../../shared/components/IconButton';
 import StoryReadAloud from './StoryReadAloud';
+import MathRenderer from './MathRenderer';
 
 export default function SolverModal({ isOpen, onClose }) {
     const userId = useProfileStore((s) => s.id);
@@ -150,9 +151,9 @@ export default function SolverModal({ isOpen, onClose }) {
                             <span className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">
                                 Final Answer
                             </span>
-                            <span className="text-3xl font-black text-green-700 dark:text-green-400 font-mono tracking-wide break-all">
-                                {result.answer}
-                            </span>
+                            <div className="text-3xl font-black text-green-700 dark:text-green-400 font-mono tracking-wide break-all">
+                                <MathRenderer text={result.answer} />
+                            </div>
                         </div>
 
                         {/* Step progression with StoryReadAloud audio */}
@@ -180,9 +181,9 @@ export default function SolverModal({ isOpen, onClose }) {
                                                     {isLatest ? (
                                                         <StoryReadAloud text={step.description} />
                                                     ) : (
-                                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-relaxed">
-                                                            {step.description}
-                                                        </p>
+                                                        <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-relaxed">
+                                                            <MathRenderer text={step.description} />
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

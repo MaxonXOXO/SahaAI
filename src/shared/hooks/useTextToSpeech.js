@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchSpeechAudio, buildSpeechChunks, estimateWordTimings } from '../../features/reading-mode/lib/openai-tts';
 
 /**
@@ -11,6 +11,24 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
     const [currentWordIndex, setCurrentWordIndex] = useState(-1);
     const [speechRate, setSpeechRate] = useState(1.0);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [voices, setVoices] = useState([]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+        const loadVoices = () => {
+            setVoices(window.speechSynthesis.getVoices() || []);
+        };
+
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+
+        return () => {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
+        };
+    }, []);
 
     const utteranceRef = useRef(null);
     const fallbackTimerRef = useRef(null);
@@ -244,7 +262,7 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         }, delay);
     };
 
-    const play = (startIndex = 0) => {
+    const play = useCallback((startIndex = 0) => {
         const activeText = refs.current.text;
         const activeWords = refs.current.words;
 
@@ -271,6 +289,9 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         }
 
         window.speechSynthesis.cancel();
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
         clearTimers();
 
         const startWord = activeWords[startIndex] || activeWords[0];
@@ -279,16 +300,48 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         boundaryFiredRef.current = false;
 
         const textToSpeak = activeText.substring(startCharOffset);
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        
+        // Strip emojis (surrogate pairs) to prevent 'synthesis-failed' errors on some platforms
+        const cleanTextToSpeak = textToSpeak.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '');
+        
+        const utterance = new SpeechSynthesisUtterance(cleanTextToSpeak);
         utterance.rate = refs.current.speechRate;
 
-        const allVoices = window.speechSynthesis.getVoices();
-        const englishVoice = allVoices.find(
-            (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
-        ) || allVoices.find((v) => v.lang.startsWith('en')) || allVoices[0];
+        const allVoices = voices.length > 0 ? voices : (window.speechSynthesis.getVoices() || []);
+        
+        // Detect language from text
+        const isMalayalam = /[\u0D00-\u0D7F]/.test(cleanTextToSpeak);
+        const targetLang = isMalayalam ? 'ml-IN' : 'en-US';
+        
+        utterance.lang = targetLang;
+        
+        let matchedVoice = null;
+        if (isMalayalam) {
+            // Prioritize local Malayalam voices to avoid network errors
+            matchedVoice = allVoices.find(v => v.localService && (v.lang.toLowerCase().startsWith('ml') || v.lang.toLowerCase().includes('ml-in'))) ||
+                           allVoices.find(v => v.lang.toLowerCase().startsWith('ml')) ||
+                           allVoices.find(v => v.lang.toLowerCase().includes('ml-in'));
+        } else {
+            // Prioritize local English voices to avoid network errors
+            matchedVoice = allVoices.find(
+                (v) => v.localService && v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
+            ) || allVoices.find(
+                (v) => v.localService && v.lang.startsWith('en')
+            ) || allVoices.find(
+                (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
+            ) || allVoices.find((v) => v.lang.startsWith('en'));
+        }
 
-        if (englishVoice) {
-            utterance.voice = englishVoice;
+        if (!matchedVoice && allVoices.length > 0) {
+            // Only fall back to first voice if it is local, otherwise let browser pick default voice
+            const firstVoice = allVoices[0];
+            if (firstVoice && firstVoice.localService) {
+                matchedVoice = firstVoice;
+            }
+        }
+
+        if (matchedVoice) {
+            utterance.voice = matchedVoice;
         }
 
         utterance.onboundary = (event) => {
@@ -326,6 +379,25 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         utterance.onerror = (err) => {
             if (err.error !== 'interrupted') {
                 console.warn("Speech synthesis boundary warning:", err.error);
+                
+                // If a custom/remote voice failed, retry once with the default system voice
+                if (err.error === 'synthesis-failed' && utterance.voice) {
+                    console.log("Retrying speech synthesis with default system voice...");
+                    const retryUtterance = new SpeechSynthesisUtterance(cleanTextToSpeak);
+                    retryUtterance.rate = utterance.rate;
+                    retryUtterance.lang = utterance.lang;
+                    retryUtterance.onboundary = utterance.onboundary;
+                    retryUtterance.onend = utterance.onend;
+                    retryUtterance.onerror = (retryErr) => {
+                        console.warn("Speech synthesis retry failed:", retryErr.error);
+                        setIsPlaying(false);
+                        setCurrentWordIndex(-1);
+                    };
+                    utteranceRef.current = retryUtterance;
+                    window.speechSynthesis.speak(retryUtterance);
+                    return;
+                }
+
                 setIsPlaying(false);
                 setCurrentWordIndex(-1);
             }
@@ -333,6 +405,11 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
 
         utteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
+        
+        // Force resume in case browser gets into a stuck paused state
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
         setIsPlaying(true);
 
         setTimeout(() => {
@@ -342,9 +419,9 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
                 startTimerFallback(latestIdx);
             }
         }, 600);
-    };
+    }, [voices]);
 
-    const pause = () => {
+    const pause = useCallback(() => {
         if (refs.current.voiceEngine === 'openai') {
             pauseOpenAI();
             return;
@@ -360,9 +437,9 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         }
         clearTimers();
         setIsPlaying(false);
-    };
+    }, []);
 
-    const stop = () => {
+    const stop = useCallback(() => {
         if (refs.current.voiceEngine === 'openai') {
             stopOpenAI();
             return;
@@ -374,15 +451,15 @@ export default function useTextToSpeech({ text, words, voiceEngine = 'browser' }
         clearTimers();
         setIsPlaying(false);
         setCurrentWordIndex(-1);
-    };
+    }, []);
 
-    const changeRate = (rate) => {
+    const changeRate = useCallback((rate) => {
         setSpeechRate(rate);
         if (refs.current.isPlaying || refs.current.currentWordIndex >= 0) {
             const index = refs.current.currentWordIndex >= 0 ? refs.current.currentWordIndex : 0;
             play(index);
         }
-    };
+    }, [play]);
 
     // Clean up SpeechSynthesis on unmount
     useEffect(() => {
