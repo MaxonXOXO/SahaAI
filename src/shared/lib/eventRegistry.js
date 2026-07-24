@@ -8,6 +8,7 @@ export const EVENT_REGISTRY = {
   explainer_viewed: { path: '/learn', tab: null, label: 'Learn Explainer' },
   // Focus Mode
   focus_session_completed: { path: '/focus-mode', tab: null, label: 'Focus Session' },
+  focus_checkin: { path: '/focus-mode', tab: 'checkin', label: 'Focus Check-in' },
   task_completed: { path: '/focus-mode', tab: null, label: 'Task Completed' },
   distraction_blocked: { path: '/focus-mode', tab: null, label: 'Distraction Blocked' },
 
@@ -34,11 +35,13 @@ export const EVENT_REGISTRY = {
   // Low Vision
   document_read: { path: '/document-reader', tab: null, label: 'Document Read' },
   ocr_scan_used: { path: '/vision-assistant', tab: 'read', label: 'Text Scan' },
+  signs_scan_used: { path: '/vision-assistant', tab: 'signs', label: 'Sign Scan' },
   high_contrast_toggled: { path: '/settings', tab: null, label: 'High Contrast' },
   magnifier_used: { path: '/vision-assistant', tab: null, label: 'Magnifier' },
 
   // AAC Board
   aac_phrase_spoken: { path: '/aac-board', tab: null, label: 'AAC Board' },
+  speech_therapy_session_completed: { path: '/speech-therapy', tab: null, label: 'Speech Therapy' },
 };
 
 /** Turns an event_type into its route + query string, e.g. '/math-helper?tab=games' */

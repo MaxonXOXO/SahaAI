@@ -1,4 +1,4 @@
-import { useRef, useState, lazy, Suspense } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { ChevronDown, ChevronUp, ExternalLink, ListOrdered, Play, Pause, Square, Volume2, VolumeX, Loader2, Sparkles, BookOpen } from 'lucide-react';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 import { generateLearnImage } from '../../shared/lib/aiClient';
@@ -18,6 +18,7 @@ function StepItem({ step, index, topic }) {
         try {
             // Include the overarching topic so the AI has context (e.g. doesn't generate junk food for a healthy snack step)
             const url = await generateLearnImage(`${topic} - Step: ${step}`);
+            if (!url) throw new Error('No image returned');
             setImage(url);
         } catch (err) {
             console.error('Failed to generate step image:', err);
@@ -26,6 +27,12 @@ function StepItem({ step, index, topic }) {
             setLoading(false);
         }
     };
+
+    // Step cards only mount when the user opens “Steps”, so this requests the
+    // visual automatically at that point without spending image credits early.
+    useEffect(() => {
+        generateImage();
+    }, []);
 
     return (
         <li className="flex flex-col gap-3 bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden">
@@ -43,16 +50,9 @@ function StepItem({ step, index, topic }) {
                     <img src={image} alt={`Visual for step ${index + 1}`} className="w-full h-auto object-cover max-h-56" />
                 </div>
             ) : (
-                <div className="pl-11 mt-1">
-                    <button 
-                        onClick={generateImage} 
-                        disabled={loading}
-                        className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-full transition-colors disabled:opacity-50"
-                    >
-                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                        {loading ? 'Generating...' : 'Generate Step Visual (Cloudflare AI)'}
-                    </button>
-                    {error && <p className="text-xs text-red-500 mt-2 font-semibold">Failed to generate image. Try again.</p>}
+                <div className="pl-11 mt-1 min-h-8 flex items-center gap-2 text-xs font-semibold text-gray-400">
+                    {loading && <><Loader2 size={15} className="animate-spin text-primary" /> Creating a visual…</>}
+                    {error && 'A visual could not be created for this step.'}
                 </div>
             )}
         </li>

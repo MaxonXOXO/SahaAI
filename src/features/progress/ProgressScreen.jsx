@@ -66,6 +66,8 @@ export default function ProgressScreen() {
         readingStreak,
         activeDays,
         totalSessions,
+        toolsUsed,
+        recentActivity,
         loading,
     } = useProgressStats();
 
@@ -181,7 +183,7 @@ export default function ProgressScreen() {
                     {totalSessions > 0 && (
                         <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between">
                             <span className="text-xs text-white/70">
-                                {displayLanguage === 'ml' ? 'ആകെ പൂർത്തിയാക്കിയ സെഷനുകൾ' : 'Total sessions logged'}
+                                {displayLanguage === 'ml' ? 'കഴിഞ്ഞ 30 ദിവസത്തെ പ്രവർത്തനങ്ങൾ' : 'Actions in the last 30 days'}
                             </span>
                             <span className="text-sm font-bold">{totalSessions}</span>
                         </div>
@@ -204,6 +206,31 @@ export default function ProgressScreen() {
                         subtitle={translate('accuracySubtitle', displayLanguage)}
                         centerLabel={`${mathAccuracy}%`}
                     />
+                </div>
+
+                <div className="p-5 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-750 shadow-sm">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h3 className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
+                                {displayLanguage === 'ml' ? 'നിങ്ങൾ ഉപയോഗിച്ച ഉപകരണങ്ങൾ' : 'Apps you used'}
+                            </h3>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {displayLanguage === 'ml' ? `കഴിഞ്ഞ 30 ദിവസത്തിൽ ${toolsUsed} തരം പ്രവർത്തനങ്ങൾ` : `${toolsUsed} activity types in the last 30 days`}
+                            </p>
+                        </div>
+                        <span className={`text-base-md font-extrabold ${activeColorClass}`}>{toolsUsed}</span>
+                    </div>
+                    {recentActivity.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                            {recentActivity.map((activity) => (
+                                <div key={activity.eventType} className="rounded-xl bg-primary/10 border border-primary/15 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200">
+                                    {activity.label} <span className="text-primary">×{activity.count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-gray-400">Use a tool to start building your activity summary.</p>
+                    )}
                 </div>
 
                 {/* Streak Calendar (Last 7 Days) */}

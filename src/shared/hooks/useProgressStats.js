@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import useProfileStore from '../../store/useProfileStore';
+import { getEventLabel } from '../lib/eventRegistry';
 
 /**
  * useProgressStats — computes real progress metrics from activity_log.
@@ -23,6 +24,8 @@ export default function useProgressStats() {
         mathAccuracy: 0,
         readingStreak: 0,
         totalSessions: 0,
+        toolsUsed: 0,
+        recentActivity: [],
         activeDays: new Set(),
         loading: true,
     });
@@ -88,10 +91,10 @@ export default function useProgressStats() {
 
             // ── 5. Math accuracy (avg of metadata.accuracy, last 30 days) ─
             const mathRows = rows.filter(
-                (r) => r.event_type === 'math_problem_solved' && r.metadata?.accuracy != null
+                (r) => r.event_type === 'math_problem_solved' && typeof r.metadata?.correct === 'boolean'
             );
             const mathAccuracy = mathRows.length > 0
-                ? Math.round(mathRows.reduce((sum, r) => sum + (r.metadata.accuracy * 100), 0) / mathRows.length)
+                ? Math.round((mathRows.filter((r) => r.metadata.correct).length / mathRows.length) * 100)
                 : 0;
 
             // ── 6. Reading streak: consecutive days with reading events ────
@@ -127,6 +130,18 @@ export default function useProgressStats() {
                 if (dateSet.has(key)) last7.add(key);
             }
 
+            const grouped = new Map();
+            rows.forEach((row) => {
+                const current = grouped.get(row.event_type) || { eventType: row.event_type, count: 0, lastUsed: row.created_at };
+                current.count += 1;
+                if (new Date(row.created_at) > new Date(current.lastUsed)) current.lastUsed = row.created_at;
+                grouped.set(row.event_type, current);
+            });
+            const recentActivity = [...grouped.values()]
+                .map((item) => ({ ...item, label: getEventLabel(item.eventType) }))
+                .sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed))
+                .slice(0, 6);
+
             if (!cancelled) {
                 setStats({
                     dailyStreak,
@@ -134,6 +149,8 @@ export default function useProgressStats() {
                     mathAccuracy,
                     readingStreak,
                     totalSessions: rows.length,
+                    toolsUsed: grouped.size,
+                    recentActivity,
                     activeDays: last7,
                     loading: false,
                 });

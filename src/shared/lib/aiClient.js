@@ -141,8 +141,20 @@ export async function generateLearnImage(topic) {
     const prompt = `A realistic, accessible educational illustration of ${topic}. Natural colors, clear subject, no text.`;
     try {
         const data = await callGateway('learn-image', { prompt });
-        return data?.image ? `data:${data.mimeType || 'image/png'};base64,${data.image}` : null;
-    } catch (error) { console.warn('generateLearnImage failed:', error.message); return null; }
+        if (data?.image) return `data:${data.mimeType || 'image/png'};base64,${data.image}`;
+        throw new Error('Cloudflare returned no image.');
+    } catch (cloudflareError) {
+        // Social Story images already use this secure OpenAI route successfully.
+        // It keeps Learn visuals available if the optional Cloudflare token is
+        // missing, expired, or lacks Workers AI permissions.
+        try {
+            const data = await callGateway('story-image', { prompt });
+            return data?.image ? `data:image/png;base64,${data.image}` : null;
+        } catch (openAIError) {
+            console.warn('Learn image generation failed:', { cloudflareError, openAIError });
+            return null;
+        }
+    }
 }
 
 export async function findLearnVideo(searchQuery, language = 'en') {
