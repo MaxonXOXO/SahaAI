@@ -20,8 +20,8 @@ export async function extractTextFromImage(imageFileOrBlob) {
  * @returns {Promise<Object>}
  */
 export async function extractMathProblemsFromText(rawText) {
-    const prompt = `You are a math worksheet parser. Analyze the following OCR text from a math worksheet and extract all basic math problems.
-A math problem can be an explicit equation (e.g., "5 + 3 = 8", "12 - 4", "6 x 7", "20 / 5"), vertical additions or subtractions, or simple word problems/stories that describe a basic math operation (addition, subtraction, multiplication, or division) between two numbers.
+    const prompt = `You are a math worksheet parser. Analyze the following OCR text from a math worksheet and extract all mathematical problems or questions.
+A math problem can be basic math, algebra (e.g., "3x + 5 = 11"), trigonometry, polynomial evaluation, or advanced/complex engineering math (like integrals, derivatives, limits, matrix calculations, differential equations).
 Text to parse:
 """
 ${rawText}
@@ -31,10 +31,11 @@ ${rawText}
 {
   "problems": [
     {
-      "expression": "string containing the simple math expression (e.g. '5 + 3', '12 - 4', '4 × 3', '8 ÷ 2')",
-      "operation": "string, exactly one of: '+', '-', '×', '÷'. Map any multiplication symbol like '*' or 'x' to '×', and division symbol like '/' to '÷'",
-      "operandA": number (the first operand in the calculation),
-      "operandB": number (the second operand in the calculation)
+      "expression": "string containing the math expression or question (e.g. '5 + 3', '3x + 5 = 11', '\\int_0^2 x^2 dx')",
+      "category": "string, exactly one of: 'basic-math', 'algebra', 'polynomial', 'trigonometry', 'calculator-expression', 'complex-math'",
+      "operation": "string, exactly one of: '+', '-', '×', '÷' (optional, only for basic-math)",
+      "operandA": number (optional, only for basic-math),
+      "operandB": number (optional, only for basic-math)
     }
   ]
 }`;

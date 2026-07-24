@@ -25,7 +25,8 @@ Classify the problem into one of these categories:
 - 'polynomial' (evaluating quadratic function ax² + bx + c at a given x point)
 - 'trigonometry' (right-triangle Pythagorean theorem side lengths)
 - 'calculator-expression' (plain mathematical expression like "2 * (3 + 4)")
-- 'unsupported' (non-math, too complex, or ambiguous)
+- 'complex-math' (advanced or engineering-level math: calculus, integration, derivatives, matrix algebra, differential equations, complex numbers, transforms, or higher-level equations)
+- 'unsupported' (non-math, purely conversational text, or completely ambiguous query)
 
 Extract relevant parameters:
 - For 'basic-math': extract operandA, operandB, and operation ('+', '-', '*', '/').
@@ -36,7 +37,7 @@ Extract relevant parameters:
 
     const schemaDescription = `Return a JSON object matching this exact shape:
 {
-  "category": "basic-math" | "algebra" | "polynomial" | "trigonometry" | "calculator-expression" | "unsupported",
+  "category": "basic-math" | "algebra" | "polynomial" | "trigonometry" | "calculator-expression" | "complex-math" | "unsupported",
   "basicMathParams": { "operandA": number, "operandB": number, "operation": "+" | "-" | "*" | "/" } (optional),
   "algebraParams": { "a": number, "b": number, "c": number } (optional),
   "polynomialParams": { "a": number, "b": number, "c": number, "x": number } (optional),
@@ -106,29 +107,38 @@ Extract relevant parameters:
             return { error: "Couldn't confidently solve this — try rephrasing or selecting a category." };
         }
 
-        // Only fall back to AI-generated answer if no local solver applies
+        // Consolidated AI Math Solver Flow for complex-math or fallback
         try {
-            const fallbackPrompt = `Solve the following math problem:
+            const aiSolvePrompt = `You are an expert mathematics engine. Solve the following mathematics problem step-by-step:
 "${userText}"
-Explain the final answer clearly.`;
 
-            const fallbackSchema = `Return a JSON object matching this exact shape:
+Show all intermediate mathematical calculations and steps clearly. Write a friendly, child-friendly explanation for the steps.`;
+
+            const aiSolveSchema = `Return a JSON object matching this exact shape:
 {
   "canSolve": boolean,
-  "answer": number or string,
-  "summary": "string explaining the result briefly"
+  "answer": "string containing the final answer (can use standard symbols or LaTeX)",
+  "steps": [
+    { "description": "String explaining step 1 and showing calculations" },
+    { "description": "String explaining step 2 and showing calculations" }
+  ],
+  "summary": "string explaining the final result briefly"
 }`;
 
-            const fallbackRes = await generateStructuredJSON(fallbackPrompt, fallbackSchema);
-            if (fallbackRes && fallbackRes.canSolve && fallbackRes.answer !== undefined) {
-                finalAnswer = fallbackRes.answer;
-                finalCategory = 'general-math';
+            const aiRes = await generateStructuredJSON(aiSolvePrompt, aiSolveSchema);
+            if (aiRes && aiRes.canSolve && aiRes.answer !== undefined && Array.isArray(aiRes.steps) && aiRes.steps.length > 0) {
+                return {
+                    answer: aiRes.answer,
+                    steps: aiRes.steps,
+                    summary: aiRes.summary || `The final answer is ${aiRes.answer}.`,
+                    category: finalCategory
+                };
             } else {
-                return { error: "Couldn't confidently solve this — try rephrasing or selecting a category." };
+                return { error: "Couldn't confidently solve this advanced problem — try rephrasing or selecting a category." };
             }
         } catch (err) {
-            console.error('[Solver] Fallback AI solver failed:', err);
-            return { error: "Couldn't confidently solve this — try rephrasing or selecting a category." };
+            console.error('[Solver] Advanced AI solver failed:', err);
+            return { error: "Failed to solve this advanced problem. Please check your query and try again." };
         }
     }
 

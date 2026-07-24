@@ -6,6 +6,7 @@ import { logActivity } from '../../../shared/lib/logActivity';
 import useProfileStore from '../../../store/useProfileStore';
 import Button from '../../../shared/components/Button';
 import StoryReadAloud from './StoryReadAloud';
+import MathRenderer from './MathRenderer';
 
 export default function CalculatorView() {
     const userId = useProfileStore((s) => s.id);
@@ -249,9 +250,9 @@ IMPORTANT: The final answer is already computed and is exactly ${formattedResult
                                         {isLatest ? (
                                             <StoryReadAloud text={step.description} />
                                         ) : (
-                                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-relaxed">
-                                                {step.description}
-                                            </p>
+                                            <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-relaxed">
+                                                <MathRenderer text={step.description} />
+                                            </div>
                                         )}
                                     </div>
                                 </div>

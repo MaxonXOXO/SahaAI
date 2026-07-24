@@ -13,6 +13,9 @@ export default function TextRecognitionPanel({
     speakResult,
     playBeep,
     resultRef,
+    title = "Extracted Document Text",
+    emptyTitle = "Ready to Read Text",
+    emptyDescription = 'Select "Text Reader (OCR)" mode, align your camera with written text (books, letters, labels), and tap "Capture & Read Aloud" to hear it.',
 }) {
     const lastSpokenRef = useRef(null);
 
@@ -29,10 +32,10 @@ export default function TextRecognitionPanel({
             <Card className="border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 flex flex-col items-center justify-center text-center">
                 <HelpCircle size={40} className="text-gray-400 mb-2" />
                 <p className="text-base-md font-bold text-gray-700 dark:text-gray-300">
-                    Ready to Read Text
+                    {emptyTitle}
                 </p>
                 <p className="text-base-sm text-gray-400 mt-1 leading-relaxed">
-                    Select "Text Reader (OCR)" mode, align your camera with written text (books, letters, labels), and tap "Capture & Read Aloud" to hear it.
+                    {emptyDescription}
                 </p>
             </Card>
         );
@@ -45,7 +48,7 @@ export default function TextRecognitionPanel({
 
     return (
         <Card
-            title="Extracted Document Text"
+            title={title}
             icon={FileText}
             iconColor="bg-primary"
             className="border-2 border-primary/20 bg-white dark:bg-gray-900"

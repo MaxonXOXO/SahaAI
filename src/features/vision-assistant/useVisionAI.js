@@ -10,6 +10,7 @@ const prompts = {
     ocr: 'You are a precise OCR system. Extract and read all visible text exactly as it appears. Do not explain. If no text is visible, say "No text detected."',
     object: 'Identify the single main object in view. Briefly state its type, colour, material, condition, and visible text. Keep it easy to hear for a visually impaired user.',
     scene: 'Describe the major objects and immediate obstacles visible. Give their relative positions. Be concise and practical for a visually impaired user.',
+    signs: 'Identify visible signs in short, scannable lines. Put hazards first, then navigation signs such as exits, stairs, restrooms, and entrances. Maximum four lines. If nothing is clear, say: "No sign detected clearly. Try moving closer."',
     currency: 'Identify the most prominent banknote or coin. Return only minified JSON: {"status":"ok"|"unclear"|"none","denomination":number,"currency":"INR","confidence":"high"|"medium","reason":"optional"}. Never guess.',
 };
 
