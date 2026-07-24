@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { solveProblem } from '../lib/solveProblem';
 import { logActivity } from '../../../shared/lib/logActivity';
@@ -20,6 +20,23 @@ export default function SolverModal({ isOpen, onClose }) {
 
     // Step progression state
     const [currentStepIdx, setCurrentStepIdx] = useState(0);
+
+    const handleClose = () => {
+        window.speechSynthesis?.cancel();
+        onClose();
+    };
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') handleClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            window.speechSynthesis?.cancel();
+        };
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -65,18 +82,21 @@ export default function SolverModal({ isOpen, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto select-none">
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-150 dark:border-gray-800 shadow-2xl p-6 w-full max-w-lg flex flex-col gap-5 relative animate-scale-in max-h-[90vh] overflow-y-auto">
+        <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto select-none"
+            onMouseDown={(event) => { if (event.target === event.currentTarget) handleClose(); }}
+        >
+            <div className="box-border bg-white dark:bg-gray-900 rounded-3xl border border-gray-150 dark:border-gray-800 shadow-2xl p-4 sm:p-6 w-full max-w-sm max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-1.5rem)] min-h-0 flex flex-col gap-4 relative animate-scale-in overflow-y-auto overscroll-contain">
                 
                 {/* Header */}
-                <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-800">
+                <div className="sticky top-0 z-10 -mt-4 sm:-mt-6 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex justify-between items-center border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
                     <h3 className="text-base-lg font-black text-gray-800 dark:text-gray-100 flex items-center gap-2">
                         ✨ Math Solver
                     </h3>
                     <IconButton 
                         icon={X} 
                         label="Close Solver" 
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="!bg-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     />
                 </div>

@@ -1,4 +1,4 @@
-import { buildSystemPrompt, safeParseJSON } from '../../../shared/lib/aiClient';
+import { buildSystemPrompt, safeParseJSON, sendMessage } from '../../../shared/lib/aiClient';
 import { ROUTINE_ICON_NAMES } from './routineIcons';
 
 /**
@@ -28,63 +28,11 @@ You MUST output ONLY a valid JSON object matching this schema:
 { "steps": [ { "label": "string", "iconName": "string" } ] }
 Do NOT include markdown formatting, backticks, or commentary. Return ONLY raw JSON.`;
 
-    // Try Gemini first
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (geminiKey) {
+    for (const provider of ['gemini', 'openai']) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${geminiKey}`;
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    system_instruction: { parts: [{ text: systemPrompt }] },
-                    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-                    generationConfig: { responseMimeType: 'application/json' },
-                }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                const parsed = text ? safeParseJSON(text) : null;
-                if (parsed && Array.isArray(parsed.steps) && parsed.steps.length) {
-                    return sanitizeSteps(parsed.steps, iconNames);
-                }
-            }
-        } catch (err) {
-            console.warn('Gemini routine step generation failed:', err);
-        }
-    }
-
-    // Fallback to OpenAI
-    const openAIKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (openAIKey) {
-        try {
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${openAIKey}`,
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt },
-                    ],
-                    response_format: { type: 'json_object' },
-                }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const content = data?.choices?.[0]?.message?.content;
-                const parsed = content ? safeParseJSON(content) : null;
-                if (parsed && Array.isArray(parsed.steps) && parsed.steps.length) {
-                    return sanitizeSteps(parsed.steps, iconNames);
-                }
-            }
-        } catch (err) {
-            console.warn('OpenAI routine step generation failed:', err);
-        }
+            const parsed = safeParseJSON(await sendMessage(systemPrompt, [{ role: 'user', content: userPrompt }], { provider }));
+            if (parsed && Array.isArray(parsed.steps) && parsed.steps.length) return sanitizeSteps(parsed.steps, iconNames);
+        } catch (err) { console.warn(`${provider} routine step generation failed:`, err); }
     }
 
     return [];

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ScreenHeader from '../../shared/components/ScreenHeader';
@@ -25,6 +25,7 @@ const TABS = [
 
 export default function SocialStoryScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const primaryMode = useProfileStore((s) => s.primaryMode);
 
@@ -47,7 +48,7 @@ export default function SocialStoryScreen() {
     if (readingStory) {
       setReadingStory(null);
     } else {
-      navigate('/dashboard');
+      navigate(location.state?.from || '/tools');
     }
   };
 

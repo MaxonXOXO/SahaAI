@@ -28,7 +28,10 @@ export default function StoryReadAloud({ text }) {
         return () => {
             stop();
         };
-    }, [text, play, stop]);
+    // `play` and `stop` are hook callbacks that change identity after playback
+    // state updates. Depending on them here repeatedly cancelled the utterance
+    // just after it began, so a step was heard only in short fragments.
+    }, [text]);
 
     const handleToggle = () => {
         if (isPlaying) {

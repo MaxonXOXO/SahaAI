@@ -177,8 +177,8 @@ export default function ReadingModeScreen() {
         } catch (err) {
             console.error('OCR Error:', err);
             setScanError(true);
-            if (err.message && err.message.includes('VITE_OPENAI_API_KEY')) {
-                setStatusMessage('Error: OpenAI API Key is missing. Please add VITE_OPENAI_API_KEY in your .env file.');
+            if (err.message && err.message.includes('OPENAI_API_KEY')) {
+                setStatusMessage('Text-to-speech is not configured on the secure server.');
             } else {
                 setStatusMessage('Error: Failed to extract readable text. Please try again.');
             }
@@ -231,7 +231,7 @@ export default function ReadingModeScreen() {
                 showBack={true}
                 onBack={() => {
                     stop();
-                    navigate('/dashboard');
+                    navigate(location.state?.from || '/tools');
                 }}
             />
 

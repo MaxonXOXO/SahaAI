@@ -20,16 +20,10 @@ export default function FocusModeScreen() {
     const initialTab = TABS.some((t) => t.key === paramTab) ? paramTab : 'focus';
 
     const [activeTab, setActiveTab] = useState(initialTab);
-    const primaryMode = useProfileStore((s) => s.primaryMode);
-    const isLowVision = primaryMode === 'lowVision';
     const streakDays = useFocusStore((s) => s.streakDays);
 
     return (
-        <div className={`relative flex-1 flex flex-col h-[calc(100dvh-5rem)] overflow-y-auto ${
-            isLowVision
-                ? 'bg-gray-950 text-white'
-                : 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-slate-950 to-purple-950 text-slate-100'
-        }`}>
+        <div className="focus-mode-shell relative flex-1 flex flex-col h-[calc(100dvh-5rem)] overflow-y-auto bg-[var(--a11y-bg)] text-[var(--a11y-text)]">
             <style>{`
                 @keyframes dustDrift {
                     0% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
@@ -50,8 +44,7 @@ export default function FocusModeScreen() {
             `}</style>
 
             {/* Background Dust Particles Overlay */}
-            {!isLowVision && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                     {Array.from({ length: 16 }).map((_, i) => {
                         const top = `${(i * 19) % 95}%`;
                         const left = `${(i * 23) % 95}%`;
@@ -60,7 +53,7 @@ export default function FocusModeScreen() {
                         return (
                             <div
                                 key={i}
-                                className="absolute rounded-full bg-amber-300/60 animate-dust shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+                                className="absolute rounded-full bg-primary/35 animate-dust"
                                 style={{
                                     top,
                                     left,
@@ -71,8 +64,7 @@ export default function FocusModeScreen() {
                             />
                         );
                     })}
-                </div>
-            )}
+            </div>
 
             <div className="relative z-10 flex flex-col h-full min-h-0 flex-1">
                 <ScreenHeader

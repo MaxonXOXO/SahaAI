@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Settings, Loader2, Sparkles } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import IconButton from '../../shared/components/IconButton';
@@ -23,6 +23,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 
 export default function MathHelperScreen() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
     const primaryMode = useProfileStore((s) => s.primaryMode);
 
@@ -172,7 +173,7 @@ export default function MathHelperScreen() {
         } else if (activeTopic) {
             setActiveTopic(null); // Return to topic-select grid
         } else {
-            navigate('/dashboard'); // Exit to dashboard
+            navigate(location.state?.from || '/tools');
         }
     };
 

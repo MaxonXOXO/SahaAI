@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
-import { Send, Loader2, Volume2, VolumeX, Mic } from 'lucide-react';
+import { Send, Loader2, Volume2, Play, Pause, Mic } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
 import { supabase } from '../../shared/lib/supabaseClient';
-import { buildSystemPrompt, sendMessage, generateSpeech } from '../../shared/lib/aiClient';
+import { buildSystemPrompt, sendMessage } from '../../shared/lib/aiClient';
 import { queryMemory } from '../../shared/lib/memoryService';
 import { renderMarkdown } from '../../shared/lib/parseMarkdown';
 
@@ -15,6 +15,15 @@ export default function ChatScreen() {
     const location = useLocation();
     const profile = useProfileStore();
     const displayLanguage = useSettingsStore((s) => s.displayLanguage);
+    const ui = displayLanguage === 'ml' ? {
+        placeholder: 'ഒരു സന്ദേശം ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ പറയുക...', play: 'കേൾക്കുക', resume: 'തുടരുക', pause: 'താൽക്കാലികമായി നിർത്തുക',
+        ttsUnsupported: 'ഈ ബ്രൗസറിൽ ടെക്സ്റ്റ്-ടു-സ്പീച്ച് ലഭ്യമല്ല.', voiceUnsupported: 'ഈ ബ്രൗസറിൽ വോയ്‌സ് ഇൻപുട്ട് ലഭ്യമല്ല.',
+        error: 'ക്ഷമിക്കണം, മറുപടി നൽകുന്നതിൽ പ്രശ്നമുണ്ടായി. വീണ്ടും ശ്രമിക്കുക.',
+    } : {
+        placeholder: 'Type or speak a message...', play: 'Play', resume: 'Resume', pause: 'Pause',
+        ttsUnsupported: 'Text-to-speech is not supported in this browser.', voiceUnsupported: 'Voice input is not supported in this browser.',
+        error: 'Sorry, I had trouble responding. Please try again.',
+    };
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
@@ -23,62 +32,58 @@ export default function ChatScreen() {
     const bottomRef = useRef(null);
     const hasInitializedRef = useRef(false);
 
-    // Audio text-to-speech states
+    // Use the device's immediate, built-in speech engine for chat playback.
     const [playingMessageId, setPlayingMessageId] = useState(null);
-    const [loadingMessageId, setLoadingMessageId] = useState(null);
-    const audioRef = useRef(null);
+    const [isSpeechPaused, setIsSpeechPaused] = useState(false);
+    const utteranceRef = useRef(null);
 
     // Clean up audio on unmount
     useEffect(() => {
         return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
             }
         };
     }, []);
 
-    const handlePlaySpeech = async (msgId, text) => {
-        if (playingMessageId === msgId) {
-            audioRef.current?.pause();
-            setPlayingMessageId(null);
+    const handlePlaySpeech = (msgId, text) => {
+        if (!('speechSynthesis' in window)) {
+            alert(ui.ttsUnsupported);
             return;
         }
 
-        if (audioRef.current) {
-            audioRef.current.pause();
+        const synth = window.speechSynthesis;
+        if (playingMessageId === msgId && synth.paused) {
+            synth.resume();
+            setIsSpeechPaused(false);
+            return;
         }
+        if (playingMessageId === msgId && synth.speaking) return;
 
-        setLoadingMessageId(msgId);
+        synth.cancel();
+        const cleanText = text.replace(/[*_`#]/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = displayLanguage === 'ml' ? 'ml-IN' : 'en-US';
+        utterance.rate = 1;
+        utteranceRef.current = utterance;
+        setPlayingMessageId(msgId);
+        setIsSpeechPaused(false);
 
-        try {
-            // Strip markdown tags before sending to text-to-speech
-            const cleanText = text.replace(/\*\*|\*/g, '');
-            const blob = await generateSpeech(cleanText);
-            const url = URL.createObjectURL(blob);
-            
-            const audio = new Audio(url);
-            audioRef.current = audio;
-            
-            audio.onplay = () => {
-                setLoadingMessageId(null);
-                setPlayingMessageId(msgId);
-            };
-            
-            audio.onended = () => {
+        utterance.onend = () => {
+            if (utteranceRef.current === utterance) {
                 setPlayingMessageId(null);
-            };
+                setIsSpeechPaused(false);
+                utteranceRef.current = null;
+            }
+        };
+        utterance.onerror = utterance.onend;
+        synth.speak(utterance);
+    };
 
-            audio.onerror = () => {
-                setLoadingMessageId(null);
-                setPlayingMessageId(null);
-            };
-
-            await audio.play();
-        } catch (err) {
-            console.error('Gemini TTS Playback failed:', err);
-            setLoadingMessageId(null);
-            setPlayingMessageId(null);
-        }
+    const handlePauseSpeech = (msgId) => {
+        if (playingMessageId !== msgId || !('speechSynthesis' in window)) return;
+        window.speechSynthesis.pause();
+        setIsSpeechPaused(true);
     };
 
     // Load existing messages
@@ -184,7 +189,7 @@ export default function ChatScreen() {
                 {
                     id: 'error',
                     role: 'assistant',
-                    content: 'Sorry, I had trouble responding. Please try again.',
+                    content: ui.error,
                     created_at: new Date().toISOString(),
                 },
             ]);
@@ -203,7 +208,7 @@ export default function ChatScreen() {
     const startVoiceInput = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            alert("Voice input is not supported in this browser.");
+            alert(ui.voiceUnsupported);
             return;
         }
         const recognition = new SpeechRecognition();
@@ -254,25 +259,24 @@ export default function ChatScreen() {
                                 {renderMarkdown(msg.content)}
                             </div>
                             {msg.role === 'assistant' && msg.id !== 'error' && (
-                                <button
-                                    onClick={() => handlePlaySpeech(msg.id, msg.content)}
-                                    className="self-start text-xs text-gray-400 hover:text-primary transition-colors flex items-center gap-1 mt-0.5 ml-1"
-                                >
-                                    {loadingMessageId === msg.id ? (
-                                        <Loader2 size={12} className="animate-spin" />
-                                    ) : playingMessageId === msg.id ? (
-                                        <VolumeX size={12} />
-                                    ) : (
-                                        <Volume2 size={12} />
-                                    )}
-                                    <span>
-                                        {loadingMessageId === msg.id 
-                                            ? 'Generating...' 
-                                            : playingMessageId === msg.id 
-                                                ? 'Stop' 
-                                                : 'Listen'}
-                                    </span>
-                                </button>
+                                <div className="self-start mt-1 ml-1 flex items-center gap-2">
+                                    <button
+                                        onClick={() => handlePlaySpeech(msg.id, msg.content)}
+                                        className="min-h-10 rounded-xl bg-primary/10 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white flex items-center gap-2"
+                                        aria-label={playingMessageId === msg.id && isSpeechPaused ? 'Resume message' : 'Play message'}
+                                    >
+                                        {playingMessageId === msg.id && !isSpeechPaused ? <Volume2 size={18} className="animate-pulse" /> : <Play size={18} />}
+                                        {playingMessageId === msg.id && isSpeechPaused ? 'Resume' : 'Play'}
+                                    </button>
+                                    <button
+                                        onClick={() => handlePauseSpeech(msg.id)}
+                                        disabled={playingMessageId !== msg.id || isSpeechPaused}
+                                        className="min-h-10 rounded-xl border border-gray-300 dark:border-gray-600 px-4 text-sm font-semibold text-gray-600 dark:text-gray-200 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 flex items-center gap-2"
+                                        aria-label="Pause message"
+                                    >
+                                        <Pause size={18} /> Pause
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>

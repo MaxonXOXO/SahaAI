@@ -1,3 +1,5 @@
+import { supabase } from '../../../shared/lib/supabaseClient';
+
 /**
  * Fetches title and thumbnail for a YouTube video (via oEmbed) or playlist (via YouTube Data API v3).
  * 
@@ -28,26 +30,12 @@ export async function fetchYoutubeMetadata({ videoId, playlistId }) {
         }
     } else if (playlistId) {
         // If only a playlist ID is present, we must query the YouTube Data API v3
-        const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-        if (!apiKey) {
-            console.error('[YouTube Metadata] VITE_YOUTUBE_API_KEY is not defined in the environment.');
-            throw new Error('System configuration error: YouTube API key is missing.');
-        }
-
         try {
-            const playlistApiUrl = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${apiKey}`;
-            const res = await fetch(playlistApiUrl);
-            
-            if (!res.ok) {
-                throw new Error('Failed to fetch playlist details');
-            }
-
-            const data = await res.json();
-            if (!data.items || data.items.length === 0) {
+            const { data, error } = await supabase.functions.invoke('api-gateway', { body: { action: 'youtube-playlist', payload: { playlistId } } });
+            if (error || data?.error || !data?.item) {
                 throw new Error('Playlist not found, private, or deleted');
             }
-
-            const snippet = data.items[0].snippet;
+            const snippet = data.item.snippet;
             const title = snippet.title || 'YouTube Playlist';
             
             // Try to extract the highest resolution thumbnail available

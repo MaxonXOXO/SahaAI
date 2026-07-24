@@ -36,112 +36,112 @@ const TOOLS_LIST = [
     {
         key: 'visualNavigator',
         title: 'Visual Navigator',
+        titleMl: 'വിഷ്വൽ നാവിഗേറ്റർ',
         description: 'Live camera and voice guidance for nearby surroundings.',
         icon: Navigation,
         path: '/visual-navigator',
         image: visionAssistantImg,
         bgTint: 'bg-[#E8F4FF] dark:bg-sky-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'vision',
         title: 'Vision Assistant',
+        titleMl: 'ദൃശ്യ സഹായി',
         description: 'Describe surroundings and read visual information.',
         icon: Eye,
         path: '/vision-assistant',
         image: visionAssistantImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'read',
         title: 'Read Text',
+        titleMl: 'വാചകം വായിക്കുക',
         description: 'Scan any text and listen or view it in your preferred way.',
         icon: FileText,
         path: '/reading-mode',
         image: readTextImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'social',
         title: 'Social Stories',
+        titleMl: 'സാമൂഹിക കഥകൾ',
         description: 'Read stories that help understand situations better.',
         icon: MessageSquare,
         path: '/social-story',
         image: socialStoryImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'math',
         title: 'Math Helper',
+        titleMl: 'ഗണിത സഹായി',
         description: 'Solve problems step-by-step with visual support.',
         icon: Calculator,
         path: '/math-helper',
         image: mathHelperImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'aacBoard',
         title: 'AAC Board',
+        titleMl: 'ആശയവിനിമയ ബോർഡ്',
         description: 'Express easily using pictures, symbols and voice.',
         icon: MessageSquare,
         path: '/aac-board',
         image: aacBoardImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'focus',
         title: 'Focus Mode',
+        titleMl: 'ശ്രദ്ധാ മോഡ്',
         description: 'Stay focused with calming sounds and timers.',
         icon: Sparkles,
         path: '/focus-mode',
         image: focusModeImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'routine',
         title: 'Routine Builder',
+        titleMl: 'ദിനചര്യ നിർമ്മാതാവ്',
         description: 'Plan and manage daily routines visually.',
         icon: ListChecks,
         path: '/routine-builder',
         image: routineBuilderImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'speechTherapy',
         title: 'Speech Therapy',
+        titleMl: 'സംസാര പരിശീലനം',
         description: 'Practice speech with exercises and voice feedback.',
         icon: Volume2,
         path: '/speech-therapy',
         image: speechAssistantImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'learnFeed',
         title: 'Learning Feed',
+        titleMl: 'പഠന ഫീഡ്',
         description: 'Personalized learning content just for you.',
         icon: BookOpen,
         path: '/learn',
         image: learnImg,
         bgTint: 'bg-[#E8F8F0] dark:bg-emerald-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
     {
         key: 'dearDiary',
         title: 'Dear Diary & Memory',
+        titleMl: 'പ്രിയ ഡയറി & ഓർമ്മ',
         description: 'Personal journal entries & smart searchable memory notes.',
         icon: Bookmark,
         path: '/dear-diary',
         image: socialStoryImg,
         bgTint: 'bg-[#F4EFFD] dark:bg-purple-950/40',
-        badgeBg: 'bg-[#7C3AED]',
     },
 ];
 
@@ -176,14 +176,14 @@ export default function ToolsScreen() {
                         return (
                             <button
                                 key={tool.key}
-                                onClick={() => navigate(tool.path)}
+                                onClick={() => navigate(tool.path, { state: { from: '/tools' } })}
                                 className="group relative flex flex-row items-stretch rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-2 sm:p-2.5 active:scale-[0.99] h-36 sm:h-40"
                             >
                                 {/* Left Section: Image with Soft Tinted Background */}
                                 <div className={`w-[44%] sm:w-[46%] shrink-0 rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
                                     <img
                                         src={tool.image}
-                                        alt={tool.title}
+                                        alt={displayLanguage === 'ml' ? tool.titleMl : tool.title}
                                         className="w-full h-full object-contain scale-125 sm:scale-130 transition-transform duration-300 group-hover:scale-135 drop-shadow-xs"
                                     />
                                 </div>
@@ -191,13 +191,13 @@ export default function ToolsScreen() {
                                 {/* Right Section: Badge Icon & Larger Text Title */}
                                 <div className="flex-1 flex flex-col justify-center gap-2 pl-3 pr-2 py-2 min-w-0">
                                     {/* Icon Badge */}
-                                    <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${tool.badgeBg} text-white flex items-center justify-center shadow-xs shrink-0`}>
-                                        <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
+                                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0" style={{ backgroundColor: 'var(--a11y-primary)', color: 'var(--a11y-bg)' }}>
+                                        <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                                     </div>
 
                                     {/* Title */}
-                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg leading-tight tracking-tight group-hover:text-[#7C3AED] transition-colors">
-                                        {tool.title}
+                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors">
+                                        {displayLanguage === 'ml' ? tool.titleMl : tool.title}
                                     </h3>
                                 </div>
                             </button>

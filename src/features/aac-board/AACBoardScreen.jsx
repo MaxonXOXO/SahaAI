@@ -35,6 +35,7 @@ export default function AACBoardScreen() {
     const userId = useProfileStore((s) => s.id);
     const primaryMode = useProfileStore((s) => s.primaryMode);
     const displayLanguage = useSettingsStore((s) => s.displayLanguage);
+    const ttsLanguage = useSettingsStore((s) => s.ttsLanguage);
 
     const isLowVision = primaryMode === 'lowVision';
     const { speakText, stopSpeaking } = useTextToSpeech();
@@ -96,8 +97,8 @@ export default function AACBoardScreen() {
     // Handlers
     const handleTileTap = (tile) => {
         setSelectedTiles(prev => [...prev, tile]);
-        const label = displayLanguage === 'ml' ? tile.labelMl : tile.labelEn;
-        speakText(label, displayLanguage === 'ml' ? 'ml-IN' : 'en-US');
+        const label = ttsLanguage === 'ml' ? tile.labelMl : tile.labelEn;
+        speakText(label, ttsLanguage === 'ml' ? 'ml-IN' : 'en-US');
     };
 
     const handleRemoveItem = (index) => {
@@ -120,12 +121,12 @@ export default function AACBoardScreen() {
         }
 
         const phrase = selectedTiles.map(tile => 
-            displayLanguage === 'ml' ? tile.labelMl : tile.labelEn
+            ttsLanguage === 'ml' ? tile.labelMl : tile.labelEn
         ).join(' ');
 
         speakText(
             phrase,
-            displayLanguage === 'ml' ? 'ml-IN' : 'en-US',
+            ttsLanguage === 'ml' ? 'ml-IN' : 'en-US',
             () => setIsSpeaking(true),
             () => setIsSpeaking(false)
         );

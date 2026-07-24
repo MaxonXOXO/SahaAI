@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import Button from '../../shared/components/Button';
 import useProfileStore from '../../store/useProfileStore';
+import useSettingsStore from '../../store/useSettingsStore';
 import { supabase } from '../../shared/lib/supabaseClient';
 
 const LANGUAGES = [
@@ -28,21 +29,20 @@ export default function LanguageSelectionScreen() {
             speechLanguage: selected,
         });
 
+        // Move the user forward immediately. The database update is a sync
+        // operation only; it must never block onboarding if Supabase is slow
+        // or temporarily unavailable.
+        navigate('/age-range');
+
         try {
-            // Direct Supabase update using session user id
             const { data: { session } } = await supabase.auth.getSession();
             const userId = id || session?.user?.id;
-
             if (userId) {
-                await supabase
-                    .from('profiles')
-                    .update({ language: selected })
-                    .eq('id', userId);
+                const { error } = await supabase.from('profiles').update({ language: selected }).eq('id', userId);
+                if (error) console.error('Failed to sync language to Supabase:', error);
             }
         } catch (err) {
-            console.error('Failed to update language in Supabase:', err);
-        } finally {
-            navigate('/age-range');
+            console.error('Failed to sync language to Supabase:', err);
         }
     };
 

@@ -87,6 +87,7 @@ export default function SpeechTherapyScreen() {
     const visualizerIntensityRef = useRef(0);
     const animationFrameRef = useRef(null);
     const analyserRef = useRef(null);
+    const transcriptRef = useRef(null);
 
     const stopSession = async (status = 'Session ended') => {
         setIsActive(false);
@@ -169,6 +170,12 @@ export default function SpeechTherapyScreen() {
         return () => clearInterval(timerIntervalRef.current);
     }, [isActive]);
 
+    // Keep the newest spoken exchange visible as live transcript chunks arrive.
+    useEffect(() => {
+        const transcript = transcriptRef.current;
+        if (transcript) transcript.scrollTop = transcript.scrollHeight;
+    }, [chatHistory]);
+
     // Handle Visualizer lifecycle automatically
     useEffect(() => {
         if (isActive || isConnecting) {
@@ -247,9 +254,9 @@ export default function SpeechTherapyScreen() {
 
     // Start Session with OpenAI Realtime WebSocket
     const legacyStartSession = async () => {
-        const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+        const apiKey = null;
         if (!apiKey) {
-            setStatusText('Error: Missing OpenAI API Key in configuration.');
+            setStatusText('This retired connection path is unavailable. Please use the secure session connection.');
             return;
         }
 
@@ -936,7 +943,7 @@ IMPORTANT: Also classify the emotional tone of what the user just said. Respond 
                     </div>
 
                     {/* Interactive running transcript */}
-                    <div className="bg-white/50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 h-36 overflow-y-auto mb-6 flex flex-col gap-3">
+                    <div ref={transcriptRef} className="bg-white/50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 h-56 sm:h-64 overflow-y-auto mb-6 flex flex-col gap-3 scroll-smooth" role="log" aria-live="polite" aria-label="Live therapy transcript">
                         {chatHistory.length === 0 ? (
                             <p className="text-xs text-gray-400 dark:text-gray-500 italic text-center py-8">Start speaking. Your words and the AI responses will transcribe here.</p>
                         ) : (

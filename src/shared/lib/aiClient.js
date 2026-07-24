@@ -1,825 +1,159 @@
-/**
- * aiClient.js — Gemini API wrapper for SahaAI.
- *
- * Builds a system prompt from the user's accessibility profile,
- * then sends the full conversation history to Gemini.
- */
+import { supabase } from './supabaseClient';
 
-/**
- * Helper to safely extract and parse JSON from an LLM response text,
- * stripping conversational prefixes or markdown backticks if present.
- */
 export function safeParseJSON(str) {
     if (!str) return null;
-    const cleanStr = str.trim();
-    try {
-        return JSON.parse(cleanStr);
-    } catch (e) {
-        // Look for the first '{' or '[' and the last '}' or ']'
-        const firstCurly = cleanStr.indexOf('{');
-        const lastCurly = cleanStr.lastIndexOf('}');
-        if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
-            try {
-                return JSON.parse(cleanStr.substring(firstCurly, lastCurly + 1));
-            } catch (innerErr) {
-                // Try stripping backticks
-                const stripped = cleanStr.replace(/```json|```/gi, '').trim();
-                try {
-                    return JSON.parse(stripped);
-                } catch (stripErr) {
-                    throw new Error(`Failed to parse extracted JSON. Content: "${cleanStr}". Error: ${stripErr.message}`);
-                }
-            }
-        }
-        // Try stripping backticks as a last resort
-        const stripped = cleanStr.replace(/```json|```/gi, '').trim();
-        try {
-            return JSON.parse(stripped);
-        } catch (stripErr) {
-            throw new Error(`Failed to parse JSON. Content: "${cleanStr}". Error: ${stripErr.message}`);
-        }
+    const clean = str.trim().replace(/```json|```/gi, '');
+    try { return JSON.parse(clean); } catch (_) {
+        const start = Math.min(...[clean.indexOf('{'), clean.indexOf('[')].filter((index) => index >= 0));
+        const end = Math.max(clean.lastIndexOf('}'), clean.lastIndexOf(']'));
+        if (Number.isFinite(start) && end > start) return JSON.parse(clean.slice(start, end + 1));
+        throw new Error('The AI response was not valid JSON.');
     }
 }
 
-/**
- * Build a system prompt that tells the AI who the user is.
- * @param {Object} profile — from useProfileStore
- */
-export function buildSystemPrompt(profile) {
-    const needsList = Object.entries(profile.needs || {})
-        .filter(([, active]) => active)
-        .map(([key]) => key);
-
-    const primaryMode = profile.primaryMode;
-    const secondaryNeeds = needsList.filter((need) => need !== primaryMode);
-
-    const bioSection = profile.bio ? `- Personal Bio / Context: ${profile.bio}` : '';
-
-    let promptRules = '';
-
-    // Primary Mode Adaptive Rules
-    if (primaryMode) {
-        promptRules += `PRIMARY MODE OPTIMIZATION (${primaryMode.toUpperCase()}): \n`;
-        switch (primaryMode) {
-            case 'dyslexia':
-                promptRules += `* DYSLEXIA MODE (CRITICAL): Write in simple, short sentences. Avoid complex vocabulary. Use generous paragraph spacing, short lines, and clear bullet points. Keep text clean and easy to scan. Avoid large walls of text.\n`;
-                break;
-            case 'adhd':
-                promptRules += `* ADHD MODE (CRITICAL): Keep responses brief and straight to the point. Break down multi-step tasks into clear, numbered checklists. Use bold text to highlight key action words. Keep paragraphs under 2-3 lines.\n`;
-                break;
-            case 'autism':
-                promptRules += `* AUTISM MODE (CRITICAL): Use clear, literal, and highly predictable language. Absolutely avoid sarcasm, hyperbole, idioms, or metaphors. Keep the structure consistent and logical.\n`;
-                break;
-            case 'dyscalculia':
-                promptRules += `* DYSCALCULIA MODE (CRITICAL): Avoid dense numbers, tables, or abstract math equations. Instead, explain math concepts visually, using real-world objects, clear analogies, and simple, conversational step-by-step logic.\n`;
-                break;
-            case 'lowVision':
-                promptRules += `* LOW VISION MODE (CRITICAL): Use highly descriptive language. Structure your responses with clear, distinct headers so they are easy to navigate for screen readers. Keep the text concise.\n`;
-                break;
-            default:
-                break;
-        }
-    }
-
-    // Secondary Needs Adaptive Rules
-    if (secondaryNeeds.length > 0) {
-        promptRules += `\nSECONDARY ACCESSIBILITY CONTEXTS (Apply these guidelines supportively):\n`;
-        secondaryNeeds.forEach((need) => {
-            switch (need) {
-                case 'dyslexia':
-                    promptRules += `- Dyslexia: Keep sentences short, avoid complex terms.\n`;
-                    break;
-                case 'adhd':
-                    promptRules += `- ADHD: Use structure, highlight key points.\n`;
-                    break;
-                case 'autism':
-                    promptRules += `- Autism: Clear, literal tone, logical flow.\n`;
-                    break;
-                case 'dyscalculia':
-                    promptRules += `- Dyscalculia: Explain numerical parts step-by-step with real-world analogies.\n`;
-                    break;
-                case 'lowVision':
-                    promptRules += `- Low Vision: Structured headings, descriptive language.\n`;
-                    break;
-                default:
-                    break;
-            }
-        });
-    }
-
-    return `You are SahaAI, a friendly, patient, and highly adaptive accessibility assistant designed for people with learning differences and disabilities.
-
-User Profile:
-- Name: ${profile.name || profile.username || 'User'}
-- Preferred language: ${profile.language === 'ml' ? 'Malayalam' : 'English'}
-- Primary Mode: ${primaryMode ? primaryMode.toUpperCase() : 'None Specified'}
-- All Needs: ${needsList.length > 0 ? needsList.join(', ') : 'None'}
-${bioSection}
-
-Instruction: You MUST adapt your formatting, complexity, tone, and layout based on the rules below.
-
-${promptRules || 'Respond in a friendly, clear, and encouraging manner.'}
-
-General rules:
-- Always be encouraging, supportive, and never condescending.
-- If the user writes in Malayalam, respond in Malayalam. Otherwise, default to English.`.trim();
+export function buildSystemPrompt(profile = {}) {
+    const needs = Object.entries(profile.needs || {}).filter(([, active]) => active).map(([need]) => need);
+    const modeRules = {
+        dyslexia: 'Use short sentences, plain words, and easy-to-scan formatting.',
+        adhd: 'Keep answers concise and use numbered steps for actions.',
+        autism: 'Use clear, literal, predictable language. Avoid idioms.',
+        dyscalculia: 'Explain quantities slowly with concrete examples.',
+        lowVision: 'Use descriptive, concise language with clear headings.',
+    };
+    return `You are SahaAI, a friendly, patient accessibility assistant.
+User name: ${profile.name || profile.username || 'User'}
+Preferred language: ${profile.language === 'ml' ? 'Malayalam' : 'English'}
+Accessibility needs: ${needs.join(', ') || 'none'}.
+${modeRules[profile.primaryMode] || 'Be clear, encouraging, and direct.'}
+Always be supportive, never condescending. Reply in Malayalam when the user writes in Malayalam; otherwise reply in English.`;
 }
 
 let currentProvider = 'gemini';
-
-/**
- * Get the current active AI provider ('gemini' | 'openai')
- */
-export function getAIProvider() {
-    return currentProvider;
-}
-
-/**
- * Set the active AI provider ('gemini' | 'openai')
- */
+export function getAIProvider() { return currentProvider; }
 export function setAIProvider(provider) {
-    if (provider !== 'gemini' && provider !== 'openai') {
-        throw new Error(`Unsupported AI provider: ${provider}`);
-    }
+    if (!['gemini', 'openai'].includes(provider)) throw new Error(`Unsupported AI provider: ${provider}`);
     currentProvider = provider;
 }
 
-/**
- * Send a conversation to the active provider and get the assistant reply.
- * @param {string} systemPrompt — built from buildSystemPrompt()
- * @param {Array<{role: string, content: string}>} messages — chat history (role: 'user' | 'assistant')
- * @param {Object} options — optional configurations (e.g. { provider: 'openai' })
- * @returns {Promise<string>} — assistant reply text
- */
-export async function sendMessage(systemPrompt, messages, options = {}) {
-    const provider = options.provider || currentProvider;
-
-    if (provider === 'openai') {
-        const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-        if (!apiKey) {
-            throw new Error('Missing VITE_OPENAI_API_KEY in .env');
-        }
-
-        console.log('[AI Client] Sending request to OpenAI with key prefix:', apiKey.slice(0, 8));
-
-        const url = 'https://api.openai.com/v1/chat/completions';
-        const chatMessages = [
-            { role: 'system', content: systemPrompt },
-            ...messages.map((m) => ({
-                role: m.role,
-                content: m.content
-            }))
-        ];
-
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                messages: chatMessages
-            })
-        });
-
-        if (!res.ok) {
-            const err = await res.text();
-            throw new Error(`OpenAI API error ${res.status}: ${err}`);
-        }
-
-        const data = await res.json();
-        const reply = data?.choices?.[0]?.message?.content;
-
-        if (!reply) {
-            throw new Error('No response from OpenAI');
-        }
-
-        return reply;
-    }
-
-    // Default to existing Gemini implementation
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
-    }
-
-    console.log('[AI Client] Sending request with key prefix:', apiKey.slice(0, 8), '... length:', apiKey.length);
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
-
-    // Map our roles to Gemini's format: 'assistant' → 'model'
-    const contents = messages
-        .filter((m) => m.role !== 'system')
-        .map((m) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }],
-        }));
-
-    const body = {
-        system_instruction: {
-            parts: [{ text: systemPrompt }],
-        },
-        contents,
-    };
-
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Gemini API error ${res.status}: ${err}`);
-    }
-
-    const data = await res.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!reply) {
-        throw new Error('No response from Gemini');
-    }
-
-    return reply;
+async function callGateway(action, payload) {
+    const { data, error } = await supabase.functions.invoke('api-gateway', { body: { action, payload } });
+    if (error) throw new Error(error.message || 'Secure AI service is unavailable.');
+    if (data?.error) throw new Error(data.error);
+    return data;
 }
 
-/**
- * Generate a 768-dimensional vector embedding for a given text string using Gemini API.
- * @param {string} text
- * @returns {Promise<number[]>} - 768-dimensional vector array
- */
-export async function getEmbedding(text) {
-    const apiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY)
-        ? import.meta.env.VITE_GEMINI_API_KEY
-        : (typeof process !== 'undefined' && process.env ? process.env.VITE_GEMINI_API_KEY : undefined);
-    if (!apiKey) {
-        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
-    }
-
-
-
-    const cleanText = (text || '').trim();
-    if (!cleanText) return [];
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${apiKey}`;
-
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: 'models/gemini-embedding-001',
-            content: {
-                parts: [{ text: cleanText }]
-            },
-            outputDimensionality: 768
-        })
-    });
-
-    if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Gemini Embedding API error ${res.status}: ${errText}`);
-    }
-
-    const data = await res.json();
-    const values = data?.embedding?.values;
-
-    if (!values || !Array.isArray(values)) {
-        throw new Error('Invalid response structure from Gemini Embedding API');
-    }
-
-    return values;
+function base64ToBytes(value) {
+    const binary = atob(value || '');
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return bytes;
 }
 
-
-/**
- * Generate a short summary of a speech therapy session and flag sensitive content.
- * @param {string} transcript - The raw text of the conversation.
- * @param {string} sessionTarget - The focus area of the session (e.g. 'slow_clear').
- * @returns {Promise<Object>} - { summary, flagged, flag_reason }
- */
-export async function generateSessionSummary(transcript, sessionTarget) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) throw new Error('Missing VITE_GEMINI_API_KEY in .env');
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    const prompt = `Summarize this speech therapy session in 2-3 sentences, factual and neutral. Focus on: what was practiced, any patterns noticed (pronunciation difficulty, topics discussed, confidence level). Do NOT include verbatim quotes. Session mode: ${sessionTarget}.
-Also return whether this session mentioned self-harm, abuse, severe distress, or anything requiring adult attention.
-You MUST respond in strict JSON format:
-{
-  "summary": "...",
-  "flagged": true/false,
-  "flag_reason": "..." or null
-}
-
-Transcript:
-${transcript}`;
-
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-        })
-    });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Gemini summary API error ${res.status}: ${err}`);
-    }
-
-    const data = await res.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    return safeParseJSON(reply);
-}
-
-/**
- * Helper to convert a File/Blob object to a Base64 Data URL.
- */
 function toBase64(fileOrBlob) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.readAsDataURL(fileOrBlob);
         reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
+        reader.onerror = reject;
+        reader.readAsDataURL(fileOrBlob);
     });
 }
 
-/**
- * Perform client-side OCR on an image file/blob using OpenAI Vision.
- * @param {Blob|File} imageFileOrBlob — The image file/blob
- * @param {Object} options — Optional configurations (provider, systemPrompt)
- * @returns {Promise<string>} — Extracted text
- */
-export async function recognizeText(imageFileOrBlob, options = {}) {
-    const provider = options.provider || currentProvider;
-    if (provider !== 'openai') {
-        throw new Error('OCR via recognizeText only supported via OpenAI provider currently');
-    }
-
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) {
-        throw new Error('Missing VITE_OPENAI_API_KEY in .env');
-    }
-
-    const base64DataUrl = await toBase64(imageFileOrBlob);
-
-    const url = 'https://api.openai.com/v1/chat/completions';
-    const systemPrompt = options.systemPrompt || 'You are an OCR assistant. Extract and return all readable text from the provided image. Output only the extracted text exactly as it appears. Do not include any explanations, greetings, markdown formatting blocks (like ```text), or metadata.';
-
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-                {
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'text',
-                            text: systemPrompt
-                        },
-                        {
-                            type: 'image_url',
-                            image_url: {
-                                url: base64DataUrl
-                            }
-                        }
-                    ]
-                }
-            ]
-        })
-    });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`OpenAI OCR error ${res.status}: ${err}`);
-    }
-
-    const data = await res.json();
-    const reply = data?.choices?.[0]?.message?.content;
-
-    if (!reply) {
-        throw new Error('No OCR response from OpenAI');
-    }
-
-    return reply;
-}
-
-/**
- * Build a WAV file container around raw PCM audio bytes.
- * Gemini TTS returns raw L16 (16-bit signed PCM) at 24 kHz mono.
- * Browsers require a WAV/RIFF header to decode it.
- *
- * @param {Uint8Array} pcmData — Raw 16-bit PCM bytes
- * @param {number} sampleRate — e.g. 24000
- * @param {number} numChannels — 1 (mono) or 2 (stereo)
- * @param {number} bitsPerSample — 16
- * @returns {Blob} — Playable audio/wav Blob
- */
 function pcmToWav(pcmData, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
-    const dataLength = pcmData.length;
     const blockAlign = numChannels * (bitsPerSample / 8);
-    const byteRate = sampleRate * blockAlign;
-    const buffer = new ArrayBuffer(44 + dataLength);
+    const buffer = new ArrayBuffer(44 + pcmData.length);
     const view = new DataView(buffer);
-
-    // RIFF chunk descriptor
-    const writeStr = (offset, str) => {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-    };
-    writeStr(0, 'RIFF');
-    view.setUint32(4, 36 + dataLength, true);   // file size - 8
-    writeStr(8, 'WAVE');
-
-    // fmt sub-chunk
-    writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true);               // sub-chunk size
-    view.setUint16(20, 1, true);                // PCM = 1
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-
-    // data sub-chunk
-    writeStr(36, 'data');
-    view.setUint32(40, dataLength, true);
-    new Uint8Array(buffer, 44).set(pcmData);
-
+    const write = (offset, value) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+    write(0, 'RIFF'); view.setUint32(4, 36 + pcmData.length, true); write(8, 'WAVE');
+    write(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true); view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true);
+    write(36, 'data'); view.setUint32(40, pcmData.length, true); new Uint8Array(buffer, 44).set(pcmData);
     return new Blob([buffer], { type: 'audio/wav' });
 }
 
-/**
- * Convert text to speech using Google Gemini TTS (3.1 Flash series).
- * @param {string} text — Text to convert
- * @param {Object} options — Optional configurations (voice, model)
- * @returns {Promise<Blob>} — Playable audio/wav Blob
- */
-export async function generateGoogleSpeech(text, options = {}) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error('Missing VITE_GEMINI_API_KEY in .env');
-    }
-
-    const modelName = options.model || 'gemini-3.1-flash-tts-preview';
-    const voiceName = options.voice || 'Puck'; // Kore, Puck, Charon, Aoede, Fenrir
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-    const body = {
-        contents: [
-            {
-                role: 'user',
-                parts: [{ text }]
-            }
-        ],
-        generationConfig: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-                voiceConfig: {
-                    prebuiltVoiceConfig: { voiceName }
-                }
-            }
-        }
-    };
-
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Google TTS error ${res.status}: ${err}`);
-    }
-
-    const data = await res.json();
-    const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-
-    if (!inlineData?.data) {
-        throw new Error('No audio data returned from Gemini TTS');
-    }
-
-    // Decode base64 → raw bytes
-    const binaryStr = atob(inlineData.data);
-    const pcmBytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-        pcmBytes[i] = binaryStr.charCodeAt(i);
-    }
-
-    // Gemini TTS returns raw L16 PCM at 24 kHz mono.
-    // Wrap it in a WAV container so the browser can play it.
-    const mimeType = (inlineData.mimeType || '').toLowerCase();
-    if (mimeType.includes('wav') || mimeType.includes('audio/wav')) {
-        // Already a full WAV – return as-is
-        return new Blob([pcmBytes], { type: 'audio/wav' });
-    }
-
-    // Raw PCM (audio/L16 or audio/pcm) → wrap in WAV
-    return pcmToWav(pcmBytes, 24000, 1, 16);
+export async function sendMessage(systemPrompt, messages, options = {}) {
+    const data = await callGateway('chat', { provider: options.provider || currentProvider, systemPrompt, messages });
+    if (!data?.text) throw new Error('No response from the AI service.');
+    return data.text;
 }
 
-/**
- * Convert text to speech using the selected AI provider.
- * @param {string} text — Text to convert
- * @param {Object} options — Optional configurations (voice, provider, model)
- * @returns {Promise<Blob>} — Audio binary data as a Blob
- */
+export async function getEmbedding(text) {
+    if (!(text || '').trim()) return [];
+    const data = await callGateway('embedding', { text });
+    if (!Array.isArray(data?.values)) throw new Error('Invalid embedding response.');
+    return data.values;
+}
+
+export async function generateSessionSummary(transcript, sessionTarget) {
+    const prompt = `Summarize this speech therapy session in 2–3 factual, neutral sentences. Focus: ${sessionTarget}. Also flag self-harm, abuse, severe distress, or anything requiring adult attention. Return only JSON: {"summary":"...","flagged":true|false,"flag_reason":"..."|null}.\n\nTranscript:\n${transcript}`;
+    return safeParseJSON(await sendMessage('You produce only safe, factual JSON.', [{ role: 'user', content: prompt }]));
+}
+
+export async function recognizeText(imageFileOrBlob, options = {}) {
+    const image = await toBase64(imageFileOrBlob);
+    const prompt = options.systemPrompt || 'Extract and return all readable text exactly as it appears. Output only the text. If none is visible, say "No text detected."';
+    const data = await callGateway('ocr', { image, prompt });
+    if (!data?.text) throw new Error('No OCR response from the AI service.');
+    return data.text;
+}
+
+export async function generateGoogleSpeech(text, options = {}) {
+    const data = await callGateway('speech', { provider: 'gemini', text, voice: options.voice || 'Puck' });
+    const bytes = base64ToBytes(data?.audio);
+    if (!bytes.length) throw new Error('No audio was returned.');
+    return (data?.mimeType || '').toLowerCase().includes('wav') ? new Blob([bytes], { type: 'audio/wav' }) : pcmToWav(bytes);
+}
+
 export async function generateSpeech(text, options = {}) {
     const provider = options.provider || currentProvider;
-
-    if (provider === 'gemini') {
-        return generateGoogleSpeech(text, options);
-    }
-
-    if (provider !== 'openai') {
-        throw new Error(`TTS unsupported for provider: ${provider}`);
-    }
-
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) {
-        throw new Error('Missing VITE_OPENAI_API_KEY in .env');
-    }
-
-    const url = 'https://api.openai.com/v1/audio/speech';
-    const voice = options.voice || 'alloy';
-
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: 'tts-1',
-            input: text,
-            voice: voice
-        })
-    });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`OpenAI TTS error ${res.status}: ${err}`);
-    }
-
-    return await res.blob();
+    if (provider === 'gemini') return generateGoogleSpeech(text, options);
+    const data = await callGateway('speech', { provider: 'openai', text, voice: options.voice || 'alloy' });
+    const bytes = base64ToBytes(data?.audio);
+    if (!bytes.length) throw new Error('No audio was returned.');
+    return new Blob([bytes], { type: data?.mimeType || 'audio/mpeg' });
 }
 
-/**
- * Send a prompt to OpenAI and guarantee a structured JSON response matching a described shape.
- *
- * @param {string} prompt - The user prompt detailing the task or context
- * @param {string} schemaDescription - Text description of the desired JSON structure
- * @returns {Promise<Object>} - Parsed JSON object
- */
 export async function generateStructuredJSON(prompt, schemaDescription) {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) {
-        throw new Error('Missing VITE_OPENAI_API_KEY in .env');
-    }
-
-    const systemPrompt = `You are a helpful assistant that outputs structured data in JSON format.
-You MUST respond ONLY with a valid JSON object matching the described shape.
-Do NOT wrap the response in markdown code blocks (do not use \`\`\`json or \`\`\` code fences).
-Do NOT include any commentary, greetings, explanation, or notes outside of the JSON object.
-
-Required JSON Structure Description:
-${schemaDescription}`;
-
-    const url = 'https://api.openai.com/v1/chat/completions';
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: prompt }
-            ],
-            response_format: { type: 'json_object' } // Force OpenAI JSON output mode
-        })
-    });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`OpenAI structured JSON error ${res.status}: ${err}`);
-    }
-
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-
-    if (!content) {
-        throw new Error('OpenAI returned an empty content body.');
-    }
-
-    try {
-        const parsed = safeParseJSON(content);
-        return parsed;
-    } catch (err) {
-        throw new Error(`Failed to parse OpenAI response as JSON. Content: "${content}". Error: ${err.message}`);
-    }
+    const data = await callGateway('structured-json', { prompt, schemaDescription });
+    return safeParseJSON(data?.text);
 }
 
-/**
- * Generate a set of contextual AAC board tiles based on a given context.
- * Adapts to the user's accessibility profile.
- * Supporting both Gemini (default) and OpenAI (fallback) for JSON structure.
- *
- * @param {string} context - The situation (e.g. "Mealtime", "Going to the store")
- * @param {Object} profile - User profile with needs and bio
- * @returns {Promise<Array<Object>>} - Array of generated tiles
- */
 export async function generateAACTiles(context, profile) {
-    const userPrompt = `Generate a list of 8 to 12 highly relevant communication tiles for a non-verbal or overwhelmed user in this situation/context: "${context}".
-Each tile represents a word, feeling, or simple action related to "${context}".
-Provide the output as a JSON object with a single root key "tiles" containing an array of objects.
-Each tile object MUST have exactly these fields:
-- "labelEn": Simple English phrase or word (e.g., "Water", "More food", "Tired")
-- "labelMl": Precise Malayalam translation/transliteration for the label (e.g., "വെള്ളം", "കൂടുതൽ ഭക്ഷണം")
-- "iconName": Standard Lucide icon name matching the item (e.g., "Droplet", "Utensils", "Smile", "Clock", "Home", "User", "Heart", "Moon", "School", "HelpCircle")
-
-Keep language extremely clear, direct, and accessible.`;
-
-    const systemPrompt = buildSystemPrompt(profile) + `\n\nYou are an expert in Augmentative and Alternative Communication (AAC) boards.
-Your task is to generate custom tiles in JSON format.
-You MUST output ONLY a valid JSON object matching this schema:
-{
-  "tiles": [
-    {
-      "labelEn": "string",
-      "labelMl": "string",
-      "iconName": "string"
+    const prompt = `Generate 8 to 12 relevant AAC communication tiles for: "${context}". Return only JSON: {"tiles":[{"labelEn":"simple English","labelMl":"Malayalam translation","iconName":"Lucide icon name"}]}.`;
+    const system = `${buildSystemPrompt(profile)} You are an AAC specialist. Output only valid JSON.`;
+    for (const provider of ['gemini', 'openai']) {
+        try {
+            const parsed = safeParseJSON(await sendMessage(system, [{ role: 'user', content: prompt }], { provider }));
+            if (Array.isArray(parsed?.tiles)) return parsed.tiles;
+        } catch (_) { /* try configured fallback */ }
     }
-  ]
+    throw new Error('Could not generate contextual AAC tiles.');
 }
 
-Do NOT include markdown formatting, backticks, or wrapping like \`\`\`json in the response. Return ONLY raw JSON.`;
-
-    // Try Gemini first
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (geminiKey) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${geminiKey}`;
-        const body = {
-            system_instruction: {
-                parts: [{ text: systemPrompt }]
-            },
-            contents: [
-                {
-                    role: 'user',
-                    parts: [{ text: userPrompt }]
-                }
-            ],
-            generationConfig: {
-                responseMimeType: "application/json"
-            }
-        };
-
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-                try {
-                    const parsed = safeParseJSON(text);
-                    if (parsed && Array.isArray(parsed.tiles)) {
-                        return parsed.tiles;
-                    }
-                } catch (err) {
-                    console.warn('Failed to parse Gemini AAC JSON response:', err);
-                }
-            }
-        }
-    }
-
-    // Fallback to OpenAI
-    const openAIKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (openAIKey) {
-        const systemPromptOpenAI = systemPrompt + `\n\nRequired JSON Structure: { "tiles": [{ "labelEn": "string", "labelMl": "string", "iconName": "string" }] }`;
-        const url = 'https://api.openai.com/v1/chat/completions';
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${openAIKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                messages: [
-                    { role: 'system', content: systemPromptOpenAI },
-                    { role: 'user', content: userPrompt }
-                ],
-                response_format: { type: 'json_object' }
-            })
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            const content = data?.choices?.[0]?.message?.content;
-            if (content) {
-                try {
-                    const parsed = safeParseJSON(content);
-                    if (parsed && Array.isArray(parsed.tiles)) {
-                        return parsed.tiles;
-                    }
-                } catch (err) {
-                    console.warn('Failed to parse OpenAI AAC JSON response:', err);
-                }
-            }
-        }
-    }
-
-    throw new Error('Could not generate contextual tiles. Check your API keys and connection.');
-}
-
-/** Generate a structured, accessibility-aware learning explainer with the active AI provider. */
 export async function generateLearnExplainer(profile, topic) {
-    const prompt = `${buildSystemPrompt(profile)}\n\nCreate a concise explainer for the topic below. Return ONLY valid JSON with this exact shape:\n{"topic":"short title","explanation":"clear markdown-friendly explanation","diagramSteps":["optional ordered step"],"videoQuery":"short educational YouTube search query"}\nUse diagramSteps only when an ordered process, mechanism, or sequence would genuinely help. Keep explanations practical and accurate.\n\nTopic: ${topic}`;
-    const response = await sendMessage(prompt, [{ role: 'user', content: topic }]);
-    const parsed = safeParseJSON(response);
-    if (!parsed || !parsed.explanation) throw new Error('The explainer response was incomplete.');
+    const prompt = `${buildSystemPrompt(profile)}\nCreate a concise explainer. Return only JSON: {"topic":"short title","explanation":"clear explanation","diagramSteps":["optional step"],"videoQuery":"YouTube search"}.\nTopic: ${topic}`;
+    const parsed = safeParseJSON(await sendMessage(prompt, [{ role: 'user', content: topic }]));
+    if (!parsed?.explanation) throw new Error('The explainer response was incomplete.');
     return { topic: parsed.topic?.trim() || topic, explanation: parsed.explanation.trim(), diagramSteps: Array.isArray(parsed.diagramSteps) ? parsed.diagramSteps.filter(Boolean).slice(0, 8) : [], videoQuery: parsed.videoQuery?.trim() || `${topic} explained` };
 }
 
-/** Create a lightweight visual for explainer cards using Cloudflare Workers AI.
- *  Uses the SDXL-Lightning model for blazing fast image generation.
- *  Routes through /cf-ai Vite proxy so the key is injected server-side.
- */
 export async function generateLearnImage(topic) {
-    const accountId = import.meta.env.VITE_CF_ACCOUNT_ID;
-    if (!accountId) {
-        console.warn('VITE_CF_ACCOUNT_ID is missing. Image generation skipped.');
-        return null;
-    }
-    const prompt = `A highly detailed, true to life photorealistic photograph depicting: ${topic}. Cinematic lighting, 8k resolution, shot on 35mm lens, realistic textures, natural colors, highly detailed, no text, professional photography.`;
+    const prompt = `A realistic, accessible educational illustration of ${topic}. Natural colors, clear subject, no text.`;
     try {
-        // We MUST use a native Cloudflare model for the REST API. 
-        // Third-party models (like Google/nano-banana) are ONLY available from inside a Worker.
-        const model = '@cf/bytedance/stable-diffusion-xl-lightning';
-        const url = `/cf-ai/client/v4/accounts/${accountId}/ai/run/${model}`;
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, num_steps: 4 })
-        });
-        
-        if (!response.ok) {
-            const err = await response.text();
-            console.warn(`Cloudflare AI image gen error ${response.status}:`, err);
-            return null;
-        }
-
-        // Native Cloudflare Workers AI returns raw binary image data (PNG or JPEG)
-        const blob = await response.blob();
-        if (!blob || blob.size === 0) return null;
-
-        // Convert blob to base64 Data URL for easy embedding
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
-        });
-    } catch (err) {
-        console.warn('generateLearnImage failed:', err.message);
-        return null;
-    }
+        const data = await callGateway('learn-image', { prompt });
+        return data?.image ? `data:${data.mimeType || 'image/png'};base64,${data.image}` : null;
+    } catch (error) { console.warn('generateLearnImage failed:', error.message); return null; }
 }
 
-/** Find a single safe, embeddable YouTube video. No request is made when no key is configured. */
 export async function findLearnVideo(searchQuery, language = 'en') {
-    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-    if (!apiKey) return null;
-    const params = new URLSearchParams({ part: 'snippet', q: searchQuery, type: 'video', maxResults: '1', safeSearch: 'strict', videoEmbeddable: 'true', key: apiKey, relevanceLanguage: language });
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
-    return response.ok ? (await response.json())?.items?.[0]?.id?.videoId || null : null;
+    try {
+        const data = await callGateway('youtube-search', { query: searchQuery, language });
+        return data?.item?.id?.videoId || null;
+    } catch (_) { return null; }
 }
 
-/** Suggest a compact daily set of learning topics from the user's mode and recent activity names. */
 export async function generateDailyLearnTopics(profile, eventTypes = []) {
-    const prompt = `${buildSystemPrompt(profile)}\n\nSuggest 9 short, safe, useful learning topics for today. Base them on the user's primary accessibility mode and recent activity labels. 
-IMPORTANT: Include at least 3 topics related to positive or educational current news and world events from today.
-Return ONLY JSON: {"topics":[{"topic": "Title", "summary": "One or two line short description"}]}. Avoid depressing or controversial news.
-Primary mode: ${profile.primaryMode || 'none'}
-Recent activity: ${eventTypes.join(', ') || 'none'}`;
-    const response = await sendMessage(prompt, [{ role: 'user', content: 'Suggest today’s learning topics.' }]);
-    const parsed = safeParseJSON(response);
-    return (parsed && Array.isArray(parsed.topics)) ? parsed.topics.slice(0, 9) : [];
+    const prompt = `${buildSystemPrompt(profile)} Suggest 9 short, safe, useful learning topics for today based on accessibility needs and activity. Include at least 3 positive educational current-news ideas. Return only JSON: {"topics":[{"topic":"Title","summary":"Short summary"}]}. Recent activity: ${eventTypes.join(', ') || 'none'}.`;
+    const parsed = safeParseJSON(await sendMessage(prompt, [{ role: 'user', content: 'Suggest today’s learning topics.' }]));
+    return Array.isArray(parsed?.topics) ? parsed.topics.slice(0, 9) : [];
 }

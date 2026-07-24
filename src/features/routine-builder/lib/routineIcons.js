@@ -13,7 +13,7 @@ import {
  *
  * If a more photo-realistic picture is ever wanted for a step, this is the
  * one place to swap in an async image (e.g. shared/lib/aiClient.js's
- * generateLearnImage, which needs VITE_CF_ACCOUNT_ID) without touching the
+ * generateLearnImage, which runs through the secure server gateway) without touching the
  * rest of the feature.
  */
 export const ROUTINE_ICONS = [

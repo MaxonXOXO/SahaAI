@@ -6,6 +6,7 @@
  * in the same format as prebuiltStories pages.
  */
 import { generateStructuredJSON } from '../../../shared/lib/aiClient';
+import { supabase } from '../../../shared/lib/supabaseClient';
 
 // ── Image cache ───────────────────────────────────────────────────────────────
 // Module-level Map persists for the browser session (cleared on full page reload).
@@ -42,9 +43,6 @@ export async function generateStoryImage(imagePrompt, cacheKey = null) {
   }
 
   const requestPromise = (async () => {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) throw new Error('Missing VITE_OPENAI_API_KEY in .env');
-
     const fullPrompt = [
       "Simple, friendly flat-cartoon illustration for a children's social story book.",
       `Scene: ${imagePrompt}.`,
@@ -53,28 +51,9 @@ export async function generateStoryImage(imagePrompt, cacheKey = null) {
       'Absolutely no text, letters, numbers, or words anywhere in the image.',
     ].join(' ');
 
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: fullPrompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'low',
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Image generation failed (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
-    const b64 = data?.data?.[0]?.b64_json;
+    const { data, error } = await supabase.functions.invoke('api-gateway', { body: { action: 'story-image', payload: { prompt: fullPrompt } } });
+    if (error || data?.error) throw new Error(data?.error || error?.message || 'Image generation failed.');
+    const b64 = data?.image;
     if (!b64) throw new Error('No image data returned from OpenAI');
 
     // Convert base64 → Blob URL (memory-efficient; avoids localStorage limits)

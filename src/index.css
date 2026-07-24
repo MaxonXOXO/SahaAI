@@ -254,14 +254,74 @@ body {
   border-radius: 8px !important;
 }
 
-/* Primary filled buttons stay yellow-on-black (not transparent) */
+/* Selected/primary controls retain bright yellow text in high contrast.
+   Black text on a yellow or dark-yellow selected state is hard to read at
+   enlarged sizes and can disappear when component-level styles overlap. */
 .theme-high .bg-primary,
 .theme-high [class*="bg-primary"] {
-  background-color: #FACC15 !important;
-  color: #000000 !important;
+  background-color: #1C1C00 !important;
+  color: #FACC15 !important;
+}
+
+/* Focus Mode uses the shared theme tokens rather than its former fixed navy
+   palette. This keeps every panel readable in Light, Dark, Soft, and High
+   Contrast themes without changing the timer's functional colour cues. */
+.focus-mode-shell [class*="bg-slate-"],
+.focus-mode-shell [class*="bg-gray-"],
+.focus-mode-shell [class*="bg-indigo-9"] {
+  background-color: var(--a11y-surface) !important;
+}
+
+.focus-mode-shell [class*="border-slate-"],
+.focus-mode-shell [class*="border-indigo-"] {
+  border-color: color-mix(in srgb, var(--a11y-text) 22%, transparent) !important;
+}
+
+.focus-mode-shell [class*="text-slate-100"],
+.focus-mode-shell [class*="text-slate-200"],
+.focus-mode-shell [class*="text-slate-300"] {
+  color: var(--a11y-text) !important;
+}
+
+.focus-mode-shell [class*="text-slate-400"],
+.focus-mode-shell [class*="text-slate-500"],
+.focus-mode-shell [class*="text-slate-600"] {
+  color: var(--a11y-text-muted) !important;
+}
+
+.focus-mode-shell [class*="bg-indigo-"],
+.focus-mode-shell [class*="bg-primary"] {
+  background-color: var(--a11y-primary) !important;
+}
+
+.focus-mode-shell [class*="text-indigo-"],
+.focus-mode-shell [class*="text-amber-"] {
+  color: var(--a11y-primary) !important;
+}
+
+.focus-mode-shell [class*="bg-amber-"],
+.focus-mode-shell [class*="bg-emerald-9"] {
+  background-color: color-mix(in srgb, var(--a11y-primary) 12%, var(--a11y-surface)) !important;
+}
+
+.focus-mode-shell [class*="shadow-indigo"],
+.focus-mode-shell [class*="shadow-amber"] {
+  box-shadow: var(--a11y-shadow) !important;
+}
+
+/* Focus Mode should feel steady and visually quiet: no drifting cards,
+   particle motion, or translucent blur that can be distracting. */
+.focus-mode-shell .animate-float-slow,
+.focus-mode-shell .animate-dust {
+  animation: none !important;
+}
+
+.focus-mode-shell [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 .theme-high button[class~="bg-primary"] * {
-  color: #000000 !important;
+  color: #FACC15 !important;
 }
 
 /* ── Inputs / textareas ── */
