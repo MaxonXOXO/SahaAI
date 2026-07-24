@@ -1,6 +1,6 @@
 /**
  * storyPrompts.js — AI prompt builder for generating custom social stories,
- * plus image generation via OpenAI gpt-image-1.
+ * plus image generation via Cloudflare Workers AI (SDXL Lightning).
  *
  * Uses the generateStructuredJSON helper from aiClient to get a story
  * in the same format as prebuiltStories pages.
@@ -10,7 +10,7 @@ import { generateStructuredJSON } from '../../../shared/lib/aiClient';
 // ── Image cache ───────────────────────────────────────────────────────────────
 // Module-level Map persists for the browser session (cleared on full page reload).
 // Keys: story.id for prebuilt stories; null/undefined for ephemeral AI page images.
-// Values: blob: URLs created from gpt-image-1 base64 responses.
+// Values: blob: URLs created from Cloudflare Workers AI responses.
 //
 // Exported so LibraryTab can read cached thumbnails on re-mount without
 // needing subscriptions — LibraryTab always re-mounts when returning from
@@ -20,11 +20,11 @@ export const storyImageCache = new Map();
 // In-flight request de-duplication: if the same cacheKey is requested again
 // before the first call resolves (e.g. the user taps Next quickly, or the
 // current-page load and the next-page prefetch race), reuse the same promise
-// instead of firing a second paid gpt-image-1 call.
+// instead of firing a second paid image generation call.
 const pendingImageRequests = new Map();
 
 /**
- * Generate a flat-cartoon illustration using OpenAI gpt-image-1.
+ * Generate a flat-cartoon illustration using Cloudflare Workers AI (SDXL Lightning).
  *
  * @param {string} imagePrompt      — Scene description (20–40 words)
  * @param {string|null} cacheKey    — If provided, result is cached for the session
@@ -42,8 +42,19 @@ export async function generateStoryImage(imagePrompt, cacheKey = null) {
   }
 
   const requestPromise = (async () => {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) throw new Error('Missing VITE_OPENAI_API_KEY in .env');
+    let userToken = '';
+    let userAccountId = '';
+    try {
+      userToken = localStorage.getItem('saha_cf_api_token') || '';
+      userAccountId = localStorage.getItem('saha_cf_account_id') || '';
+    } catch (e) {
+      console.warn('[StoryPrompts] Failed to read CF keys from localStorage:', e);
+    }
+    const accountId = userAccountId || import.meta.env.VITE_CF_ACCOUNT_ID || '';
+    const apiToken = userToken || import.meta.env.VITE_CF_API_TOKEN || '';
+    if (!accountId || !apiToken) {
+      throw new Error('Missing VITE_CF_ACCOUNT_ID or VITE_CF_API_TOKEN in environment');
+    }
 
     const fullPrompt = [
       "Simple, friendly flat-cartoon illustration for a children's social story book.",
@@ -53,35 +64,68 @@ export async function generateStoryImage(imagePrompt, cacheKey = null) {
       'Absolutely no text, letters, numbers, or words anywhere in the image.',
     ].join(' ');
 
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: fullPrompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'low',
-      }),
-    });
+    const model = '@cf/bytedance/stable-diffusion-xl-lightning';
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Image generation failed (${res.status}): ${errText}`);
+    // Try Vite proxy endpoint first, then direct Cloudflare API endpoint
+    const endpoints = [
+      `/cf-ai/client/v4/accounts/${accountId}/ai/run/${model}`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`
+    ];
+
+    let response = null;
+    let lastErr = null;
+
+    for (const url of endpoints) {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (apiToken) {
+          headers['Authorization'] = `Bearer ${apiToken}`;
+        }
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ prompt: fullPrompt, num_steps: 4 }),
+        });
+
+        if (res.ok) {
+          response = res;
+          console.log('[StoryPrompts] Cloudflare Workers AI succeeded with model:', model);
+          break;
+        }
+
+        const errText = await res.text();
+        lastErr = `${url} → ${res.status}: ${errText}`;
+        console.warn('[StoryPrompts] Workers AI endpoint failed:', lastErr);
+      } catch (err) {
+        lastErr = `${url} → fetch error: ${err.message}`;
+        console.warn('[StoryPrompts] Fetch error calling Cloudflare Workers AI:', lastErr);
+      }
     }
 
-    const data = await res.json();
-    const b64 = data?.data?.[0]?.b64_json;
-    if (!b64) throw new Error('No image data returned from OpenAI');
+    if (!response) {
+      throw new Error(`Cloudflare Workers AI image generation failed: ${lastErr || 'Unknown error'}`);
+    }
 
-    // Convert base64 → Blob URL (memory-efficient; avoids localStorage limits)
-    const byteChars = atob(b64);
-    const byteArr = new Uint8Array(byteChars.length);
-    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-    const blob = new Blob([byteArr], { type: 'image/png' });
+    let blob = null;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const json = await response.json();
+      const b64 = json?.result?.image || json?.result;
+      if (typeof b64 === 'string') {
+        const byteChars = atob(b64.includes('base64,') ? b64.split('base64,')[1] : b64);
+        const byteArr = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+        blob = new Blob([byteArr], { type: 'image/png' });
+      }
+    } else {
+      blob = await response.blob();
+    }
+
+    if (!blob || blob.size === 0) {
+      throw new Error('No image data returned from Cloudflare Workers AI');
+    }
+
     const blobUrl = URL.createObjectURL(blob);
 
     if (cacheKey) storyImageCache.set(cacheKey, blobUrl);
