@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt, Wallet, MinusCircle, PlusCircle, Loader2, Signpost } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt, Wallet, MinusCircle, PlusCircle, Loader2, Signpost, Navigation } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
 import CameraCapture from './CameraCapture';
@@ -70,6 +70,13 @@ export default function VisionAssistant() {
     const TAB_PARAM_MAP = { identify: 'object', read: 'ocr', describe: 'scene', currency: 'currency', signs: 'signs' };
     const initialTab = TAB_PARAM_MAP[searchParams.get('tab')] || 'object';
 
+    // Custom Speech & AI Hooks
+    const { speak, stop, speaking, playBeep } = useSpeak();
+    const { analyzeImage, loading, stripMarkdown } = useVisionAI();
+
+    const cameraContainerRef = useRef(null);
+    const resultRef = useRef(null);
+
     // Feature Mode & View State
     const [activeMode, setActiveMode] = useState(initialTab); // 'object' | 'ocr' | 'scene' | 'currency' | 'signs'
     const [capturedImage, setCapturedImage] = useState(null);
@@ -85,6 +92,18 @@ export default function VisionAssistant() {
     const [verifyPrice, setVerifyPrice] = useState('');
     const [verifyAmountGiven, setVerifyAmountGiven] = useState('');
     const [verifyError, setVerifyError] = useState('');
+    const [isLiveScanning, setIsLiveScanning] = useState(false);
+
+    const isLiveScanningRef = useRef(isLiveScanning);
+    const loadingRef = useRef(loading);
+
+    useEffect(() => {
+        isLiveScanningRef.current = isLiveScanning;
+    }, [isLiveScanning]);
+
+    useEffect(() => {
+        loadingRef.current = loading;
+    }, [loading]);
 
     const moneyTipsBtnRef = useRef(null);
     const moneyTipsModalRef = useRef(null);
@@ -137,11 +156,7 @@ export default function VisionAssistant() {
         }
     });
 
-    // Custom Speech & AI Hooks
-    const resultRef = useRef(null);
-    const cameraContainerRef = useRef(null);
-    const { speak, stop, speaking, playBeep } = useSpeak();
-    const { analyzeImage, loading, stripMarkdown } = useVisionAI();
+
 
     // Focus management for Money Tips dialog
     useEffect(() => {
@@ -562,6 +577,44 @@ export default function VisionAssistant() {
         speak("Back to camera", speechRate);
     };
 
+    const triggerCapture = useCallback(() => {
+        if (loadingRef.current || reviewScan) return;
+        const btn = cameraContainerRef.current?.querySelector('button[data-capture-btn="true"], button[class*="min-h-touch"], button:has(svg.lucide-camera)');
+        if (btn) {
+            btn.click();
+        }
+    }, [reviewScan]);
+
+    // Live continuous analysis loop (matching Visual Navigator frame sampling pattern)
+    useEffect(() => {
+        let timer = null;
+        if (isLiveScanning && !reviewScan) {
+            if (!loadingRef.current) {
+                triggerCapture();
+            }
+            timer = setInterval(() => {
+                if (isLiveScanningRef.current && !loadingRef.current && !reviewScan) {
+                    triggerCapture();
+                }
+            }, 3500);
+        }
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [isLiveScanning, reviewScan]);
+
+    const toggleLiveScanning = () => {
+        playBeep(isLiveScanning ? 350 : 550, 0.08);
+        const nextState = !isLiveScanning;
+        setIsLiveScanning(nextState);
+        if (nextState) {
+            speak("Live Vision started. Point your camera around for continuous guidance.", speechRate);
+        } else {
+            speak("Live Vision paused.", speechRate);
+            stop();
+        }
+    };
+
     // Frame Capture Handler
     const handleCapture = async (base64Image) => {
         setCapturedImage(base64Image);
@@ -668,14 +721,6 @@ export default function VisionAssistant() {
             console.error('[VisionAI] Q&A analysis failure:', err);
             setCurrentSubtitle('');
             speak("Failed to answer. Please check your API key in Settings and try again.", speechRate);
-        }
-    };
-
-    const triggerCapture = () => {
-        if (loading || reviewScan) return;
-        const btn = cameraContainerRef.current?.querySelector('button[data-capture-btn="true"], button[class*="min-h-touch"], button:has(svg.lucide-camera)');
-        if (btn) {
-            btn.click();
         }
     };
 
@@ -882,6 +927,14 @@ export default function VisionAssistant() {
 
                     {/* --- CAMERA & CAPTION OVERLAY CONTAINER (EXPLICIT VIEWPORT HEIGHT) --- */}
                     <div ref={cameraContainerRef} className="relative h-[48dvh] min-h-[300px] w-full rounded-card overflow-hidden border-4 border-gray-800 dark:border-gray-900 shadow-lg bg-black">
+                        {/* LIVE VISION STATUS BADGE */}
+                        {!reviewScan && (
+                            <div className="absolute top-3 left-3 z-30 flex items-center gap-2 rounded-full bg-black/80 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-white border border-white/20 shadow-md">
+                                <span className={`h-2.5 w-2.5 rounded-full ${isLiveScanning ? 'bg-emerald-400 animate-pulse' : 'bg-sky-400'}`} />
+                                <span>{isLiveScanning ? 'LIVE VISION ACTIVE' : 'CAMERA READY'}</span>
+                            </div>
+                        )}
+
                         {reviewScan ? (
                             <img
                                 src={reviewScan.image}
@@ -1125,9 +1178,10 @@ export default function VisionAssistant() {
                             <button
                                 onClick={() => {
                                     playBeep(300, 0.1);
+                                    if (isLiveScanning) setIsLiveScanning(false);
                                     handleStopSpeaking();
                                 }}
-                                aria-label="Stop audio output"
+                                aria-label="Stop audio output and live scanning"
                                 className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
                             >
                                 <Square size={18} />
@@ -1144,15 +1198,30 @@ export default function VisionAssistant() {
                                 <span>Ask</span>
                             </button>
 
-                            {/* CAPTURE BUTTON (VISUALLY LARGEST & MOST PROMINENT) */}
+                            {/* LIVE VISION TOGGLE BUTTON (PRIMARY CONTINUOUS NAVIGATOR STYLE) */}
+                            <button
+                                onClick={toggleLiveScanning}
+                                disabled={loading}
+                                aria-label={isLiveScanning ? "Pause Live Vision mode" : "Start Live Vision mode for continuous analysis"}
+                                className={`w-20 h-20 rounded-full active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-xl transition-all border-4 border-white dark:border-gray-800 focus:outline-none focus:ring-4 focus:ring-primary/50 ${
+                                    isLiveScanning
+                                        ? 'bg-emerald-600 hover:bg-emerald-700 animate-pulse'
+                                        : 'bg-primary hover:bg-primary-dark disabled:bg-gray-400'
+                                }`}
+                            >
+                                <Navigation size={26} />
+                                <span>{isLiveScanning ? 'Live On' : 'Start Live'}</span>
+                            </button>
+
+                            {/* SNAPSHOT BUTTON */}
                             <button
                                 onClick={triggerCapture}
                                 disabled={loading}
-                                aria-label="Capture image and analyze"
-                                className="w-20 h-20 rounded-full bg-primary hover:bg-primary-dark disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-xl transition-all border-4 border-white dark:border-gray-800 focus:outline-none focus:ring-4 focus:ring-primary/50"
+                                aria-label="Capture single frame snapshot"
+                                className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
                             >
-                                <Camera size={28} />
-                                <span>Capture</span>
+                                <Camera size={18} />
+                                <span>Snapshot</span>
                             </button>
 
                             {/* RECENTS BUTTON */}
