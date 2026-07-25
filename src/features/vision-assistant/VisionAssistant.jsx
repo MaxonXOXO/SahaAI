@@ -730,32 +730,32 @@ export default function VisionAssistant() {
     };
 
     const getButtonClasses = (type) => {
-        const base = 'w-[72px] h-[72px] rounded-full active:scale-95 flex flex-col items-center justify-center font-bold text-[11px] transition-all focus:outline-none shadow-md border-2 shrink-0 gap-1 disabled:opacity-50 disabled:cursor-not-allowed';
+        const base = 'w-20 h-20 rounded-full active:scale-95 flex flex-col items-center justify-center font-extrabold text-[11px] transition-all focus:outline-none shadow-xl border-4 shrink-0 gap-0.5 disabled:opacity-50 disabled:cursor-not-allowed';
         
         if (contrastMode === 'high-dark') {
-            return `${base} bg-black border-yellow-400 text-yellow-400 hover:bg-yellow-400/10 focus:ring-2 focus:ring-yellow-400`;
+            return `${base} bg-black border-yellow-400 text-yellow-400 hover:bg-yellow-400/10 focus:ring-4 focus:ring-yellow-400`;
         }
         if (contrastMode === 'high-light') {
-            return `${base} bg-white border-black text-black hover:bg-black/5 focus:ring-2 focus:ring-black`;
+            return `${base} bg-white border-black text-black hover:bg-black/5 focus:ring-4 focus:ring-black`;
         }
         
         if (type === 'stop') {
-            return `${base} bg-red-500 hover:bg-red-600 border-white text-white focus:ring-2 focus:ring-red-400`;
+            return `${base} bg-red-500 hover:bg-red-600 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-red-450`;
         }
         if (type === 'ask') {
-            return `${base} bg-blue-600 hover:bg-blue-700 border-white text-white focus:ring-2 focus:ring-blue-400`;
+            return `${base} bg-[#2563eb] hover:bg-blue-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-blue-450`;
         }
         if (type === 'snapshot') {
-            return `${base} bg-slate-700 hover:bg-slate-800 border-white text-white focus:ring-2 focus:ring-slate-400`;
+            return `${base} bg-[#4b5563] hover:bg-slate-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-slate-450`;
         }
         if (type === 'recents') {
-            return `${base} bg-slate-700 hover:bg-slate-800 border-white text-white focus:ring-2 focus:ring-slate-400`;
+            return `${base} bg-[#4b5563] hover:bg-slate-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-slate-450`;
         }
         if (type === 'back') {
-            return `${base} bg-slate-700 hover:bg-slate-800 border-white text-white focus:ring-2 focus:ring-slate-400`;
+            return `${base} bg-[#4b5563] hover:bg-slate-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-slate-450`;
         }
         if (type === 'repeat') {
-            return `${base} bg-primary hover:bg-primary-dark border-white text-white focus:ring-2 focus:ring-primary/50`;
+            return `${base} bg-primary hover:bg-primary-dark border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-primary/50`;
         }
         return base;
     };
