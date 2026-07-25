@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt, Wallet, MinusCircle, PlusCircle, Loader2, Signpost } from 'lucide-react';
+import { Square, Settings, Volume2, Sparkles, BookOpen, Map, History, Trash2, Check, Camera, MessageSquare, ArrowLeft, Banknote, Lightbulb, RotateCcw, X, Receipt, Wallet, MinusCircle, PlusCircle, Loader2, Signpost, MoreVertical } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import Button from '../../shared/components/Button';
 import CameraCapture from './CameraCapture';
@@ -729,8 +729,12 @@ export default function VisionAssistant() {
         return 'bg-surface dark:bg-surface-dark border border-gray-200 dark:border-gray-800 rounded-card p-4 shadow-sm';
     };
 
-    const getButtonClasses = (type) => {
-        const base = 'w-20 h-20 rounded-full active:scale-95 flex flex-col items-center justify-center font-extrabold text-[11px] transition-all focus:outline-none shadow-xl border-4 shrink-0 gap-0.5 disabled:opacity-50 disabled:cursor-not-allowed';
+    const getCircularButtonClasses = (type) => {
+        let sizeClasses = 'w-16 h-16';
+        if (type === 'stop' || type === 'more') sizeClasses = 'w-12 h-12';
+        if (type === 'capture') sizeClasses = 'w-20 h-20';
+
+        const base = `${sizeClasses} rounded-full active:scale-95 flex items-center justify-center transition-all focus:outline-none shadow-lg border-[3px] shrink-0 disabled:opacity-50 disabled:cursor-not-allowed`;
         
         if (contrastMode === 'high-dark') {
             return `${base} bg-black border-yellow-400 text-yellow-400 hover:bg-yellow-400/10 focus:ring-4 focus:ring-yellow-400`;
@@ -740,24 +744,37 @@ export default function VisionAssistant() {
         }
         
         if (type === 'stop') {
-            return `${base} bg-red-500 hover:bg-red-600 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-red-450`;
+            return `${base} bg-[#ef4444] hover:bg-[#dc2626] border-white text-white focus:ring-4 focus:ring-red-400`;
         }
         if (type === 'ask') {
-            return `${base} bg-[#2563eb] hover:bg-blue-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-blue-450`;
+            return `${base} bg-[#3b82f6] hover:bg-[#2563eb] border-white text-white focus:ring-4 focus:ring-blue-400`;
         }
-        if (type === 'snapshot') {
-            return `${base} bg-[#4b5563] hover:bg-slate-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-slate-450`;
+        if (type === 'capture') {
+            return `${base} bg-[#8b5cf6] hover:bg-[#7c3aed] border-white text-white shadow-purple-500/20 focus:ring-4 focus:ring-purple-400`;
         }
-        if (type === 'recents') {
-            return `${base} bg-[#4b5563] hover:bg-slate-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-slate-450`;
-        }
-        if (type === 'back') {
-            return `${base} bg-[#4b5563] hover:bg-slate-700 border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-slate-450`;
+        if (type === 'recents' || type === 'more' || type === 'back') {
+            return `${base} bg-[#334155] hover:bg-[#1e293b] border-white text-white focus:ring-4 focus:ring-slate-400`;
         }
         if (type === 'repeat') {
-            return `${base} bg-primary hover:bg-primary-dark border-white dark:border-gray-800 text-white focus:ring-4 focus:ring-primary/50`;
+            return `${base} bg-primary hover:bg-primary-dark border-white text-white focus:ring-4 focus:ring-primary/50`;
         }
         return base;
+    };
+
+    const getLabelColorClass = (type) => {
+        if (contrastMode === 'high-dark') return 'text-yellow-400';
+        if (contrastMode === 'high-light') return 'text-black';
+        
+        if (type === 'stop') return 'text-[#ef4444]';
+        if (type === 'ask') return 'text-[#3b82f6]';
+        if (type === 'capture') return 'text-[#8b5cf6]';
+        return 'text-[#334155] dark:text-slate-200';
+    };
+
+    const getDescriptionColorClass = () => {
+        if (contrastMode === 'high-dark') return 'text-yellow-400/80';
+        if (contrastMode === 'high-light') return 'text-black/80';
+        return 'text-gray-400 dark:text-gray-500';
     };
 
     // Full Screen Scan History View
@@ -1126,88 +1143,127 @@ export default function VisionAssistant() {
 
                     {/* --- ACTION BUTTON ROW --- */}
                     {reviewScan ? (
-                        <div className="flex items-center justify-around gap-2 pt-2 pb-2 shrink-0">
+                        <div className="flex items-center justify-around gap-4 pt-4 pb-4 shrink-0 max-w-[320px] mx-auto w-full">
                             {/* BACK TO CAMERA BUTTON */}
-                            <button
-                                onClick={handleExitReview}
-                                aria-label="Return to live camera mode"
-                                className={getButtonClasses('back')}
-                            >
-                                <ArrowLeft size={22} />
-                                <span>Back</span>
-                            </button>
+                            <div className="flex flex-col items-center text-center">
+                                <button
+                                    onClick={handleExitReview}
+                                    aria-label="Return to live camera mode"
+                                    className={getCircularButtonClasses('back')}
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('back')}`}>Back</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Exit scan</span>
+                            </div>
 
                             {/* ASK BUTTON FOR THIS REVIEW IMAGE */}
-                            <button
-                                onClick={handleAskClick}
-                                aria-label="Ask AI question about this reviewed photo"
-                                className={getButtonClasses('ask')}
-                            >
-                                <MessageSquare size={22} />
-                                <span>Ask</span>
-                            </button>
+                            <div className="flex flex-col items-center text-center">
+                                <button
+                                    onClick={handleAskClick}
+                                    aria-label="Ask AI question about this reviewed photo"
+                                    className={getCircularButtonClasses('ask')}
+                                >
+                                    <MessageSquare size={20} className="fill-current" />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('ask')}`}>Ask</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Ask AI</span>
+                            </div>
 
                             {/* REPEAT RESULT BUTTON */}
-                            <button
-                                onClick={() => {
-                                    playBeep(440, 0.08);
-                                    speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
-                                }}
-                                aria-label="Replay audio description for this scan"
-                                className={getButtonClasses('repeat')}
-                            >
-                                <Volume2 size={22} />
-                                <span>Repeat</span>
-                            </button>
+                            <div className="flex flex-col items-center text-center">
+                                <button
+                                    onClick={() => {
+                                        playBeep(440, 0.08);
+                                        speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
+                                    }}
+                                    aria-label="Replay audio description for this scan"
+                                    className={getCircularButtonClasses('repeat')}
+                                >
+                                    <Volume2 size={20} />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('repeat')}`}>Repeat</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Replay result</span>
+                            </div>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-around gap-2 pt-2 pb-2 shrink-0">
+                        <div className="relative flex items-end justify-around gap-1 pt-6 pb-6 shrink-0 mt-4 min-h-[140px] w-full max-w-[390px] mx-auto select-none">
+                            {/* ABSOLUTE WAVE CURVE BACKGROUND */}
+                            <svg viewBox="0 0 360 100" className="absolute top-0 left-0 w-full h-[100px] pointer-events-none stroke-gray-300/60 dark:stroke-gray-700/60" fill="none">
+                                <path d="M 40,30 C 80,-10 130,30 180,60 C 230,30 280,-10 320,30" strokeDasharray="4 4" strokeWidth="2" />
+                            </svg>
+
                             {/* STOP BUTTON */}
-                            <button
-                                onClick={() => {
-                                    playBeep(300, 0.1);
-                                    handleStopSpeaking();
-                                }}
-                                aria-label="Stop audio output"
-                                className={getButtonClasses('stop')}
-                            >
-                                <Square size={22} />
-                                <span>Stop</span>
-                            </button>
+                            <div className="flex flex-col items-center text-center translate-y-2 z-10">
+                                <button
+                                    onClick={() => {
+                                        playBeep(300, 0.1);
+                                        handleStopSpeaking();
+                                    }}
+                                    aria-label="Stop audio output"
+                                    className={getCircularButtonClasses('stop')}
+                                >
+                                    <Square size={16} className="fill-current" />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('stop')}`}>Stop</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>End session</span>
+                            </div>
 
                             {/* ASK BUTTON */}
-                            <button
-                                onClick={handleAskClick}
-                                aria-label="Ask AI question about photo"
-                                className={getButtonClasses('ask')}
-                            >
-                                <MessageSquare size={22} />
-                                <span>Ask</span>
-                            </button>
+                            <div className="flex flex-col items-center text-center -translate-y-2 z-10">
+                                <button
+                                    onClick={handleAskClick}
+                                    aria-label="Ask AI question about photo"
+                                    className={getCircularButtonClasses('ask')}
+                                >
+                                    <MessageSquare size={20} className="fill-current" />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('ask')}`}>Ask</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Ask for help</span>
+                            </div>
 
-                            {/* SNAPSHOT BUTTON */}
-                            <button
-                                onClick={triggerCapture}
-                                disabled={loading}
-                                aria-label="Capture single frame snapshot"
-                                className={getButtonClasses('snapshot')}
-                            >
-                                <Camera size={22} />
-                                <span>Snapshot</span>
-                            </button>
+                            {/* CAPTURE IMAGE BUTTON */}
+                            <div className="flex flex-col items-center text-center translate-y-4 z-10">
+                                <button
+                                    onClick={triggerCapture}
+                                    disabled={loading}
+                                    aria-label="Capture single frame snapshot"
+                                    className={getCircularButtonClasses('capture')}
+                                >
+                                    <Camera size={30} className="fill-current" />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('capture')}`}>Capture Image</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Take a snapshot</span>
+                            </div>
 
                             {/* RECENTS BUTTON */}
-                            <button
-                                onClick={() => {
-                                    playBeep(440, 0.08);
-                                    setShowHistory(true);
-                                }}
-                                aria-label="View recent scans history"
-                                className={getButtonClasses('recents')}
-                            >
-                                <History size={22} />
-                                <span>Recents</span>
-                            </button>
+                            <div className="flex flex-col items-center text-center -translate-y-2 z-10">
+                                <button
+                                    onClick={() => {
+                                        playBeep(440, 0.08);
+                                        setShowHistory(true);
+                                    }}
+                                    aria-label="View recent scans history"
+                                    className={getCircularButtonClasses('recents')}
+                                >
+                                    <History size={20} />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('recents')}`}>Recents</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>View history</span>
+                            </div>
+
+                            {/* MORE BUTTON */}
+                            <div className="flex flex-col items-center text-center translate-y-2 z-10">
+                                <button
+                                    onClick={toggleSettings}
+                                    aria-label="More settings options"
+                                    className={getCircularButtonClasses('more')}
+                                >
+                                    <MoreVertical size={16} />
+                                </button>
+                                <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('more')}`}>More</span>
+                                <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>More options</span>
+                            </div>
                         </div>
                     )}
                 </div>
