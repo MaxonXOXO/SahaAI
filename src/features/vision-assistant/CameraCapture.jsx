@@ -16,6 +16,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
     const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
     const [zoom, setZoom] = useState(1);
     const [isActive, setIsActive] = useState(true);
+    const [stream, setStream] = useState(null);
 
     // Touch Pinch-to-Zoom & Audio Feedback Refs
     const initialPinchDistRef = useRef(null);
@@ -39,6 +40,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
         if (videoRef.current) {
             videoRef.current.srcObject = null;
         }
+        setStream(null);
     }, []);
 
     const startCamera = useCallback(async () => {
@@ -82,9 +84,7 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
             const mockStream = canvasMock.captureStream(10);
             mockStream._mockInterval = interval;
             streamRef.current = mockStream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = mockStream;
-            }
+            setStream(mockStream);
             setHasPermission(true);
             if (speakFeedbackRef.current) speakFeedbackRef.current("Camera active. Point at your target and tap Capture.");
             return;
@@ -100,19 +100,51 @@ export default function CameraCapture({ onCapture, isProcessing, speakFeedback, 
         };
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
+            const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            streamRef.current = mediaStream;
+            setStream(mediaStream);
             setHasPermission(true);
             if (speakFeedbackRef.current) speakFeedbackRef.current("Camera active. Point at your target and tap Capture.");
         } catch (err) {
-            console.error('Camera access error:', err);
-            setHasPermission(false);
-            if (speakFeedbackRef.current) speakFeedbackRef.current("Camera permission denied or camera not found. Please enable it in browser settings.");
+            console.warn('Initial camera constraints failed, trying fallback...', err);
+            // Fallback: request only video facingMode to avoid OverconstrainedError on some mobile webviews
+            try {
+                const fallbackConstraints = {
+                    video: { facingMode: facingMode },
+                    audio: false
+                };
+                const mediaStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                streamRef.current = mediaStream;
+                setStream(mediaStream);
+                setHasPermission(true);
+                if (speakFeedbackRef.current) speakFeedbackRef.current("Camera active.");
+            } catch (fallbackErr) {
+                // Final bare-minimum fallback
+                try {
+                    const bareMinimumConstraints = { video: true, audio: false };
+                    const mediaStream = await navigator.mediaDevices.getUserMedia(bareMinimumConstraints);
+                    streamRef.current = mediaStream;
+                    setStream(mediaStream);
+                    setHasPermission(true);
+                } catch (finalErr) {
+                    console.error('All camera access attempts failed:', finalErr);
+                    setHasPermission(false);
+                    if (speakFeedbackRef.current) speakFeedbackRef.current("Camera permission denied or camera not found. Please enable it in browser settings.");
+                }
+            }
         }
     }, [facingMode, stopCamera]);
+
+    // Handle stream binding when both stream and video DOM node are available
+    useEffect(() => {
+        if (hasPermission && isActive && stream && videoRef.current) {
+            videoRef.current.srcObject = stream;
+            // Explicitly call play() which is required on iOS Safari / mobile Chrome to begin rendering the frames
+            videoRef.current.play().catch((playErr) => {
+                console.warn("video.play() failed:", playErr);
+            });
+        }
+    }, [hasPermission, isActive, stream]);
 
     // Initial camera setup
     useEffect(() => {
