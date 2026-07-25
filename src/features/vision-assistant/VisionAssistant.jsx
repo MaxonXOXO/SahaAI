@@ -730,9 +730,9 @@ export default function VisionAssistant() {
     };
 
     const getCircularButtonClasses = (type) => {
-        let sizeClasses = 'w-16 h-16';
-        if (type === 'stop' || type === 'more') sizeClasses = 'w-12 h-12';
-        if (type === 'capture') sizeClasses = 'w-20 h-20';
+        let sizeClasses = 'w-[72px] h-[72px]';
+        if (type === 'stop' || type === 'more') sizeClasses = 'w-[56px] h-[56px]';
+        if (type === 'capture') sizeClasses = 'w-[92px] h-[92px]';
 
         const base = `${sizeClasses} rounded-full active:scale-95 flex items-center justify-center transition-all focus:outline-none shadow-lg border-[3px] shrink-0 disabled:opacity-50 disabled:cursor-not-allowed`;
         
@@ -750,7 +750,7 @@ export default function VisionAssistant() {
             return `${base} bg-[#3b82f6] hover:bg-[#2563eb] border-white text-white focus:ring-4 focus:ring-blue-400`;
         }
         if (type === 'capture') {
-            return `${base} bg-[#8b5cf6] hover:bg-[#7c3aed] border-white text-white shadow-purple-500/20 focus:ring-4 focus:ring-purple-400`;
+            return `${base} bg-[#f5f3ff] dark:bg-purple-950/30 border-[#8b5cf6] text-[#8b5cf6] shadow-purple-500/15 focus:ring-4 focus:ring-purple-400 p-0`;
         }
         if (type === 'recents' || type === 'more' || type === 'back') {
             return `${base} bg-[#334155] hover:bg-[#1e293b] border-white text-white focus:ring-4 focus:ring-slate-400`;
@@ -1143,7 +1143,7 @@ export default function VisionAssistant() {
 
                     {/* --- ACTION BUTTON ROW --- */}
                     {reviewScan ? (
-                        <div className="flex items-center justify-around gap-4 pt-4 pb-4 shrink-0 max-w-[320px] mx-auto w-full">
+                        <div className="flex items-center justify-around gap-4 pt-4 pb-4 shrink-0 max-w-[340px] mx-auto w-full">
                             {/* BACK TO CAMERA BUTTON */}
                             <div className="flex flex-col items-center text-center">
                                 <button
@@ -1151,7 +1151,7 @@ export default function VisionAssistant() {
                                     aria-label="Return to live camera mode"
                                     className={getCircularButtonClasses('back')}
                                 >
-                                    <ArrowLeft size={20} />
+                                    <ArrowLeft size={26} />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('back')}`}>Back</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Exit scan</span>
@@ -1164,7 +1164,7 @@ export default function VisionAssistant() {
                                     aria-label="Ask AI question about this reviewed photo"
                                     className={getCircularButtonClasses('ask')}
                                 >
-                                    <MessageSquare size={20} className="fill-current" />
+                                    <MessageSquare size={26} className="fill-current" />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('ask')}`}>Ask</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Ask AI</span>
@@ -1180,21 +1180,21 @@ export default function VisionAssistant() {
                                     aria-label="Replay audio description for this scan"
                                     className={getCircularButtonClasses('repeat')}
                                 >
-                                    <Volume2 size={20} />
+                                    <Volume2 size={26} />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('repeat')}`}>Repeat</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Replay result</span>
                             </div>
                         </div>
                     ) : (
-                        <div className="relative flex items-end justify-around gap-1 pt-6 pb-6 shrink-0 mt-4 min-h-[140px] w-full max-w-[390px] mx-auto select-none">
+                        <div className="relative flex items-end justify-around gap-1 pt-8 pb-8 shrink-0 mt-4 min-h-[170px] w-full max-w-[390px] mx-auto select-none">
                             {/* ABSOLUTE WAVE CURVE BACKGROUND */}
                             <svg viewBox="0 0 360 100" className="absolute top-0 left-0 w-full h-[100px] pointer-events-none stroke-gray-300/60 dark:stroke-gray-700/60" fill="none">
-                                <path d="M 40,30 C 80,-10 130,30 180,60 C 230,30 280,-10 320,30" strokeDasharray="4 4" strokeWidth="2" />
+                                <path d="M 40,58 C 80,20 130,45 180,91 C 230,45 280,20 320,58" strokeDasharray="4 4" strokeWidth="2" />
                             </svg>
 
                             {/* STOP BUTTON */}
-                            <div className="flex flex-col items-center text-center translate-y-2 z-10">
+                            <div className="flex flex-col items-center text-center translate-y-3 z-10">
                                 <button
                                     onClick={() => {
                                         playBeep(300, 0.1);
@@ -1203,41 +1203,47 @@ export default function VisionAssistant() {
                                     aria-label="Stop audio output"
                                     className={getCircularButtonClasses('stop')}
                                 >
-                                    <Square size={16} className="fill-current" />
+                                    <Square size={20} className="fill-current" />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('stop')}`}>Stop</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>End session</span>
                             </div>
 
                             {/* ASK BUTTON */}
-                            <div className="flex flex-col items-center text-center -translate-y-2 z-10">
+                            <div className="flex flex-col items-center text-center -translate-y-1 z-10">
                                 <button
                                     onClick={handleAskClick}
                                     aria-label="Ask AI question about photo"
                                     className={getCircularButtonClasses('ask')}
                                 >
-                                    <MessageSquare size={20} className="fill-current" />
+                                    <MessageSquare size={26} className="fill-current" />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('ask')}`}>Ask</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Ask for help</span>
                             </div>
 
                             {/* CAPTURE IMAGE BUTTON */}
-                            <div className="flex flex-col items-center text-center translate-y-4 z-10">
+                            <div className="flex flex-col items-center text-center translate-y-5 z-10">
                                 <button
                                     onClick={triggerCapture}
                                     disabled={loading}
                                     aria-label="Capture single frame snapshot"
                                     className={getCircularButtonClasses('capture')}
                                 >
-                                    <Camera size={30} className="fill-current" />
+                                    {contrastMode === 'standard' ? (
+                                        <div className="w-[74px] h-[74px] rounded-full bg-[#8b5cf6] hover:bg-[#7c3aed] transition-colors flex items-center justify-center text-white shadow-md">
+                                            <Camera size={36} className="fill-current" />
+                                        </div>
+                                    ) : (
+                                        <Camera size={38} className="fill-current" />
+                                    )}
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('capture')}`}>Capture Image</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Take a snapshot</span>
                             </div>
 
                             {/* RECENTS BUTTON */}
-                            <div className="flex flex-col items-center text-center -translate-y-2 z-10">
+                            <div className="flex flex-col items-center text-center -translate-y-1 z-10">
                                 <button
                                     onClick={() => {
                                         playBeep(440, 0.08);
@@ -1246,20 +1252,20 @@ export default function VisionAssistant() {
                                     aria-label="View recent scans history"
                                     className={getCircularButtonClasses('recents')}
                                 >
-                                    <History size={20} />
+                                    <History size={26} />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('recents')}`}>Recents</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>View history</span>
                             </div>
 
                             {/* MORE BUTTON */}
-                            <div className="flex flex-col items-center text-center translate-y-2 z-10">
+                            <div className="flex flex-col items-center text-center translate-y-3 z-10">
                                 <button
                                     onClick={toggleSettings}
                                     aria-label="More settings options"
                                     className={getCircularButtonClasses('more')}
                                 >
-                                    <MoreVertical size={16} />
+                                    <MoreVertical size={20} />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('more')}`}>More</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>More options</span>
