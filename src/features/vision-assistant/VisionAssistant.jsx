@@ -729,6 +729,37 @@ export default function VisionAssistant() {
         return 'bg-surface dark:bg-surface-dark border border-gray-200 dark:border-gray-800 rounded-card p-4 shadow-sm';
     };
 
+    const getButtonClasses = (type) => {
+        const base = 'w-[72px] h-[72px] rounded-full active:scale-95 flex flex-col items-center justify-center font-bold text-[11px] transition-all focus:outline-none shadow-md border-2 shrink-0 gap-1 disabled:opacity-50 disabled:cursor-not-allowed';
+        
+        if (contrastMode === 'high-dark') {
+            return `${base} bg-black border-yellow-400 text-yellow-400 hover:bg-yellow-400/10 focus:ring-2 focus:ring-yellow-400`;
+        }
+        if (contrastMode === 'high-light') {
+            return `${base} bg-white border-black text-black hover:bg-black/5 focus:ring-2 focus:ring-black`;
+        }
+        
+        if (type === 'stop') {
+            return `${base} bg-red-500 hover:bg-red-600 border-white text-white focus:ring-2 focus:ring-red-400`;
+        }
+        if (type === 'ask') {
+            return `${base} bg-blue-600 hover:bg-blue-700 border-white text-white focus:ring-2 focus:ring-blue-400`;
+        }
+        if (type === 'snapshot') {
+            return `${base} bg-slate-700 hover:bg-slate-800 border-white text-white focus:ring-2 focus:ring-slate-400`;
+        }
+        if (type === 'recents') {
+            return `${base} bg-slate-700 hover:bg-slate-800 border-white text-white focus:ring-2 focus:ring-slate-400`;
+        }
+        if (type === 'back') {
+            return `${base} bg-slate-700 hover:bg-slate-800 border-white text-white focus:ring-2 focus:ring-slate-400`;
+        }
+        if (type === 'repeat') {
+            return `${base} bg-primary hover:bg-primary-dark border-white text-white focus:ring-2 focus:ring-primary/50`;
+        }
+        return base;
+    };
+
     // Full Screen Scan History View
     if (showHistory) {
         return (
@@ -1095,12 +1126,12 @@ export default function VisionAssistant() {
 
                     {/* --- ACTION BUTTON ROW --- */}
                     {reviewScan ? (
-                        <div className="flex items-center justify-around gap-2 pt-1 pb-1 shrink-0">
+                        <div className="flex items-center justify-around gap-2 pt-2 pb-2 shrink-0">
                             {/* BACK TO CAMERA BUTTON */}
                             <button
                                 onClick={handleExitReview}
                                 aria-label="Return to live camera mode"
-                                className="w-16 h-16 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                                className={getButtonClasses('back')}
                             >
                                 <ArrowLeft size={22} />
                                 <span>Back</span>
@@ -1110,7 +1141,7 @@ export default function VisionAssistant() {
                             <button
                                 onClick={handleAskClick}
                                 aria-label="Ask AI question about this reviewed photo"
-                                className="w-16 h-16 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                                className={getButtonClasses('ask')}
                             >
                                 <MessageSquare size={22} />
                                 <span>Ask</span>
@@ -1123,14 +1154,14 @@ export default function VisionAssistant() {
                                     speak(stripMarkdown(analysisResult || reviewScan.result), speechRate, null, isCaptionMode ? setCurrentSubtitle : null);
                                 }}
                                 aria-label="Replay audio description for this scan"
-                                className="w-16 h-16 rounded-full bg-primary hover:bg-primary-dark active:scale-95 text-white flex flex-col items-center justify-center font-bold text-xs shadow-md transition-all border-2 border-white focus:outline-none"
+                                className={getButtonClasses('repeat')}
                             >
                                 <Volume2 size={22} />
                                 <span>Repeat</span>
                             </button>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-between gap-2 pt-1 pb-1 shrink-0">
+                        <div className="flex items-center justify-around gap-2 pt-2 pb-2 shrink-0">
                             {/* STOP BUTTON */}
                             <button
                                 onClick={() => {
@@ -1138,9 +1169,9 @@ export default function VisionAssistant() {
                                     handleStopSpeaking();
                                 }}
                                 aria-label="Stop audio output"
-                                className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                                className={getButtonClasses('stop')}
                             >
-                                <Square size={18} />
+                                <Square size={22} />
                                 <span>Stop</span>
                             </button>
 
@@ -1148,9 +1179,9 @@ export default function VisionAssistant() {
                             <button
                                 onClick={handleAskClick}
                                 aria-label="Ask AI question about photo"
-                                className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                                className={getButtonClasses('ask')}
                             >
-                                <MessageSquare size={18} />
+                                <MessageSquare size={22} />
                                 <span>Ask</span>
                             </button>
 
@@ -1159,9 +1190,9 @@ export default function VisionAssistant() {
                                 onClick={triggerCapture}
                                 disabled={loading}
                                 aria-label="Capture single frame snapshot"
-                                className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 disabled:bg-gray-400 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                                className={getButtonClasses('snapshot')}
                             >
-                                <Camera size={18} />
+                                <Camera size={22} />
                                 <span>Snapshot</span>
                             </button>
 
@@ -1172,9 +1203,9 @@ export default function VisionAssistant() {
                                     setShowHistory(true);
                                 }}
                                 aria-label="View recent scans history"
-                                className="w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-800 active:scale-95 text-white flex flex-col items-center justify-center font-bold text-[11px] shadow-md transition-all border-2 border-white focus:outline-none"
+                                className={getButtonClasses('recents')}
                             >
-                                <History size={18} />
+                                <History size={22} />
                                 <span>Recents</span>
                             </button>
                         </div>
