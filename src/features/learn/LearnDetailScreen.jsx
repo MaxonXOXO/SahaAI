@@ -4,7 +4,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import { supabase } from '../../shared/lib/supabaseClient';
-import { buildSystemPrompt, generateLearnExplainer, generateLearnImage, findLearnVideo, generateSpeech, sendMessage } from '../../shared/lib/aiClient';
+import { buildSystemPrompt, generateLearnExplainer, generateLearnImage, findLearnVideo, sendMessage } from '../../shared/lib/aiClient';
 import FeedCard from './FeedCard';
 import ChatBubble from './ChatBubble';
 import InputBar from './InputBar';
@@ -21,10 +21,9 @@ export default function LearnDetailScreen() {
     const [playingId, setPlayingId] = useState(null);
     const [loadingSpeechId, setLoadingSpeechId] = useState(null);
     const feedRef = useRef(null);
-    const audioRef = useRef(null);
     const hasExpanded = useRef(false);
 
-    useEffect(() => () => audioRef.current?.pause(), []);
+    useEffect(() => () => window.speechSynthesis.cancel(), []);
     useEffect(() => { feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' }); }, [chatItems.length]);
 
     useEffect(() => {
@@ -82,25 +81,20 @@ export default function LearnDetailScreen() {
 
     const listen = async (id, text) => {
         if (playingId === id) {
-            audioRef.current?.pause();
+            window.speechSynthesis.cancel();
             setPlayingId(null);
             return;
         }
-        audioRef.current?.pause();
-        setLoadingSpeechId(id);
-        try {
-            const blob = await generateSpeech(text.replace(/\*+/g, ''));
-            const audio = new Audio(URL.createObjectURL(blob));
-            audioRef.current = audio;
-            audio.onended = () => setPlayingId(null);
-            audio.onerror = () => setPlayingId(null);
-            await audio.play();
-            setPlayingId(id);
-        } catch (speechError) {
-            console.error('Learn TTS failed:', speechError);
-        } finally {
-            setLoadingSpeechId(null);
-        }
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text.replace(/\*+/g, ''));
+        utterance.lang = /[\u0D00-\u0D7F]/.test(text) ? 'ml-IN' : 'en-US';
+        
+        utterance.onstart = () => setPlayingId(id);
+        utterance.onend = () => setPlayingId(null);
+        utterance.onerror = () => setPlayingId(null);
+        
+        window.speechSynthesis.speak(utterance);
     };
 
     const handleSubmit = async (question) => {

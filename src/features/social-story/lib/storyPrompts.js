@@ -51,10 +51,10 @@ export async function generateStoryImage(imagePrompt, cacheKey = null) {
       'Absolutely no text, letters, numbers, or words anywhere in the image.',
     ].join(' ');
 
-    const { data, error } = await supabase.functions.invoke('api-gateway', { body: { action: 'story-image', payload: { prompt: fullPrompt } } });
+    const { data, error } = await supabase.functions.invoke('api-gateway', { body: { action: 'learn-image', payload: { prompt: fullPrompt } } });
     if (error || data?.error) throw new Error(data?.error || error?.message || 'Image generation failed.');
     const b64 = data?.image;
-    if (!b64) throw new Error('No image data returned from OpenAI');
+    if (!b64) throw new Error('No image data returned from AI');
 
     // Convert base64 → Blob URL (memory-efficient; avoids localStorage limits)
     const byteChars = atob(b64);

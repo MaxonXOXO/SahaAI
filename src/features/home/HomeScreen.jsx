@@ -337,7 +337,7 @@ export default function HomeScreen() {
             </div>
 
             {/* ── Global Search Bar (White Background merging with Nav) ── */}
-            <div className="bg-white rounded-t-[3rem] pt-8 pb-24 md:pb-28 px-5 md:px-8 mt-auto shadow-[0_-12px_30px_rgba(0,0,0,0.03)] relative z-10">
+            <div className="bg-white rounded-t-[3rem] pt-8 pb-6 md:pb-8 px-5 md:px-8 mt-auto shadow-[0_-12px_30px_rgba(0,0,0,0.03)] sticky bottom-0 z-50">
                 <form onSubmit={handleSearchSubmit} className="relative">
                     <div className="rounded-[3rem] border border-primary/30 bg-white p-2 flex items-center shadow-md focus-within:border-primary/60 focus-within:shadow-lg transition-all">
                         <div className="w-14 h-14 flex items-center justify-center shrink-0">
