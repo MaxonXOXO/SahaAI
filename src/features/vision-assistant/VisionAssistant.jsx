@@ -1164,7 +1164,7 @@ export default function VisionAssistant() {
                                     aria-label="Ask AI question about this reviewed photo"
                                     className={getCircularButtonClasses('ask')}
                                 >
-                                    <MessageSquare size={26} className="fill-current" />
+                                    <MessageSquare size={26} />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('ask')}`}>Ask</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Ask AI</span>
@@ -1187,7 +1187,7 @@ export default function VisionAssistant() {
                             </div>
                         </div>
                     ) : (
-                        <div className="relative flex items-end justify-around gap-1 pt-8 pb-8 shrink-0 mt-4 min-h-[170px] w-full max-w-[390px] mx-auto select-none">
+                        <div className="relative flex items-end justify-around gap-1 pt-8 pb-8 shrink-0 mt-4 min-h-[170px] w-full max-w-[420px] mx-auto px-1 select-none">
                             {/* ABSOLUTE WAVE CURVE BACKGROUND */}
                             <svg viewBox="0 0 360 100" className="absolute top-0 left-0 w-full h-[100px] pointer-events-none stroke-gray-300/60 dark:stroke-gray-700/60" fill="none">
                                 <path d="M 40,58 C 80,20 130,45 180,91 C 230,45 280,20 320,58" strokeDasharray="4 4" strokeWidth="2" />
@@ -1216,7 +1216,7 @@ export default function VisionAssistant() {
                                     aria-label="Ask AI question about photo"
                                     className={getCircularButtonClasses('ask')}
                                 >
-                                    <MessageSquare size={26} className="fill-current" />
+                                    <MessageSquare size={26} />
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('ask')}`}>Ask</span>
                                 <span className={`text-[9px] mt-0.5 leading-none ${getDescriptionColorClass()}`}>Ask for help</span>
@@ -1232,10 +1232,18 @@ export default function VisionAssistant() {
                                 >
                                     {contrastMode === 'standard' ? (
                                         <div className="w-[74px] h-[74px] rounded-full bg-[#8b5cf6] hover:bg-[#7c3aed] transition-colors flex items-center justify-center text-white shadow-md">
-                                            <Camera size={36} className="fill-current" />
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                                                <circle cx="12" cy="13" r="3"/>
+                                                <circle cx="12" cy="13" r="0.8" fill="currentColor"/>
+                                            </svg>
                                         </div>
                                     ) : (
-                                        <Camera size={38} className="fill-current" />
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                                            <circle cx="12" cy="13" r="3"/>
+                                            <circle cx="12" cy="13" r="0.8" fill="currentColor"/>
+                                        </svg>
                                     )}
                                 </button>
                                 <span className={`font-extrabold text-[12px] mt-1.5 leading-none ${getLabelColorClass('capture')}`}>Capture Image</span>
