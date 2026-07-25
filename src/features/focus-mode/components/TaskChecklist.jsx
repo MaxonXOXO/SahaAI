@@ -20,7 +20,8 @@ export default function TaskChecklist({ steps, completedStepIds, onToggleStep, t
 
     if (!steps || steps.length === 0) return null;
 
-    const completedCount = completedStepIds.length;
+    const completedIds = Array.isArray(completedStepIds) ? completedStepIds : [];
+    const completedCount = completedIds.length;
     const totalCount = steps.length;
     const progressPercent = Math.round((completedCount / totalCount) * 100);
     const prevCompletedCountRef = useRef(completedCount);
@@ -35,7 +36,7 @@ export default function TaskChecklist({ steps, completedStepIds, onToggleStep, t
     }, [completedCount, totalCount]);
 
     const handleStepClick = (step) => {
-        const isDone = completedStepIds.includes(step.id);
+        const isDone = completedIds.includes(step.id);
         if (!isDone) {
             // Rising two-note tone for step completion
             playSequence([
@@ -145,7 +146,7 @@ export default function TaskChecklist({ steps, completedStepIds, onToggleStep, t
             {/* Step Items */}
             <div className="flex flex-col gap-3">
                 {steps.map((step, index) => {
-                    const isDone = completedStepIds.includes(step.id);
+                    const isDone = completedIds.includes(step.id);
                     const isJustChecked = justCheckedId === step.id;
                     return (
                         <button

@@ -32,8 +32,8 @@ export default function FocusTimer({ onSessionComplete, onDistractionBlocked }) 
     const rawSessionsToday = useFocusStore((s) => s.sessionsToday);
 
     // Task breakdown steps and completion state
-    const steps = useFocusStore((s) => s.steps);
-    const completedStepIds = useFocusStore((s) => s.completedStepIds);
+    const steps = useFocusStore((s) => s.steps) || [];
+    const completedStepIds = useFocusStore((s) => s.completedStepIds) || [];
     const toggleStepCompleted = useFocusStore((s) => s.toggleStepCompleted);
 
     // Timer Style & Reveal selectors

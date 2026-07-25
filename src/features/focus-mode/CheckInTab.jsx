@@ -5,8 +5,8 @@ import useFocusStore from './useFocusStore';
 
 export default function CheckInTab() {
     const userId = useProfileStore((s) => s.id);
-    const steps = useFocusStore((s) => s.steps);
-    const completedStepIds = useFocusStore((s) => s.completedStepIds);
+    const steps = useFocusStore((s) => s.steps) || [];
+    const completedStepIds = useFocusStore((s) => s.completedStepIds) || [];
 
     // Derive initial reflection outcome from real task breakdown progress
     let initialStatus = 'not_completed';

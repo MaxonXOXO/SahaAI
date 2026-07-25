@@ -24,8 +24,8 @@ export default function TaskBreakdownTab({ onNavigateToFocus }) {
 
     // Persisted task breakdown state from store (individual primitive selectors)
     const taskTitle = useFocusStore((s) => s.taskTitle);
-    const steps = useFocusStore((s) => s.steps);
-    const completedStepIds = useFocusStore((s) => s.completedStepIds);
+    const steps = useFocusStore((s) => s.steps) || [];
+    const completedStepIds = useFocusStore((s) => s.completedStepIds) || [];
 
     const setBreakdown = useFocusStore((s) => s.setBreakdown);
     const toggleStepCompleted = useFocusStore((s) => s.toggleStepCompleted);
