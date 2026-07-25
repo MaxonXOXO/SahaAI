@@ -1,4 +1,4 @@
-import { FileText, Calculator, MessageSquare, Sparkles, Eye, ListChecks, Type, Volume2, Gamepad2, Settings2, Moon, Search, Camera, ScanText } from 'lucide-react';
+import { FileText, Calculator, MessageSquare, Sparkles, Eye, ListChecks, Type, Volume2, Gamepad2, Settings2, Moon, Search, Camera, ScanText, Navigation } from 'lucide-react';
 
 // Central registry of all possible quick access tiles
 export const TILE_REGISTRY = {
@@ -28,6 +28,7 @@ export const TILE_REGISTRY = {
     colorInverter: { label: 'Color Inverter', icon: Settings2, path: '/settings', color: 'bg-primary' },
     aacBoard: { label: 'AAC Board', icon: MessageSquare, path: '/aac-board', color: 'bg-primary' },
     speechTherapy: { label: 'Speech Therapy', icon: Volume2, path: '/speech-therapy', color: 'bg-primary' },
+    visualNavigator: { label: 'Visual Navigator', icon: Navigation, path: '/visual-navigator', color: 'bg-primary' },
 };
 
 // Configuration for each primary mode

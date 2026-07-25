@@ -26,7 +26,7 @@ const PROFILE_TILES = {
     adhd:         ['focus', 'routine', 'math', 'read', 'social', 'speechTherapy'],
     dyslexia:     ['read', 'vision', 'math', 'focus', 'speechTherapy', 'social'],
     dyscalculia:  ['math', 'focus', 'read', 'routine', 'vision', 'social'],
-    lowVision:    ['vision', 'read', 'aacBoard', 'math'],
+    lowVision:    ['vision', 'read', 'aacBoard', 'visualNavigator'],
     default:      ['read', 'math', 'focus', 'routine', 'aacBoard', 'speechTherapy'],
 };
 
