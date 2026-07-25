@@ -15,9 +15,6 @@ export default function SplashScreen() {
                 backgroundRepeat: 'no-repeat'
             }}
         >
-            {/* Soft dark overlay to ensure readability and clear button contrast */}
-            <div className="absolute inset-0 bg-black/10 dark:bg-black/25 pointer-events-none" />
-
             {/* Bottom Button Area - floating cleanly above the full-screen background */}
             <div className="w-full max-w-[360px] mx-auto z-10 shrink-0">
                 <Button onClick={() => navigate('/signup')} className="w-full py-4 text-base-lg font-bold shadow-2xl">
