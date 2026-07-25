@@ -3,13 +3,15 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
 export default function MathRenderer({ text = '', className = '' }) {
-    if (!text) return null;
+    if (text === null || text === undefined) return null;
+    const textStr = String(text);
+    if (!textStr.trim()) return null;
 
     // Detect if the text contains LaTeX characters but no delimiters, and wrap it
-    let processedText = text;
-    const hasDelimiters = /(\$\$|\\\[|\$|\\\()/.test(text);
-    if (!hasDelimiters && /\\|[\^_{}]/.test(text)) {
-        processedText = `$$${text}$$`;
+    let processedText = textStr;
+    const hasDelimiters = /(\$\$|\\\[|\$|\\\()/.test(textStr);
+    if (!hasDelimiters && /\\|[\^_{}]/.test(textStr)) {
+        processedText = `$$${textStr}$$`;
     }
 
     // Split text into segments of math and non-math
