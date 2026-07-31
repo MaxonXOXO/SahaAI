@@ -6,6 +6,16 @@ import useProfileStore from '../../store/useProfileStore';
 
 const InlineDyslexiaReader = lazy(() => import('./InlineDyslexiaReader'));
 
+// Workers AI image generation is the slowest part of a learning card. Keep a
+// single lightweight queue so opening Steps never floods the gateway with all
+// illustrations at once and delays the content the user is trying to read.
+let stepVisualQueue = Promise.resolve();
+const enqueueStepVisual = (work) => {
+    const queuedWork = stepVisualQueue.then(work, work);
+    stepVisualQueue = queuedWork.catch(() => undefined);
+    return queuedWork;
+};
+
 function StepItem({ step, index, topic }) {
     const [image, setImage] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -17,7 +27,7 @@ function StepItem({ step, index, topic }) {
         setError(false);
         try {
             // Include the overarching topic so the AI has context (e.g. doesn't generate junk food for a healthy snack step)
-            const url = await generateLearnImage(`${topic} - Step: ${step}`);
+            const url = await enqueueStepVisual(() => generateLearnImage(`${topic} - Step: ${step}`));
             if (!url) throw new Error('No image returned');
             setImage(url);
         } catch (err) {
@@ -31,7 +41,10 @@ function StepItem({ step, index, topic }) {
     // Step cards only mount when the user opens “Steps”, so this requests the
     // visual automatically at that point without spending image credits early.
     useEffect(() => {
-        generateImage();
+        // Render the steps immediately, then stagger expensive image requests
+        // rather than starting every Cloudflare call at once.
+        const timer = window.setTimeout(generateImage, 250 + index * 350);
+        return () => window.clearTimeout(timer);
     }, []);
 
     return (

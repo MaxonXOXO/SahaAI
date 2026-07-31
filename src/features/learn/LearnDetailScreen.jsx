@@ -4,7 +4,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import ScreenHeader from '../../shared/components/ScreenHeader';
 import useProfileStore from '../../store/useProfileStore';
 import { supabase } from '../../shared/lib/supabaseClient';
-import { buildSystemPrompt, generateLearnExplainer, generateLearnImage, findLearnVideo, sendMessage } from '../../shared/lib/aiClient';
+import { buildSystemPrompt, generateLearnExplainer, findLearnVideo, sendMessage } from '../../shared/lib/aiClient';
 import FeedCard from './FeedCard';
 import ChatBubble from './ChatBubble';
 import InputBar from './InputBar';
@@ -50,10 +50,6 @@ export default function LearnDetailScreen() {
                 hasExpanded.current = true; // Prevent double trigger
                 try {
                     const explainer = await generateLearnExplainer(profile, data.topic);
-                    const [imageResult, videoResult] = await Promise.allSettled([
-                        generateLearnImage(explainer.topic),
-                        findLearnVideo(explainer.videoQuery, profile.language || 'en'),
-                    ]);
                     const updates = {
                         explanation: JSON.stringify({
                             stub: false,
@@ -61,11 +57,31 @@ export default function LearnDetailScreen() {
                             full: explainer.explanation
                         }),
                         diagram_steps: explainer.diagramSteps.length ? explainer.diagramSteps : null,
-                        image_url: imageResult.status === 'fulfilled' ? imageResult.value : null,
-                        video_id: videoResult.status === 'fulfilled' ? videoResult.value : null,
                     };
-                    const { data: updatedCard } = await supabase.from('learn_cards').update(updates).eq('id', cardId).select().single();
-                    if (!cancelled) setCard(updatedCard || { ...data, ...updates });
+                    const expandedCard = { ...data, ...updates, image_url: null, video_id: null };
+
+                    // Render the explainer as soon as it is ready. Step visuals are
+                    // generated lazily in FeedCard, and video lookup is non-blocking.
+                    if (!cancelled) {
+                        setCard(expandedCard);
+                        setLoading(false);
+                    }
+
+                    const { data: updatedCard } = await supabase
+                        .from('learn_cards')
+                        .update(updates)
+                        .eq('id', cardId)
+                        .select()
+                        .single();
+                    if (!cancelled && updatedCard) setCard(updatedCard);
+
+                    findLearnVideo(explainer.videoQuery, profile.language || 'en')
+                        .then(async (videoId) => {
+                            if (!videoId) return;
+                            await supabase.from('learn_cards').update({ video_id: videoId }).eq('id', cardId);
+                            if (!cancelled) setCard((current) => current ? { ...current, video_id: videoId } : current);
+                        })
+                        .catch((videoError) => console.warn('Learn video lookup failed:', videoError));
                 } catch(expErr) {
                     console.error('Failed to expand topic:', expErr);
                     if (!cancelled) setError('Failed to generate the full explainer. Please try again.');
