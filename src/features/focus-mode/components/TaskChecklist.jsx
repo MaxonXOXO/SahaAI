@@ -18,12 +18,14 @@ export default function TaskChecklist({ steps, completedStepIds, onToggleStep, t
     const [justCheckedId, setJustCheckedId] = useState(null);
     const [showConfetti, setShowConfetti] = useState(false);
 
-    if (!steps || steps.length === 0) return null;
-
+    // A persisted store from an older app version can contain an invalid value.
+    // Normalize before using hooks so adding the first custom task never changes
+    // this component's hook order (which would otherwise crash the whole screen).
+    const safeSteps = Array.isArray(steps) ? steps.filter((step) => step && typeof step === 'object') : [];
     const completedIds = Array.isArray(completedStepIds) ? completedStepIds : [];
     const completedCount = completedIds.length;
-    const totalCount = steps.length;
-    const progressPercent = Math.round((completedCount / totalCount) * 100);
+    const totalCount = safeSteps.length;
+    const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
     const prevCompletedCountRef = useRef(completedCount);
 
     useEffect(() => {
@@ -34,6 +36,8 @@ export default function TaskChecklist({ steps, completedStepIds, onToggleStep, t
         }
         prevCompletedCountRef.current = completedCount;
     }, [completedCount, totalCount]);
+
+    if (totalCount === 0) return null;
 
     const handleStepClick = (step) => {
         const isDone = completedIds.includes(step.id);
@@ -145,7 +149,7 @@ export default function TaskChecklist({ steps, completedStepIds, onToggleStep, t
 
             {/* Step Items */}
             <div className="flex flex-col gap-3">
-                {steps.map((step, index) => {
+                {safeSteps.map((step, index) => {
                     const isDone = completedIds.includes(step.id);
                     const isJustChecked = justCheckedId === step.id;
                     return (
