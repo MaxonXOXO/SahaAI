@@ -17,14 +17,14 @@ export const EVENT_REGISTRY = {
   routine_followed: { path: '/routine-builder', tab: null, label: 'Routine Followed' },
 
   // Text Simplifier / Dyslexia Reader
-  text_simplified: { path: '/text-simplifier', tab: null, label: 'Text Simplifier' },
-  read_aloud_used: { path: '/dyslexia-reader', tab: null, label: 'Read Aloud' },
-  spell_check_used: { path: '/text-simplifier', tab: null, label: 'Spell Check' },
-  reading_minutes_logged: { path: '/dyslexia-reader', tab: null, label: 'Reading Session' },
+  text_simplified: { path: '/reading-mode', tab: null, label: 'Text Simplifier' },
+  read_aloud_used: { path: '/reading-mode', tab: null, label: 'Read Aloud' },
+  spell_check_used: { path: '/reading-mode', tab: null, label: 'Spell Check' },
+  reading_minutes_logged: { path: '/reading-mode', tab: null, label: 'Reading Session' },
 
   // Autism
   social_story_completed: { path: '/social-story', tab: null, label: 'Social Story' },
-  conversation_practice_session: { path: '/conversation-practice', tab: null, label: 'Conversation Practice' },
+  conversation_practice_session: { path: '/social-story', tab: null, label: 'Conversation Practice' },
   emotion_checkin_logged: { path: '/home', tab: null, label: 'Emotion Check-in' },
 
   // Dyscalculia
@@ -33,10 +33,10 @@ export const EVENT_REGISTRY = {
   time_practiced_logged: { path: '/math-helper', tab: 'games', label: 'Math Practice' },
 
   // Low Vision
-  document_read: { path: '/document-reader', tab: null, label: 'Document Read' },
+  document_read: { path: '/reading-mode', tab: null, label: 'Document Read' },
   ocr_scan_used: { path: '/vision-assistant', tab: 'read', label: 'Text Scan' },
   signs_scan_used: { path: '/vision-assistant', tab: 'signs', label: 'Sign Scan' },
-  high_contrast_toggled: { path: '/settings', tab: null, label: 'High Contrast' },
+  high_contrast_toggled: { path: '/profile', tab: null, label: 'High Contrast' },
   magnifier_used: { path: '/vision-assistant', tab: null, label: 'Magnifier' },
 
   // AAC Board

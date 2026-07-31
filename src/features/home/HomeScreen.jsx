@@ -71,7 +71,8 @@ export default function HomeScreen() {
     // Resolve the most recent activity for the Continue Card
     const continueItem = useMemo(() => {
         if (recentLoading || recentItems.length === 0) return null;
-        const item = recentItems[0];
+        const item = recentItems.find((candidate) => getEventLink(candidate.event_type));
+        if (!item) return null;
         const entry = EVENT_REGISTRY[item.event_type];
         if (!entry) return null;
 

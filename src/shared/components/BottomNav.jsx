@@ -27,7 +27,7 @@ export default function BottomNav() {
 
     return (
         <nav
-            className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-around"
+            className="relative z-20 shrink-0 flex items-center justify-around"
             style={{
                 background: 'var(--a11y-surface)',
                 borderColor: isLowVision ? '#FACC15' : 'rgba(0,0,0,0.08)',

@@ -126,7 +126,7 @@ export default function ProgressScreen() {
 
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 pb-24">
+            <div className="flex-1 min-h-0 flex flex-col bg-gray-50 dark:bg-gray-900">
                 <ScreenHeader title={translate('progressTitle', displayLanguage)} showBack={false} />
                 <div className="flex-1 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
@@ -143,7 +143,7 @@ export default function ProgressScreen() {
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto pb-24">
+        <div className="flex-1 min-h-0 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto overscroll-contain">
             <ScreenHeader title={translate('progressTitle', displayLanguage)} showBack={false} />
 
             <div className="px-4 py-4 flex flex-col gap-6">
@@ -191,7 +191,7 @@ export default function ProgressScreen() {
                 </div>
 
                 {/* Circular Stats Rings */}
-                <div className="flex gap-4">
+                <div className="grid grid-cols-2 gap-3">
                     <ProgressCircle
                         percentage={(focusSessionsWeek / 5) * 100}
                         strokeClass={getPrimaryModeStrokeClass(primaryMode)}

@@ -27,7 +27,7 @@ export default function DashboardScreen() {
     // For Low Vision, we might want a darker background. 
     // Just a quick check to apply a specific wrapper style if needed based on the config.
     const isLowVision = modeKey === 'lowVision';
-    const containerClasses = `flex-1 flex flex-col px-4 py-4 overflow-y-auto pb-24 transition-colors duration-300 ${isLowVision ? 'bg-gray-950 text-white' : 'bg-white dark:bg-gray-900'}`;
+    const containerClasses = `flex-1 min-h-0 flex flex-col px-4 py-4 overflow-y-auto overscroll-contain transition-colors duration-300 ${isLowVision ? 'bg-gray-950 text-white' : 'bg-white dark:bg-gray-900'}`;
     const textClasses = isLowVision ? 'text-gray-100' : 'text-gray-800 dark:text-gray-100';
     const subTextClasses = isLowVision ? 'text-gray-300' : 'text-gray-400';
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import Button from '../../shared/components/Button';
 import IconButton from '../../shared/components/IconButton';
-import { generateSpeech } from '../../shared/lib/aiClient';
 import { logActivity } from '../../shared/lib/logActivity';
 import useProfileStore from '../../store/useProfileStore';
+import useSpeak from '../vision-assistant/useSpeak';
 import StoryIllustration from './lib/storyIllustrations';
 import { generateStoryImage } from './lib/storyPrompts';
 
@@ -32,11 +32,10 @@ import { generateStoryImage } from './lib/storyPrompts';
 export default function ReadStoryView({ story, onBack }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [showTip, setShowTip] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
-  const audioRef = useRef(null);
   const userId = useProfileStore((s) => s.id);
+  const { speak, stop, speaking } = useSpeak();
 
   const page = story.pages[currentPage];
   const totalPages = story.pages.length;
@@ -100,16 +99,6 @@ export default function ReadStoryView({ story, onBack }) {
 
   const currentImage = pageImages[currentPage];
 
-  // Clean up audio on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
   const handleNext = useCallback(() => {
     if (isLastPage) {
       setCompleted(true);
@@ -122,7 +111,7 @@ export default function ReadStoryView({ story, onBack }) {
     }
     setDirection(1);
     setShowTip(false);
-    stopAudio();
+    stop();
     setCurrentPage((p) => p + 1);
   }, [isLastPage, userId, story.title, totalPages]);
 
@@ -130,49 +119,18 @@ export default function ReadStoryView({ story, onBack }) {
     if (isFirstPage) return;
     setDirection(-1);
     setShowTip(false);
-    stopAudio();
+    stop();
     setCurrentPage((p) => p - 1);
   }, [isFirstPage]);
 
-  const stopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsPlaying(false);
-  };
-
-  const handleReadAloud = async () => {
-    if (isPlaying) {
-      stopAudio();
+  const handleReadAloud = () => {
+    if (speaking) {
+      stop();
       return;
     }
 
-    try {
-      setIsPlaying(true);
-      const textToRead = page.text + (showTip && page.tip ? '. Tip: ' + page.tip : '');
-      const audioBlob = await generateSpeech(textToRead);
-      const url = URL.createObjectURL(audioBlob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-      };
-
-      audio.onerror = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-      };
-
-      await audio.play();
-    } catch (err) {
-      console.error('TTS failed:', err);
-      setIsPlaying(false);
-    }
+    const textToRead = page.text + (showTip && page.tip ? '. Tip: ' + page.tip : '');
+    speak(textToRead);
   };
 
   const handleRestart = () => {
@@ -180,7 +138,7 @@ export default function ReadStoryView({ story, onBack }) {
     setCurrentPage(0);
     setShowTip(false);
     setDirection(1);
-    stopAudio();
+    stop();
   };
 
   // Slide animation variants
@@ -290,7 +248,7 @@ export default function ReadStoryView({ story, onBack }) {
             className="flex flex-col gap-4"
           >
             {/* Page illustration — real AI image once generated, icon while loading/on error */}
-            <div className="relative w-full h-40 rounded-card overflow-hidden">
+            <div className="relative w-full aspect-[4/3] min-h-52 rounded-card overflow-hidden bg-slate-100 dark:bg-slate-800">
               {currentImage?.status === 'ready' ? (
                 <motion.img
                   key={currentImage.url}
@@ -299,7 +257,7 @@ export default function ReadStoryView({ story, onBack }) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <>
@@ -370,8 +328,8 @@ export default function ReadStoryView({ story, onBack }) {
       {/* Action buttons row */}
       <div className="flex items-center justify-center gap-3 mb-2">
         <IconButton
-          icon={isPlaying ? VolumeX : Volume2}
-          label={isPlaying ? 'Stop reading' : 'Read aloud'}
+          icon={speaking ? VolumeX : Volume2}
+          label={speaking ? 'Stop reading' : 'Read aloud'}
           variant="default"
           onClick={handleReadAloud}
         />

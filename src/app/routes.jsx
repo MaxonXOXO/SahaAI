@@ -53,7 +53,7 @@ export default function AppRoutes() {
 
     return (
         <>
-            <div className={`flex-1 flex flex-col min-h-0 ${hideNav ? '' : 'pb-16'}`}>
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <Routes>
                     {/* Onboarding */}
                     <Route path="/" element={<SplashScreen />} />
@@ -66,7 +66,7 @@ export default function AppRoutes() {
 
                     {/* Main tabs */}
                     <Route path="/home" element={<HomeScreen />} />
-                    <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+                    <Route path="/dashboard" element={<DashboardScreen />} />
                     <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
                     <Route path="/learn" element={<LearnScreen />} />
@@ -86,7 +86,7 @@ export default function AppRoutes() {
                     <Route path="/conversation-practice" element={<Placeholder name="Conversation Practice" />} />
                     <Route path="/vision-assistant" element={<VisionAssistant />} />
                     <Route path="/document-reader" element={<Placeholder name="Document Reader" />} />
-                    <Route path="/settings" element={<Placeholder name="Settings" />} />
+                    <Route path="/settings" element={<Navigate to="/profile" replace />} />
                     <Route path="/aac-board" element={<AACBoardScreen />} />
                     <Route path="/speech-therapy" element={<SpeechTherapyScreen />} />
                     <Route path="/dear-diary" element={<DiaryMemoryScreen />} />
