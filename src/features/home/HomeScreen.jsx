@@ -290,9 +290,12 @@ export default function HomeScreen() {
                             <button
                                 key={tileKey}
                                 onClick={() => navigate(tile.path)}
-                                className="flex flex-row items-center gap-4 bg-white/80 backdrop-blur-md rounded-[1.75rem] p-5 shadow-sm hover:shadow-md transition-all text-left"
+                                className="flex flex-row items-center gap-4 rounded-[1.75rem] p-5 border-2 shadow-md hover:shadow-lg transition-all text-left"
                                 style={{
                                     minHeight: isLowVision ? '110px' : '100px',
+                                    background: 'var(--a11y-surface)',
+                                    borderColor: 'var(--a11y-primary)',
+                                    boxShadow: '0 3px 12px color-mix(in srgb, var(--a11y-primary) 18%, transparent)',
                                 }}
                             >
                                 <div

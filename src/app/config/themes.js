@@ -125,18 +125,16 @@ export const DEFAULT_STRUCTURE = {
  *
  * Pure function — no side effects, fully testable.
  */
-export function buildTheme({ needs = {}, primaryMode = null, contrastMode = 'default' }) {
-    // Keep the raw setting long enough to distinguish the low-vision default
-    // from an explicit Light selection.
-    let activeContrast = contrastMode;
+export function buildTheme({ needs = {}, primaryMode = null, contrastMode = 'light' }) {
+    // "default" is a legacy alias for Light. Normalize it before disability
+    // patches so a new or migrated user always has an explicit Light choice.
+    let activeContrast = contrastMode === 'default' ? 'light' : contrastMode;
 
     // lowVision auto-upgrade before anything else
     const lowVisionPatch = DISABILITY_PATCHES.find((p) => p.key === 'lowVision');
     if (needs.lowVision && lowVisionPatch?.resolveContrast) {
         activeContrast = lowVisionPatch.resolveContrast(activeContrast);
     }
-
-    activeContrast = activeContrast === 'default' ? 'light' : activeContrast;
 
     // 2. Start from base color preset
     const basePreset = CONTRAST_PRESETS[activeContrast] ?? CONTRAST_PRESETS.light;

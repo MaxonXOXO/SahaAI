@@ -7,7 +7,7 @@ const DEFAULT_SETTINGS = {
     fontSize: 'medium', // small, medium, large
 
     // Display settings
-    contrastMode: 'default', // default, soft, high
+    contrastMode: 'light', // light, dark, soft, high
 
     // Language settings
     displayLanguage: 'en', // en, ml
@@ -18,12 +18,20 @@ const DEFAULT_SETTINGS = {
 
 let currentUserId = null;
 
+// Older installs stored "default" for the light palette. Normalize it once
+// during hydration so the visible Light Theme option is correctly selected.
+const normalizeSettings = (settings = {}) => ({
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    contrastMode: settings.contrastMode === 'default' ? 'light' : (settings.contrastMode || 'light'),
+});
+
 const useSettingsStore = create((set, get) => ({
     ...DEFAULT_SETTINGS,
 
     updateSettings: (newSettings) => {
         set((state) => {
-            const nextState = { ...state, ...newSettings };
+            const nextState = normalizeSettings({ ...state, ...newSettings });
             
             // Persist settings
             const storageKey = currentUserId 
@@ -54,7 +62,7 @@ const useSettingsStore = create((set, get) => ({
             if (cachedAnon) {
                 try {
                     const parsed = JSON.parse(cachedAnon);
-                    set({ ...DEFAULT_SETTINGS, ...parsed });
+                    set(normalizeSettings(parsed));
                 } catch (e) {
                     set(DEFAULT_SETTINGS);
                 }
@@ -68,7 +76,7 @@ const useSettingsStore = create((set, get) => ({
         if (cachedUser) {
             try {
                 const parsed = JSON.parse(cachedUser);
-                set({ ...DEFAULT_SETTINGS, ...parsed });
+                set(normalizeSettings(parsed));
             } catch (e) {
                 console.error('Failed to parse user settings:', e);
                 set(DEFAULT_SETTINGS);
@@ -79,7 +87,7 @@ const useSettingsStore = create((set, get) => ({
             if (cachedAnon) {
                 try {
                     const parsed = JSON.parse(cachedAnon);
-                    set({ ...DEFAULT_SETTINGS, ...parsed });
+                    set(normalizeSettings(parsed));
                     // Save it for this user
                     localStorage.setItem(`saha-settings-storage-${userId}`, cachedAnon);
                 } catch (e) {

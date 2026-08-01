@@ -155,7 +155,7 @@ export default function ToolsScreen() {
 
     return (
         <div
-            className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-28"
+            className="flex-1 flex flex-col min-h-0 overflow-y-auto overscroll-contain"
             style={{
                 background: 'var(--a11y-bg)',
                 color: 'var(--a11y-text)',
@@ -169,7 +169,7 @@ export default function ToolsScreen() {
 
             {/* Grid Container */}
             <div className="px-4 sm:px-6 pt-2 pb-6 max-w-6xl mx-auto w-full">
-                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3.5 sm:gap-4">
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
                     {TOOLS_LIST.map((tool) => {
                         const Icon = tool.icon;
 
@@ -177,10 +177,10 @@ export default function ToolsScreen() {
                             <button
                                 key={tool.key}
                                 onClick={() => navigate(tool.path, { state: { from: '/tools' } })}
-                                className="group relative flex flex-row items-stretch rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-2 sm:p-2.5 active:scale-[0.99] h-36 sm:h-40"
+                                className="group relative flex flex-row items-stretch rounded-2xl sm:rounded-3xl bg-white dark:bg-gray-900 border-2 border-primary/25 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-1.5 sm:p-2.5 active:scale-[0.99] min-h-32 sm:min-h-40"
                             >
                                 {/* Left Section: Image with Soft Tinted Background */}
-                                <div className={`w-[44%] sm:w-[46%] shrink-0 rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
+                                <div className={`w-[42%] sm:w-[46%] shrink-0 rounded-xl sm:rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
                                     <img
                                         src={tool.image}
                                         alt={displayLanguage === 'ml' ? tool.titleMl : tool.title}
@@ -189,14 +189,14 @@ export default function ToolsScreen() {
                                 </div>
 
                                 {/* Right Section: Badge Icon & Larger Text Title */}
-                                <div className="flex-1 flex flex-col justify-center gap-2 pl-3 pr-2 py-2 min-w-0">
+                                <div className="flex-1 flex flex-col justify-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 pr-1.5 sm:pr-2 py-1.5 sm:py-2 min-w-0">
                                     {/* Icon Badge */}
-                                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0" style={{ backgroundColor: 'var(--a11y-primary)', color: 'var(--a11y-bg)' }}>
+                                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center shadow-xs shrink-0" style={{ backgroundColor: 'var(--a11y-primary)', color: 'var(--a11y-bg)' }}>
                                         <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                                     </div>
 
                                     {/* Title */}
-                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors">
+                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-xs sm:text-base md:text-lg leading-tight tracking-tight break-words group-hover:text-primary transition-colors">
                                         {displayLanguage === 'ml' ? tool.titleMl : tool.title}
                                     </h3>
                                 </div>
