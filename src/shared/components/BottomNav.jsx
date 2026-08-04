@@ -1,4 +1,4 @@
-import { Home, Sparkles, LayoutGrid, TrendingUp, User } from 'lucide-react';
+import { Home, Sparkles, LayoutGrid, TrendingUp } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
@@ -27,7 +27,7 @@ export default function BottomNav() {
 
     return (
         <nav
-            className="relative z-20 shrink-0 flex items-center justify-around"
+            className="relative z-20 shrink-0 min-w-0 flex items-center justify-around"
             style={{
                 background: 'var(--a11y-surface)',
                 borderColor: isLowVision ? '#FACC15' : 'rgba(0,0,0,0.08)',
@@ -49,7 +49,7 @@ export default function BottomNav() {
                         onClick={() => navigate(path)}
                         aria-label={label}
                         aria-current={isActive ? 'page' : undefined}
-                        className="flex flex-col items-center justify-center flex-1"
+                        className="flex min-w-0 flex-col items-center justify-center flex-1"
                         style={{
                             minHeight: 'var(--a11y-min-touch)',
                             transition: 'var(--a11y-transition)',
@@ -58,8 +58,10 @@ export default function BottomNav() {
                         <div 
                             className={`flex flex-col items-center justify-center gap-1 rounded-2xl transition-colors ${isActive ? 'bg-primary/10 dark:bg-primary/20' : ''}`}
                             style={{
-                                width: isLowVision ? '5rem' : '4rem',
-                                height: isLowVision ? '4.5rem' : '3.5rem'
+                                // Pixel dimensions do not scale with the root font size.
+                                // This keeps all four navigation tabs inside a narrow phone.
+                                width: isLowVision ? 'min(80px, 100%)' : 'min(64px, 100%)',
+                                height: isLowVision ? '72px' : '56px'
                             }}
                         >
                             <Icon
@@ -73,7 +75,7 @@ export default function BottomNav() {
                             <span
                                 style={{
                                     fontFamily: 'var(--a11y-font-body)',
-                                    fontSize: isLowVision ? '0.8125rem' : '0.6875rem',
+                                    fontSize: isLowVision ? 'clamp(11px, 3vw, 13px)' : '11px',
                                     fontWeight: isActive ? 700 : 400,
                                     color: isActive ? 'var(--a11y-primary)' : 'var(--a11y-text-muted)',
                                     letterSpacing: 'var(--a11y-letter-spacing)',

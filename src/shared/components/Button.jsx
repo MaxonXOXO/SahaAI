@@ -34,7 +34,9 @@ export default function Button({
 }) {
     const baseStyle = {
         fontFamily:    'var(--a11y-font-body)',
-        fontSize:      size === 'lg' ? 'var(--a11y-font-size-md)' : 'var(--a11y-font-size-base)',
+        // Let copy remain readable, but cap controls so an accessibility
+        // font-size change cannot push the phone layout sideways.
+        fontSize:      size === 'lg' ? 'var(--a11y-control-font-size-lg)' : 'var(--a11y-control-font-size)',
         borderRadius:  'var(--a11y-border-radius)',
         minHeight:     'var(--a11y-min-touch)',
         minWidth:      iconOnly ? 'var(--a11y-min-touch)' : undefined,
@@ -63,7 +65,7 @@ export default function Button({
             aria-label={iconOnly ? (label || children) : label}
             style={baseStyle}
             className={`
-                saha-btn inline-flex items-center justify-center gap-2 cursor-pointer
+                saha-btn inline-flex max-w-full min-w-0 items-center justify-center gap-2 cursor-pointer
                 disabled:opacity-50 disabled:cursor-not-allowed
                 ${variantClasses[variant]}
                 ${sizeClasses[size]}

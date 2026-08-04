@@ -13,7 +13,7 @@ export default function ThemeProvider({ children }) {
 
     return (
         <div 
-            className={`w-full flex-1 flex flex-col min-h-0 transition-all duration-200 ${containerClass}`}
+            className={`w-full flex-1 flex flex-col min-h-0 min-w-0 overflow-x-hidden transition-all duration-200 ${containerClass}`}
             style={styles}
         >
             {children}
