@@ -15,6 +15,24 @@ export default function SplashScreen() {
         }
     }, [isAuthenticated, navigate, sessionReady]);
 
+    // Do not expose the signed-out action while Supabase is still restoring a
+    // persisted session. This removes the brief, misleading "Get Started"
+    // flash during an authenticated PWA launch.
+    if (!sessionReady) {
+        return (
+            <div
+                className="flex-1 min-h-screen select-none"
+                aria-busy="true"
+                style={{
+                    backgroundImage: `url(${splashImg})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                }}
+            />
+        );
+    }
+
     return (
         <div 
             className="flex-1 flex flex-col items-center justify-end px-6 pb-32 min-h-screen relative select-none"

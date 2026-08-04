@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from '../shared/components/BottomNav';
 import { getRouteMeta } from './config/routeMeta';
@@ -33,6 +33,12 @@ const SpeechTherapyScreen = lazy(() => import('../features/speech-therapy/Speech
 const DiaryMemoryScreen = lazy(() => import('../features/dear-diary/DiaryMemoryScreen'));
 const VisualNavigatorScreen = lazy(() => import('../features/visual-navigator/VisualNavigatorScreen'));
 
+const MAIN_TABS = [
+    { path: '/home', Component: HomeScreen },
+    { path: '/learn', Component: LearnScreen },
+    { path: '/tools', Component: ToolsScreen },
+    { path: '/progress', Component: ProgressScreen },
+];
 
 /**
  * Temporary placeholder — swap for real feature screen as each
@@ -54,12 +60,35 @@ function Placeholder({ name }) {
 export default function AppRoutes() {
     const location = useLocation();
     const { hideNav } = getRouteMeta(location.pathname);
+    const activeTabPath = MAIN_TABS.find(({ path }) => location.pathname === path)?.path;
+    const [visitedTabs, setVisitedTabs] = useState(() => new Set(activeTabPath ? [activeTabPath] : []));
+
+    // Tab screens are kept mounted after their first visit. This prevents the
+    // Learn feed, images, and in-progress UI from resetting every time a user
+    // switches to another bottom-navigation tab.
+    useEffect(() => {
+        if (!activeTabPath) return;
+        setVisitedTabs((current) => {
+            if (current.has(activeTabPath)) return current;
+            const next = new Set(current);
+            next.add(activeTabPath);
+            return next;
+        });
+    }, [activeTabPath]);
 
     return (
         <>
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <Suspense fallback={<div className="flex-1" aria-busy="true" />}>
-                <Routes>
+                    <div className={activeTabPath ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
+                        {MAIN_TABS.map(({ path, Component }) => visitedTabs.has(path) && (
+                            <div key={path} className={activeTabPath === path ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
+                                <Component />
+                            </div>
+                        ))}
+                    </div>
+
+                    {!activeTabPath && <Routes>
                     {/* Onboarding */}
                     <Route path="/" element={<SplashScreen />} />
                     <Route path="/signup" element={<SignupScreen />} />
@@ -69,15 +98,10 @@ export default function AppRoutes() {
                     <Route path="/region" element={<RegionScreen />} />
                     <Route path="/profile-setup" element={<ProfileSetupScreen />} />
 
-                    {/* Main tabs */}
-                    <Route path="/home" element={<HomeScreen />} />
                     <Route path="/dashboard" element={<DashboardScreen />} />
                     <Route path="/ai-chat" element={<ChatListScreen />} />
                     <Route path="/ai-chat/:chatId" element={<ChatScreen />} />
-                    <Route path="/learn" element={<LearnScreen />} />
                     <Route path="/learn/:cardId" element={<LearnDetailScreen />} />
-                    <Route path="/tools" element={<ToolsScreen />} />
-                    <Route path="/progress" element={<ProgressScreen />} />
                     <Route path="/profile" element={<ProfileScreen />} />
                     <Route path="/edit-profile" element={<EditProfileScreen />} />
 
@@ -99,7 +123,7 @@ export default function AppRoutes() {
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                    </Routes>}
                 </Suspense>
             </div>
             {!hideNav && <BottomNav />}
