@@ -1,4 +1,4 @@
-import { Play, Pause, Square, Volume2 } from 'lucide-react';
+import { Play, Pause, Square } from 'lucide-react';
 
 /**
  * PlaybackBar Component
@@ -32,14 +32,14 @@ export default function PlaybackBar({
             </div>
 
             {/* Controls Row */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 {/* Speed Controls Toggle button */}
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-full">
+                <div className="flex flex-1 items-center justify-between gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-full min-w-[220px]">
                     {speeds.map((s) => (
                         <button
                             key={s}
                             onClick={() => onChangeSpeed && onChangeSpeed(s)}
-                            className={`px-2.5 py-1 text-xs font-extrabold rounded-full transition-all ${
+                            className={`min-w-touch min-h-touch px-2 py-1 text-xs font-extrabold rounded-full transition-all ${
                                 speed === s
                                     ? 'bg-primary text-white shadow-sm'
                                     : 'text-gray-500 hover:text-primary dark:text-gray-400'
@@ -51,7 +51,7 @@ export default function PlaybackBar({
                 </div>
 
                 {/* Primary play action */}
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                     {onStop && (
                         <button
                             onClick={onStop}
@@ -76,11 +76,6 @@ export default function PlaybackBar({
                     </button>
                 </div>
 
-                {/* Simulated voice status */}
-                <div className="flex items-center gap-1.5 text-gray-500 text-xs font-semibold">
-                    <Volume2 size={16} className="text-primary" />
-                    <span>English Voice</span>
-                </div>
             </div>
         </div>
     );

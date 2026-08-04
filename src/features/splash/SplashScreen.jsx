@@ -1,9 +1,19 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../shared/components/Button';
+import useProfileStore from '../../store/useProfileStore';
 import splashImg from '../../assets/splash-screen.png';
 
 export default function SplashScreen() {
     const navigate = useNavigate();
+    const isAuthenticated = useProfileStore((s) => s.isAuthenticated);
+    const sessionReady = useProfileStore((s) => s.sessionReady);
+
+    useEffect(() => {
+        if (sessionReady && isAuthenticated) {
+            navigate('/home', { replace: true });
+        }
+    }, [isAuthenticated, navigate, sessionReady]);
 
     return (
         <div 

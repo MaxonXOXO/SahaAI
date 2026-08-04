@@ -1,33 +1,37 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from '../shared/components/BottomNav';
-import SignupScreen from '../features/auth/SignupScreen';
-import LoginScreen from '../features/auth/LoginScreen';
-import LanguageSelectionScreen from '../features/language-selection/LanguageSelectionScreen';
-import AgeRangeScreen from '../features/onboarding/AgeRangeScreen';
-import RegionScreen from '../features/onboarding/RegionScreen';
-import SplashScreen from '../features/splash/SplashScreen';
-import ProfileSetupScreen from '../features/profile-setup/Profilesetupscreen';
-import DashboardScreen from '../features/dashboard/DashboardScreen';
-import HomeScreen from '../features/home/HomeScreen';
-import ChatListScreen from '../features/ai-chat/ChatListScreen';
-import ChatScreen from '../features/ai-chat/ChatScreen';
-import ProfileScreen from '../features/profile/ProfileScreen';
-import EditProfileScreen from '../features/profile/EditProfileScreen';
-import ReadingModeScreen from '../features/reading-mode/ReadingModeScreen';
-import MathHelperScreen from '../features/math-helper/MathHelperScreen';
-import VisionAssistant from '../features/vision-assistant/VisionAssistant';
-import ToolsScreen from '../features/tools/ToolsScreen';
-import ProgressScreen from '../features/progress/ProgressScreen';
-import AACBoardScreen from '../features/aac-board/AACBoardScreen';
-import FocusModeScreen from '../features/focus-mode/FocusModeScreen';
-import SocialStoryScreen from '../features/social-story/SocialStoryScreen';
-import RoutineBuilderScreen from '../features/routine-builder/RoutineBuilderScreen';
-import LearnScreen from '../features/learn/LearnScreen';
-import LearnDetailScreen from '../features/learn/LearnDetailScreen';
-import SpeechTherapyScreen from '../features/speech-therapy/SpeechTherapyScreen';
-import DiaryMemoryScreen from '../features/dear-diary/DiaryMemoryScreen';
-import VisualNavigatorScreen from '../features/visual-navigator/VisualNavigatorScreen';
 import { getRouteMeta } from './config/routeMeta';
+
+// Route-level splitting keeps the initial PWA shell quick to open. Heavy
+// vision, maths, camera, and reading code is requested only when needed.
+const SignupScreen = lazy(() => import('../features/auth/SignupScreen'));
+const LoginScreen = lazy(() => import('../features/auth/LoginScreen'));
+const LanguageSelectionScreen = lazy(() => import('../features/language-selection/LanguageSelectionScreen'));
+const AgeRangeScreen = lazy(() => import('../features/onboarding/AgeRangeScreen'));
+const RegionScreen = lazy(() => import('../features/onboarding/RegionScreen'));
+const SplashScreen = lazy(() => import('../features/splash/SplashScreen'));
+const ProfileSetupScreen = lazy(() => import('../features/profile-setup/Profilesetupscreen'));
+const DashboardScreen = lazy(() => import('../features/dashboard/DashboardScreen'));
+const HomeScreen = lazy(() => import('../features/home/HomeScreen'));
+const ChatListScreen = lazy(() => import('../features/ai-chat/ChatListScreen'));
+const ChatScreen = lazy(() => import('../features/ai-chat/ChatScreen'));
+const ProfileScreen = lazy(() => import('../features/profile/ProfileScreen'));
+const EditProfileScreen = lazy(() => import('../features/profile/EditProfileScreen'));
+const ReadingModeScreen = lazy(() => import('../features/reading-mode/ReadingModeScreen'));
+const MathHelperScreen = lazy(() => import('../features/math-helper/MathHelperScreen'));
+const VisionAssistant = lazy(() => import('../features/vision-assistant/VisionAssistant'));
+const ToolsScreen = lazy(() => import('../features/tools/ToolsScreen'));
+const ProgressScreen = lazy(() => import('../features/progress/ProgressScreen'));
+const AACBoardScreen = lazy(() => import('../features/aac-board/AACBoardScreen'));
+const FocusModeScreen = lazy(() => import('../features/focus-mode/FocusModeScreen'));
+const SocialStoryScreen = lazy(() => import('../features/social-story/SocialStoryScreen'));
+const RoutineBuilderScreen = lazy(() => import('../features/routine-builder/RoutineBuilderScreen'));
+const LearnScreen = lazy(() => import('../features/learn/LearnScreen'));
+const LearnDetailScreen = lazy(() => import('../features/learn/LearnDetailScreen'));
+const SpeechTherapyScreen = lazy(() => import('../features/speech-therapy/SpeechTherapyScreen'));
+const DiaryMemoryScreen = lazy(() => import('../features/dear-diary/DiaryMemoryScreen'));
+const VisualNavigatorScreen = lazy(() => import('../features/visual-navigator/VisualNavigatorScreen'));
 
 
 /**
@@ -54,6 +58,7 @@ export default function AppRoutes() {
     return (
         <>
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <Suspense fallback={<div className="flex-1" aria-busy="true" />}>
                 <Routes>
                     {/* Onboarding */}
                     <Route path="/" element={<SplashScreen />} />
@@ -95,6 +100,7 @@ export default function AppRoutes() {
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                </Suspense>
             </div>
             {!hideNav && <BottomNav />}
         </>

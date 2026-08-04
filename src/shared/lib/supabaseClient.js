@@ -15,4 +15,13 @@ if (isPlaceholder) {
 const clientUrl = supabaseUrl || 'https://placeholder-project.supabase.co';
 const clientKey = supabaseAnonKey || 'placeholder-key';
 
-export const supabase = createClient(clientUrl, clientKey);
+// Be explicit for installed PWAs: the auth token belongs in durable browser
+// storage and Supabase should refresh it whenever the app resumes.
+export const supabase = createClient(clientUrl, clientKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+    },
+});

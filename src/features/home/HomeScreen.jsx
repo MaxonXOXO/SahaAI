@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Mic, BookOpen, Info, Volume2, ArrowRight, Search, MessageSquare } from 'lucide-react';
+import { Sparkles, Mic, BookOpen, Info, Volume2, Send, Search, MessageSquare } from 'lucide-react';
 import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
 import { useThemeVariables } from '../../app/hooks/useThemeVariables';
@@ -142,6 +142,8 @@ export default function HomeScreen() {
         recognition.start();
     };
 
+    const hasSearchText = searchQuery.trim().length > 0;
+
     return (
         <div
             className="flex-1 flex flex-col min-h-0 overflow-y-auto relative"
@@ -281,14 +283,21 @@ export default function HomeScreen() {
                         const Icon = tile.icon;
                         
                         const translatedLabel = translate('tile_' + tileKey, displayLanguage) || '';
+                        // Keep multi-word labels on two deliberate lines so they use
+                        // the space below the icon instead of wrapping unpredictably.
+                        const labelWords = translatedLabel.trim().split(/\s+/);
+                        const hasMultipleWords = labelWords.length > 1;
+                        const firstLabelLine = hasMultipleWords ? labelWords[0] : translatedLabel;
+                        const secondLabelLine = hasMultipleWords ? labelWords.slice(1).join(' ') : null;
 
                         return (
                             <button
                                 key={tileKey}
                                 onClick={() => navigate(tile.path)}
-                                className="flex min-w-0 flex-col items-start gap-3 rounded-[1.75rem] p-4 border-2 shadow-md hover:shadow-lg transition-all text-left"
+                                className="flex min-w-0 flex-col items-start gap-3 rounded-[1.75rem] p-3.5 border-2 shadow-md hover:shadow-lg transition-all text-left"
                                 style={{
-                                    minHeight: isLowVision ? '156px' : '136px',
+                                    height: isLowVision ? '164px' : '144px',
+                                    overflow: 'hidden',
                                     background: 'var(--a11y-surface)',
                                     borderColor: 'var(--a11y-primary)',
                                     boxShadow: '0 3px 12px color-mix(in srgb, var(--a11y-primary) 18%, transparent)',
@@ -297,23 +306,24 @@ export default function HomeScreen() {
                                 <div
                                     className={`shrink-0 flex items-center justify-center rounded-[1.25rem] ${tile.color}`}
                                     style={{
-                                        width: isLowVision ? '56px' : '48px',
-                                        height: isLowVision ? '56px' : '48px',
+                                        width: isLowVision ? '44px' : '38px',
+                                        height: isLowVision ? '44px' : '38px',
                                     }}
                                 >
                                     <Icon
-                                        size={isLowVision ? 28 : 24}
+                                        size={isLowVision ? 22 : 20}
                                         className="text-white"
                                     />
                                 </div>
                                 <span
-                                    className="w-full min-w-0 font-bold text-gray-800 leading-tight break-words"
+                                    className="w-full min-w-0 font-bold text-gray-800 leading-tight overflow-hidden"
                                     style={{
                                         fontFamily: 'var(--a11y-font-heading)',
-                                        fontSize: isLowVision ? 'clamp(16px, 4.5vw, 19px)' : 'clamp(15px, 4vw, 17px)',
+                                        fontSize: isLowVision ? 'clamp(19px, 5vw, 22px)' : 'clamp(17px, 4.8vw, 20px)',
                                     }}
                                 >
-                                    {translatedLabel}
+                                    <span className="block truncate">{firstLabelLine}</span>
+                                    {secondLabelLine && <span className="block truncate">{secondLabelLine}</span>}
                                 </span>
                             </button>
                         );
@@ -358,12 +368,12 @@ export default function HomeScreen() {
                             )}
                         </div>
                         <button
-                            type="button"
-                            onClick={startVoiceSearch}
-                            aria-label="Voice input"
+                            type={hasSearchText ? "submit" : "button"}
+                            onClick={hasSearchText ? undefined : startVoiceSearch}
+                            aria-label={hasSearchText ? "Send message" : "Voice input"}
                             className={`shrink-0 w-16 h-16 flex items-center justify-center rounded-full transition-colors ml-3 shadow-md ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-primary hover:bg-primary-light'}`}
                         >
-                            <Mic size={28} className="text-white" />
+                            {hasSearchText ? <Send size={26} className="text-white" /> : <Mic size={28} className="text-white" />}
                         </button>
                     </div>
                 </form>

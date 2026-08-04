@@ -39,6 +39,7 @@ const useProfileStore = create((set, get) => ({
     },
 
     isAuthenticated: false,
+    sessionReady: false,
     loading: false,
     error: null,
 
@@ -87,12 +88,18 @@ const useProfileStore = create((set, get) => ({
     },
 
     checkSession: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-            set({ id: session.user.id, isAuthenticated: true });
-            await get().fetchProfile();
-        } else {
-            useSettingsStore.getState().loadSettings(null);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                set({ id: session.user.id, isAuthenticated: true });
+                await get().fetchProfile();
+            } else {
+                useSettingsStore.getState().loadSettings(null);
+            }
+        } finally {
+            // Routes wait for this before deciding whether to show the signed-out
+            // splash screen, avoiding a PWA cold-start race.
+            set({ sessionReady: true });
         }
     },
 
@@ -230,7 +237,7 @@ const useProfileStore = create((set, get) => ({
             role: 'student', language: 'en', age_range: null, is_minor: false, region: '', primaryMode: null,
             needs: { dyslexia: false, adhd: false, autism: false, dyscalculia: false, lowVision: false },
             progress: { readingStreak: 0, focusSessionsWeek: 0, mathAccuracy: 0, dailyStreak: 0 },
-            isAuthenticated: false, loading: false, error: null,
+            isAuthenticated: false, sessionReady: true, loading: false, error: null,
         });
         useSettingsStore.getState().resetSettings();
     },

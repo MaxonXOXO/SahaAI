@@ -9,7 +9,6 @@ import {
     Volume2,
     BookOpen,
     Bookmark,
-    ChevronRight,
     Navigation
 } from 'lucide-react';
 
@@ -165,7 +164,7 @@ export default function ToolsScreen() {
 
             {/* Grid Container */}
             <div className="px-4 sm:px-6 pt-2 pb-6 max-w-6xl mx-auto w-full">
-                <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     {TOOLS_LIST.map((tool) => {
                         const Icon = tool.icon;
 
@@ -173,30 +172,29 @@ export default function ToolsScreen() {
                             <button
                                 key={tool.key}
                                 onClick={() => navigate(tool.path, { state: { from: '/tools' } })}
-                                className="group relative flex min-w-0 items-center gap-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-gray-900 border-2 border-primary/25 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-2.5 sm:p-3 active:scale-[0.99] min-h-[104px]"
+                                className="group relative flex min-w-0 items-stretch gap-2 rounded-2xl sm:rounded-3xl bg-white dark:bg-gray-900 border-2 border-primary/25 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-2 active:scale-[0.99] h-[132px] sm:h-[148px]"
                             >
                                 {/* Left Section: Image with Soft Tinted Background */}
-                                <div className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl sm:rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
+                                <div className={`w-[48%] shrink-0 rounded-xl sm:rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
                                     <img
                                         src={tool.image}
                                         alt={displayLanguage === 'ml' ? tool.titleMl : tool.title}
-                                    className="w-full h-full object-contain scale-125 transition-transform duration-300 group-hover:scale-135 drop-shadow-xs"
+                                        className="w-full h-full object-contain scale-125 transition-transform duration-300 group-hover:scale-135 drop-shadow-xs"
                                     />
                                 </div>
 
-                                {/* Right Section: Badge Icon & Larger Text Title */}
-                                <div className="flex-1 flex min-w-0 flex-col justify-center gap-2 py-1">
+                                {/* Right Section: identity icon and title only. */}
+                                <div className="flex-1 flex min-w-0 flex-col justify-center gap-2 py-2 pr-1">
                                     {/* Icon Badge */}
-                                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center shadow-xs shrink-0" style={{ backgroundColor: 'var(--a11y-primary)', color: 'var(--a11y-bg)' }}>
-                                        <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-xs shrink-0" style={{ backgroundColor: 'var(--a11y-primary)', color: 'var(--a11y-bg)' }}>
+                                        <Icon className="w-4 h-4" />
                                     </div>
 
                                     {/* Title */}
-                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-base sm:text-lg leading-tight tracking-tight break-words group-hover:text-primary transition-colors">
+                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-[13px] sm:text-base leading-tight tracking-tight break-words group-hover:text-primary transition-colors">
                                         {displayLanguage === 'ml' ? tool.titleMl : tool.title}
                                     </h3>
                                 </div>
-                                <ChevronRight className="shrink-0 text-primary" aria-hidden="true" />
                             </button>
                         );
                     })}

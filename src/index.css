@@ -27,8 +27,10 @@
   /* Phone controls use pixel caps so root text scaling never widens them. */
   --a11y-min-touch:        48px;
   --a11y-icon-size:        20px;
-  --a11y-control-font-size: clamp(14px, 4vw, 16px);
-  --a11y-control-font-size-lg: clamp(16px, 4.5vw, 18px);
+  /* Control labels may follow the user's text-size preference. Layouts wrap
+     instead of shrinking the tap target or making the label unreadable. */
+  --a11y-control-font-size: var(--a11y-font-size-base);
+  --a11y-control-font-size-lg: var(--a11y-font-size-md);
   --a11y-spacing-section:  16px;
   --a11y-transition:       all 0.2s ease;
   --a11y-shadow:           0 1px 3px rgba(0,0,0,0.08);
@@ -90,7 +92,7 @@ body {
 
 /* Flex children otherwise retain their intrinsic width and can cause a
    horizontal overflow when text is enlarged by an accessibility profile. */
-.app-shell .flex > * {
+.app-shell .flex > :not(button):not([role="button"]) {
   min-width: 0;
 }
 

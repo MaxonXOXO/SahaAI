@@ -52,7 +52,7 @@ export default function ProfileScreen() {
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto pb-24">
+        <div className="flex-1 min-h-0 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
             <ScreenHeader title={translate('profileTitle', displayLanguage)} showBack={false} />
 
             {/* User Info Header Card */}
@@ -406,12 +406,12 @@ export default function ProfileScreen() {
                                     <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
                                         {translate('uiDisplayScale', displayLanguage)}
                                     </p>
-                                    <div className="flex flex-col gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
+                                    <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
                                         {['small', 'medium', 'large'].map(size => (
                                             <button
                                                 key={size}
                                                 onClick={() => settings.updateSettings({ fontSize: size })}
-                                                className={`w-full px-3 py-2 text-left rounded-lg text-sm transition-colors capitalize ${
+                                                className={`min-w-0 px-1 py-2 text-center rounded-lg text-sm transition-colors capitalize break-words ${
                                                     settings.fontSize === size
                                                         ? 'bg-white dark:bg-gray-600 shadow-sm font-bold text-gray-900 dark:text-white'
                                                         : 'text-gray-500 dark:text-gray-400'
@@ -428,12 +428,12 @@ export default function ProfileScreen() {
                                     <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
                                         {translate('textThickness', displayLanguage)}
                                     </p>
-                                    <div className="flex flex-col gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
+                                    <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
                                         {['normal', 'medium', 'bold'].map(weight => (
                                             <button
                                                 key={weight}
                                                 onClick={() => settings.updateSettings({ fontWeight: weight })}
-                                                className={`w-full px-3 py-2 text-left rounded-lg text-sm transition-colors capitalize ${
+                                                className={`min-w-0 px-1 py-2 text-center rounded-lg text-sm transition-colors capitalize break-words ${
                                                     settings.fontWeight === weight
                                                         ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white'
                                                         : 'text-gray-500 dark:text-gray-400'
@@ -533,7 +533,7 @@ export default function ProfileScreen() {
                                     const LangSelect = ({ label, settingKey }) => (
                                         <div className="flex flex-col gap-2">
                                             <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">{label}</p>
-                                            <div className="flex flex-col gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
+                                            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
                                                 {[
                                                     { code: 'en', label: 'English' },
                                                     { code: 'ml', label: 'മലയാളം' }
@@ -541,7 +541,7 @@ export default function ProfileScreen() {
                                                     <button
                                                         key={lang.code}
                                                         onClick={() => settings.updateSettings({ [settingKey]: lang.code })}
-                                                        className={`w-full px-3 py-2.5 text-left rounded-lg text-sm font-semibold transition-colors ${
+                                                        className={`min-w-0 px-2 py-2.5 text-center rounded-lg text-sm font-semibold transition-colors break-words ${
                                                             settings[settingKey] === lang.code
                                                                 ? 'bg-white dark:bg-gray-600 shadow-sm text-primary dark:text-white'
                                                                 : 'text-gray-500 dark:text-gray-400'

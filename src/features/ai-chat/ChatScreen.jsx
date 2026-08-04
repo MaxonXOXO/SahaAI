@@ -228,6 +228,8 @@ export default function ChatScreen() {
         recognition.start();
     };
 
+    const hasTypedMessage = input.trim().length > 0;
+
     return (
         <div className="flex-1 flex flex-col h-full">
             <ScreenHeader title={chatTitle} />
@@ -296,15 +298,6 @@ export default function ChatScreen() {
             {/* Input bar */}
             <div className="border-t-2 border-gray-200 dark:border-gray-700 px-4 py-3">
                 <div className="flex items-end gap-2">
-                    <button
-                        onClick={startVoiceInput}
-                        className={`
-                            shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-sm
-                            ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-primary'}
-                        `}
-                    >
-                        <Mic size={22} />
-                    </button>
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -314,16 +307,19 @@ export default function ChatScreen() {
                         className="flex-1 resize-none bg-gray-100 dark:bg-gray-800 rounded-card px-4 py-3 text-base-sm text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary/30"
                     />
                     <button
-                        onClick={() => handleSend()}
-                        disabled={!input.trim() || sending}
+                        onClick={hasTypedMessage ? () => handleSend() : startVoiceInput}
+                        disabled={sending}
+                        aria-label={hasTypedMessage ? 'Send message' : 'Start voice input'}
                         className={`
                             shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-sm
-                            ${input.trim() && !sending
+                            ${hasTypedMessage && !sending
                                 ? 'bg-primary text-white hover:bg-primary-light'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}
+                                : isListening
+                                ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-primary'}
                         `}
                     >
-                        <Send size={18} />
+                        {hasTypedMessage ? <Send size={20} /> : <Mic size={22} />}
                     </button>
                 </div>
             </div>
