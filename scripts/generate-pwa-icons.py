@@ -14,13 +14,17 @@ ICON_SIZES = (72, 96, 128, 144, 152, 180, 192, 384, 512)
 
 
 def make_icon(source: Image.Image, size: int, maskable: bool = False) -> Image.Image:
-    """Create a square transparent icon with safe padding around the logo."""
-    padding = 0.12 if maskable else 0.04
-    inner_size = round(size * (1 - padding * 2))
-    resized = ImageOps.contain(source, (inner_size, inner_size), Image.Resampling.LANCZOS)
-    icon = Image.new('RGBA', (size, size), (255, 255, 255, 0))
-    icon.alpha_composite(resized, ((size - resized.width) // 2, (size - resized.height) // 2))
-    return icon
+    """Create an opaque, edge-to-edge icon for Android launchers.
+
+    Android supplies the squircle mask itself. Transparent padding here would
+    reveal the launcher background as a dark box, so crop the artwork to fill
+    the complete icon canvas instead.
+    """
+    zoom = 1.08 if maskable else 1.02
+    crop_size = round(size * zoom)
+    icon = ImageOps.fit(source, (crop_size, crop_size), Image.Resampling.LANCZOS)
+    inset = (crop_size - size) // 2
+    return icon.crop((inset, inset, inset + size, inset + size))
 
 
 def main() -> None:

@@ -272,9 +272,9 @@ export default function ProfileScreen() {
 
             {/* MODAL / DIALOGS */}
             {activeModal && (
-                <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setActiveModal(null)}>
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setActiveModal(null)}>
                     <div 
-                        className="bg-white dark:bg-gray-800 w-full max-w-[380px] rounded-3xl p-5 shadow-xl max-h-[85vh] overflow-y-auto animate-slide-up"
+                        className="bg-white dark:bg-gray-800 w-full max-w-[380px] min-w-0 rounded-3xl p-4 sm:p-5 shadow-xl max-h-[calc(100dvh-24px)] overflow-x-hidden overflow-y-auto animate-slide-up"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal Header */}
@@ -406,12 +406,12 @@ export default function ProfileScreen() {
                                     <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
                                         {translate('uiDisplayScale', displayLanguage)}
                                     </p>
-                                    <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
+                                    <div className="flex flex-col gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
                                         {['small', 'medium', 'large'].map(size => (
                                             <button
                                                 key={size}
                                                 onClick={() => settings.updateSettings({ fontSize: size })}
-                                                className={`flex-1 py-2 rounded-lg text-sm transition-colors capitalize ${
+                                                className={`w-full px-3 py-2 text-left rounded-lg text-sm transition-colors capitalize ${
                                                     settings.fontSize === size
                                                         ? 'bg-white dark:bg-gray-600 shadow-sm font-bold text-gray-900 dark:text-white'
                                                         : 'text-gray-500 dark:text-gray-400'
@@ -428,12 +428,12 @@ export default function ProfileScreen() {
                                     <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">
                                         {translate('textThickness', displayLanguage)}
                                     </p>
-                                    <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
+                                    <div className="flex flex-col gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
                                         {['normal', 'medium', 'bold'].map(weight => (
                                             <button
                                                 key={weight}
                                                 onClick={() => settings.updateSettings({ fontWeight: weight })}
-                                                className={`flex-1 py-2 rounded-lg text-sm transition-colors capitalize ${
+                                                className={`w-full px-3 py-2 text-left rounded-lg text-sm transition-colors capitalize ${
                                                     settings.fontWeight === weight
                                                         ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white'
                                                         : 'text-gray-500 dark:text-gray-400'
@@ -533,7 +533,7 @@ export default function ProfileScreen() {
                                     const LangSelect = ({ label, settingKey }) => (
                                         <div className="flex flex-col gap-2">
                                             <p className="text-base-sm font-bold text-gray-800 dark:text-gray-100">{label}</p>
-                                            <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
+                                            <div className="flex flex-col gap-2 p-1 bg-gray-100 dark:bg-gray-750 rounded-xl">
                                                 {[
                                                     { code: 'en', label: 'English' },
                                                     { code: 'ml', label: 'മലയാളം' }
@@ -541,7 +541,7 @@ export default function ProfileScreen() {
                                                     <button
                                                         key={lang.code}
                                                         onClick={() => settings.updateSettings({ [settingKey]: lang.code })}
-                                                        className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                                                        className={`w-full px-3 py-2.5 text-left rounded-lg text-sm font-semibold transition-colors ${
                                                             settings[settingKey] === lang.code
                                                                 ? 'bg-white dark:bg-gray-600 shadow-sm text-primary dark:text-white'
                                                                 : 'text-gray-500 dark:text-gray-400'

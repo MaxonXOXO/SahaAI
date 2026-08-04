@@ -280,19 +280,15 @@ export default function HomeScreen() {
                         if (!tile) return null;
                         const Icon = tile.icon;
                         
-                        // Split the translation string by space to attempt to put it on two lines if possible
                         const translatedLabel = translate('tile_' + tileKey, displayLanguage) || '';
-                        const words = translatedLabel.split(' ');
-                        const line1 = words[0];
-                        const line2 = words.slice(1).join(' ');
 
                         return (
                             <button
                                 key={tileKey}
                                 onClick={() => navigate(tile.path)}
-                                className="flex flex-row items-center gap-4 rounded-[1.75rem] p-5 border-2 shadow-md hover:shadow-lg transition-all text-left"
+                                className="flex min-w-0 flex-col items-start gap-3 rounded-[1.75rem] p-4 border-2 shadow-md hover:shadow-lg transition-all text-left"
                                 style={{
-                                    minHeight: isLowVision ? '110px' : '100px',
+                                    minHeight: isLowVision ? '156px' : '136px',
                                     background: 'var(--a11y-surface)',
                                     borderColor: 'var(--a11y-primary)',
                                     boxShadow: '0 3px 12px color-mix(in srgb, var(--a11y-primary) 18%, transparent)',
@@ -301,23 +297,23 @@ export default function HomeScreen() {
                                 <div
                                     className={`shrink-0 flex items-center justify-center rounded-[1.25rem] ${tile.color}`}
                                     style={{
-                                        width: isLowVision ? '64px' : '56px',
-                                        height: isLowVision ? '64px' : '56px',
+                                        width: isLowVision ? '56px' : '48px',
+                                        height: isLowVision ? '56px' : '48px',
                                     }}
                                 >
                                     <Icon
-                                        size={isLowVision ? 32 : 28}
+                                        size={isLowVision ? 28 : 24}
                                         className="text-white"
                                     />
                                 </div>
                                 <span
-                                    className="font-bold text-gray-800 leading-tight flex-1 md:text-lg"
+                                    className="w-full min-w-0 font-bold text-gray-800 leading-tight break-words"
                                     style={{
                                         fontFamily: 'var(--a11y-font-heading)',
-                                        fontSize: isLowVision ? '1.15rem' : '1.05rem',
+                                        fontSize: isLowVision ? 'clamp(16px, 4.5vw, 19px)' : 'clamp(15px, 4vw, 17px)',
                                     }}
                                 >
-                                    {line1} {line2 && <><br />{line2}</>}
+                                    {translatedLabel}
                                 </span>
                             </button>
                         );

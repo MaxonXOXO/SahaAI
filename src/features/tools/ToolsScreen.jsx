@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 
 import ScreenHeader from '../../shared/components/ScreenHeader';
-import useProfileStore from '../../store/useProfileStore';
 import useSettingsStore from '../../store/useSettingsStore';
 import { translate } from '../../shared/lib/translations';
 
@@ -148,10 +147,7 @@ const TOOLS_LIST = [
 
 export default function ToolsScreen() {
     const navigate = useNavigate();
-    const primaryMode = useProfileStore((s) => s.primaryMode);
     const displayLanguage = useSettingsStore((s) => s.displayLanguage);
-
-    const isLowVision = primaryMode === 'lowVision';
 
     return (
         <div
@@ -169,7 +165,7 @@ export default function ToolsScreen() {
 
             {/* Grid Container */}
             <div className="px-4 sm:px-6 pt-2 pb-6 max-w-6xl mx-auto w-full">
-                <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                     {TOOLS_LIST.map((tool) => {
                         const Icon = tool.icon;
 
@@ -177,29 +173,30 @@ export default function ToolsScreen() {
                             <button
                                 key={tool.key}
                                 onClick={() => navigate(tool.path, { state: { from: '/tools' } })}
-                                className="group relative flex flex-row items-stretch rounded-2xl sm:rounded-3xl bg-white dark:bg-gray-900 border-2 border-primary/25 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-1.5 sm:p-2.5 active:scale-[0.99] min-h-32 sm:min-h-40"
+                                className="group relative flex min-w-0 items-center gap-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-gray-900 border-2 border-primary/25 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left p-2.5 sm:p-3 active:scale-[0.99] min-h-[104px]"
                             >
                                 {/* Left Section: Image with Soft Tinted Background */}
-                                <div className={`w-[42%] sm:w-[46%] shrink-0 rounded-xl sm:rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
+                                <div className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl sm:rounded-2xl ${tool.bgTint} flex items-center justify-center p-0 overflow-hidden relative`}>
                                     <img
                                         src={tool.image}
                                         alt={displayLanguage === 'ml' ? tool.titleMl : tool.title}
-                                        className="w-full h-full object-contain scale-125 sm:scale-130 transition-transform duration-300 group-hover:scale-135 drop-shadow-xs"
+                                    className="w-full h-full object-contain scale-125 transition-transform duration-300 group-hover:scale-135 drop-shadow-xs"
                                     />
                                 </div>
 
                                 {/* Right Section: Badge Icon & Larger Text Title */}
-                                <div className="flex-1 flex flex-col justify-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 pr-1.5 sm:pr-2 py-1.5 sm:py-2 min-w-0">
+                                <div className="flex-1 flex min-w-0 flex-col justify-center gap-2 py-1">
                                     {/* Icon Badge */}
                                     <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center shadow-xs shrink-0" style={{ backgroundColor: 'var(--a11y-primary)', color: 'var(--a11y-bg)' }}>
                                         <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                                     </div>
 
                                     {/* Title */}
-                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-xs sm:text-base md:text-lg leading-tight tracking-tight break-words group-hover:text-primary transition-colors">
+                                    <h3 className="font-extrabold text-gray-900 dark:text-white text-base sm:text-lg leading-tight tracking-tight break-words group-hover:text-primary transition-colors">
                                         {displayLanguage === 'ml' ? tool.titleMl : tool.title}
                                     </h3>
                                 </div>
+                                <ChevronRight className="shrink-0 text-primary" aria-hidden="true" />
                             </button>
                         );
                     })}
