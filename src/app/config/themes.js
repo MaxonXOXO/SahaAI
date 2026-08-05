@@ -61,10 +61,10 @@ export const CONTRAST_PRESETS = {
 export const DISABILITY_PATCHES = [
     {
         key: 'lowVision',
-        // Use high contrast as the initial low-vision default only. An
-        // explicitly selected theme must always win.
-        resolveContrast: (contrastMode) =>
-            contrastMode === 'default' ? 'high' : contrastMode,
+        // Low-vision mode always needs the maximum-contrast palette. This
+        // deliberately takes precedence over the general theme preference,
+        // including the app-wide Light default.
+        resolveContrast: () => 'high',
         structurePatch: () => ({
             lineHeight: '1.8',
         }),
@@ -130,7 +130,7 @@ export function buildTheme({ needs = {}, primaryMode = null, contrastMode = 'lig
     // patches so a new or migrated user always has an explicit Light choice.
     let activeContrast = contrastMode === 'default' ? 'light' : contrastMode;
 
-    // lowVision auto-upgrade before anything else
+    // Low vision takes precedence over the global theme selection.
     const lowVisionPatch = DISABILITY_PATCHES.find((p) => p.key === 'lowVision');
     if (needs.lowVision && lowVisionPatch?.resolveContrast) {
         activeContrast = lowVisionPatch.resolveContrast(activeContrast);
