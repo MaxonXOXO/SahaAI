@@ -1,6 +1,7 @@
 # SahaAI
 
-SahaAI is an accessibility-first AI companion that helps people communicate, learn, read, navigate, and manage everyday routines with greater independence. It brings personalised accessibility settings, voice interaction, camera-assisted tools, and multilingual support into one mobile-first web application.
+SahaAI is an accessibility-first AI companion that helps people communicate, learn, read, navigate, and manage everyday routines with greater independence. It brings personalised accessibility settings, voice interaction, camera-assisted tools, and multilingual support into one mobile-first application. 
+The app is currentl being apckaged via capacitor js to serve purely like a native mobile application for both Ios and Android alike
 
 ## The problem
 
